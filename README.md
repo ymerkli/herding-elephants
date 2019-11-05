@@ -1,8 +1,8 @@
 # Complete Project Name
 
 #### Authors
-    * Name 1 (email 1)
-    * Name 2 (email 2)
-    * Name 3 (email 3)
+    * Yannick Merkli    (ymerkli@student.ethz.ch)
+    * Felix Ruessli     (fruessli@student.ethz.ch)
+    * Tim Bohren        (tbohren@student.ethz.ch)
 
 Brief project description
