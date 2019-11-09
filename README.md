@@ -19,4 +19,13 @@ cd /home/p4/02-herding
 git pull https://gitlab.ethz.ch/nsg/adv-comm-net-projects/02-herding.git
 ```
 
+### Commit and push
+```bash
+cd /home/p4/02-herding
+git add filename.txt
+git commit -m "YourMessage"
+git remote add origin https://gitlab.ethz.ch/nsg/adv-comm-net-projects/02-herding.git
+git push -u origin master
+```
+
 Brief project description
