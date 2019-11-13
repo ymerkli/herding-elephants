@@ -4,6 +4,7 @@ import pickle
 import os
 import rpyc
 import nnpy
+import argparse
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
@@ -28,10 +29,10 @@ class L2Controller(object):
 
     def __init__(self, sw_name):
 
-        self.topo        = Topology(db="topology.db")
-        self.sw_name     = sw_name
-        self.thrift_port = self.topo.get_thrift_port(sw_name)
-        self.controller  = SimpleSwitchAPI(self.thrift_port)
+        self.topo          = Topology(db="topology.db")
+        self.sw_name       = sw_name
+        self.thrift_port   = self.topo.get_thrift_port(sw_name)
+        self.controller    = SimpleSwitchAPI(self.thrift_port)
 
         self.coordinator_c = rpyc.connect('localhost', 18812)
 
@@ -44,7 +45,7 @@ class L2Controller(object):
     def unpack_digest(self, msg, num_samples):
 
         digest = []
-        print len(msg), num_samples
+        print(len(msg), num_samples)
         starting_index = 32
         for sample in range(num_samples):
             mac0, mac1, ingress_port = struct.unpack(">LHH", msg[starting_index:starting_index+8])
@@ -75,10 +76,49 @@ class L2Controller(object):
             self.recv_msg_digest(msg)
 
 
-    def report_flow(self, msg):
+    def report_flow(self, flow):
         '''
-        Reports a flow to the central coordinator
+        Reports a mule flow to the central coordinator
         '''
 
-        self.coordinator_c.root.echo(msg)
+        self.coordinator_c.root.send_report(flow)
+    
+    def send_hello(self, flow):
+        '''
+        Sends a hello message to the central coordinator, notifying that the switch has seen
+        a flow it's never seen before. We also send a callback to the coordinator, through 
+        which the coordiantor can send back the l_g. The coordinator will store the callback
+        in case our l_g needs to be updated
 
+        Args:
+            flow (): The new flow we want to report
+        '''
+
+        self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
+
+    def hello_callback(self, flow, l_g):
+        '''
+        The callback function for the coordinator to receive the update l_g
+        '''
+
+
+def parser():
+    parser = argparse.ArgumentParser(description='parse the keyword arguments')
+
+    parser.add_argument(
+            "--n",
+            type=str,
+            required=True,
+            help="The name of the switch"
+    )
+
+    args = parser.parse_args()
+
+    return args.n
+
+if __name__ == '__main__':
+    sw_name = parser()
+
+    l2_controller = L2Controller(sw_name)
+
+    l2_controller.run_digest_loop()
