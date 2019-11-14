@@ -3,11 +3,11 @@ import struct
 import pickle
 import os
 import rpyc
-import nnpy
+#import nnpy
 
-from p4utils.utils.topology import Topology
-from p4utils.utils.sswitch_API import *
-from crc import Crc
+#from p4utils.utils.topology import Topology
+#from p4utils.utils.sswitch_API import *
+#from crc import Crc
 from rpyc.utils.server import ThreadedServer
 from scapy.all import Ether, sniff, Packet, BitField
 
@@ -61,12 +61,18 @@ class CoordinatorService(rpyc.Service):
             flow (tuple): a 5 tuple identifying a flow
         '''
 
+        print('report: flow=', flow)
+        return
         flow_hash = self.flow_to_hash(flow)
+
+        # if the flow has been reported before, increase its count
+        # otherwise, start counting
         if flow_hash in self.reports:
             self.reports[flow_hash] += 1
         else:
             self.reports[flow_hash] = 1
 
+        # if the number of reports reaches the report threshold, we have a heavy hitter
         if self.reports[flow_hash] >= self.elephant_threshold_R:
             self.heavy_hitter_set.append(flow)
 
@@ -98,13 +104,17 @@ class CoordinatorService(rpyc.Service):
                                     callback(flow, l_g) (see L2Controller class)
         '''
 
-        # store the callback
+        print('hello: flow=', flow, 'sw_name=', sw_name)
+        hello_callback(flow, 1)
+        return
+        # store the callback function since we need it several times
         if sw_name not in self.callback_table:
             self.callback_table[sw_name] = hello_callback
 
         flow_hash  = self.flow_to_hash(flow)
         group_hash = self.get_group_hash(flow)
 
+        # lookup the group based locality parameter l_g
         l_g = self.l_g_table[group_hash]
 
         if sw_name not in self.flow_to_switches[flow_hash]:
@@ -132,6 +142,8 @@ class CoordinatorService(rpyc.Service):
         '''
 
         #TODO: extract fields from digest
+        flow    = None
+        sw_name = None
 
         return flow, sw_name
 
@@ -148,6 +160,7 @@ class CoordinatorService(rpyc.Service):
         '''
 
         #TODO: extract flow fields and calculate hash
+        flow_hash = None
 
         return flow_hash
 
@@ -163,6 +176,7 @@ class CoordinatorService(rpyc.Service):
         '''
 
         #TODO: flow to group lookup, calculate hash
+        group_hash = None
 
         return group_hash
 
@@ -181,6 +195,6 @@ class CoordinatorServer(object):
         self.server.close()
 
 
-if __name__ == '__main__':
-    coordinator = CoordinatorServer()
-    coordinator.start()
+#if __name__ == '__main__':
+#    coordinator = CoordinatorServer()
+#    coordinator.start()

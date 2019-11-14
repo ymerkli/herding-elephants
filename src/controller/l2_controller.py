@@ -3,12 +3,12 @@ import struct
 import pickle
 import os
 import rpyc
-import nnpy
+#import nnpy
 import argparse
 
-from p4utils.utils.topology import Topology
-from p4utils.utils.sswitch_API import *
-from crc import Crc
+#from p4utils.utils.topology import Topology
+#from p4utils.utils.sswitch_API import *
+#from crc import Crc
 from rpyc.utils.server import ThreadedServer
 from scapy.all import Ether, sniff, Packet, BitField
 
@@ -18,21 +18,22 @@ class L2Controller(object):
     the central coordiantor
 
     Args:
+        sw_name (str): The name of the switch where the controller is running on
 
     Attributes:
-        topo (p4utils.utils.topology.Topology): The switch topology
-        sw_name (str): The name of the switch
-        thrift_port (int): The thrift port of the switch
-        controller (p4utils.utils.sswitch_API.SimpleSwitchAPI): The controller of the switch
-        coordinator_c (rpyc connection): An rpyc connection to the Coordinator
+        topo (p4utils Topology):                The switch topology
+        sw_name (str):                          The name of the switch
+        thrift_port (int):                      The thrift port of the switch
+        controller (p4utils SimpleSwitchAPI):   The controller of the switch
+        coordinator_c (rpyc connection):        An rpyc connection to the Coordinator
     '''
 
     def __init__(self, sw_name):
 
-        self.topo          = Topology(db="topology.db")
+        #self.topo          = Topology(db="topology.db")
         self.sw_name       = sw_name
-        self.thrift_port   = self.topo.get_thrift_port(sw_name)
-        self.controller    = SimpleSwitchAPI(self.thrift_port)
+        #self.thrift_port   = self.topo.get_thrift_port(sw_name)
+        #self.controller    = SimpleSwitchAPI(self.thrift_port)
 
         self.coordinator_c = rpyc.connect('localhost', 18812)
 
@@ -40,7 +41,8 @@ class L2Controller(object):
 
     def init(self):
 
-        self.controller.reset_state()
+        #self.controller.reset_state()
+        pass
 
     def unpack_digest(self, msg, num_samples):
 
@@ -55,25 +57,25 @@ class L2Controller(object):
 
         return digest
 
-    def recv_msg_digest(self, msg):
+    #def recv_msg_digest(self, msg):
 
-        topic, device_id, ctx_id, list_id, buffer_id, num = struct.unpack("<iQiiQi", msg[:32])
-        digest = self.unpack_digest(msg, num)
-        self.report_flow(digest)
+    #    topic, device_id, ctx_id, list_id, buffer_id, num = struct.unpack("<iQiiQi", msg[:32])
+    #    digest = self.unpack_digest(msg, num)
+    #    self.report_flow(digest)
 
-        #Acknowledge digest
-        self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
+    #    #Acknowledge digest
+    #    self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
 
-    def run_digest_loop(self):
+    #def run_digest_loop(self):
 
-        sub = nnpy.Socket(nnpy.AF_SP, nnpy.SUB)
-        notifications_socket = self.controller.client.bm_mgmt_get_info().notifications_socket
-        sub.connect(notifications_socket)
-        sub.setsockopt(nnpy.SUB, nnpy.SUB_SUBSCRIBE, '')
+    #    sub = nnpy.Socket(nnpy.AF_SP, nnpy.SUB)
+    #    notifications_socket = self.controller.client.bm_mgmt_get_info().notifications_socket
+    #    sub.connect(notifications_socket)
+    #    sub.setsockopt(nnpy.SUB, nnpy.SUB_SUBSCRIBE, '')
 
-        while True:
-            msg = sub.recv()
-            self.recv_msg_digest(msg)
+    #    while True:
+    #        msg = sub.recv()
+    #        self.recv_msg_digest(msg)
 
 
     def report_flow(self, flow):
@@ -101,6 +103,8 @@ class L2Controller(object):
         The callback function for the coordinator to receive the update l_g
         '''
 
+        print('hello callback: flow=', flow, ', l_g=', l_g)
+
 
 def parser():
     parser = argparse.ArgumentParser(description='parse the keyword arguments')
@@ -116,9 +120,9 @@ def parser():
 
     return args.n
 
-if __name__ == '__main__':
-    sw_name = parser()
-
-    l2_controller = L2Controller(sw_name)
-
-    l2_controller.run_digest_loop()
+#if __name__ == '__main__':
+#    sw_name = parser()
+#
+#    l2_controller = L2Controller(sw_name)
+#
+#    l2_controller.run_digest_loop()
