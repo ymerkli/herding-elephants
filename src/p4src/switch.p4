@@ -5,11 +5,16 @@
 // Typedefs //
 typedef bit<16> tau_t;
 typedef bit<32> uint32_probability;
-typedef bit<32> flow_id_t
+typedef bit<32> flow_id_t;
 
+typedef bit<48> macAddr_t;
+typedef bit<32> ip4Addr_t;
 
 // Constants //
-const uint32_probability INT32_MAX = 4294967296;
+const uint32_probability INT32_MAX = 4294967295;
+
+const bit<16> ipv4_type = 0x800;
+
 //TODO: adapt group table size
 // there are 2^16 possible group pairs (8bit scr and 8bit dst)
 const bit<16> GROUP_TABLE_SIZE = 1000;
@@ -19,29 +24,40 @@ const uint32_probability SAMPLING_PROBABILITY = 1073741824;
 // 1/s such that we know where to start counting
 const bit<16> counter_start = 4;
 // equals 2^32 or r = 1, for testing purposes
-const bit<32> REPORTING_PROBABILITY = 4294967296;
+const bit<32> REPORTING_PROBABILITY = 4294967295;
 
 //TODO: add custom hash functions
 //TODO: add real key value storage D
 #define COUNTERS 1000
 #define COUNTER_BIT_WIDTH 16
 
+
+
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
+struct five_tuple_t {
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+    bit<16>   srcPort;
+    bit<16>   dstPort;
+    bit<8>    protocol;
+}
+
+struct report_data_t {
+    five_tuple_t five_tuple;
+    bit<16> flow_count;
+}
 
 struct metadata {
     uint32_probability flip_s;
     uint32_probability flip_r;
     tau_t tau;
     flow_id_t flow_id;
+    report_data_t data;
 }
 
 //TODO: add ipv6 and udp headers
-const bit<16> ipv4_type = 0x800;
-
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
 
 
 header ethernet_t {
@@ -112,7 +128,7 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType){
             ipv4_type: parse_ipv4;
-            default: reject;
+            default: accept;
         }
     }
 
@@ -120,7 +136,7 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.protocol){
             6 : parse_tcp;
-            default: reject;
+            default: accept;
         }
     }
 
@@ -151,13 +167,32 @@ control MyIngress(inout headers hdr,
 
     register<bit<COUNTER_BIT_WIDTH>>(COUNTERS) reg_counters;
 
+    // extracts the five tuple identifying a flow from the packet
+    action extractFiveTuple() {
+        meta.data.five_tuple.srcAddr = hdr.ipv4.srcAddr;
+        meta.data.five_tuple.dstAddr = hdr.ipv4.dstAddr;
+        meta.data.five_tuple.srcPort = hdr.tcp.srcPort;
+        meta.data.five_tuple.dstPort = hdr.tcp.dstPort;
+        meta.data.five_tuple.protocol = hdr.ipv4.protocol;
+    }
+
     action sendHello() {
-        // TODO: send 5 tuple to controller
+        extractFiveTuple();
+        meta.data.flow_count = 0;
+        digest(1, meta.data);
+
+        // TODO: remove, for testing purposes
+        standard_metadata.egress_spec = 4;
     }
 
     action sendReport() {
-        // TODO: send report
+        extractFiveTuple();
+        digest(1, meta.data);
+
+                // TODO: remove, for testing purposes
+        standard_metadata.egress_spec = 3;
     }
+
     // called by a table hit in group_table
     // IN:  group report probability (converted to uint32) p_report,
     //      group parameter tau (threshold)
@@ -211,9 +246,9 @@ control MyIngress(inout headers hdr,
     }
 
     // group id MAT to retrieve the group parameters
+    //TODO: fix keys
     table groups {
         key = {
-            hdr.ipv4.srcAddr: lpm;
             hdr.ipv4.srcAddr: lpm;
         }
         actions = {
@@ -225,7 +260,7 @@ control MyIngress(inout headers hdr,
     }
 
     // Does the value lookup of a flow. If no value is found, we try to sample.
-    action updateAndCheck()
+    action updateAndCheck() {
         //TODO: implement real hash table lookup
         hashFlow();
         bit<16> flow_count;
@@ -234,35 +269,41 @@ control MyIngress(inout headers hdr,
         if (flow_count > 0) {
             // if counter is over the threshold, reset and leave meta.flip_r as
             // is, else increment and set it to false
-            if (flow_count >= meta.tau_g) {
+            if (flow_count >= meta.tau) {
+                meta.data.flow_count = flow_count;
                 reg_counters.write(meta.flow_id, 0);
             } else {
                 meta.flip_r = 0;
                 flow_count = flow_count + 1;
-                reg_counters.write(meta.flow_id, flow_count)
+                reg_counters.write(meta.flow_id, flow_count);
             }
         } else {
             // set meta.flip_r to false since we don’t want to report
             meta.flip_r = 0;
-            if (meta.flip_s) {
+            if (meta.flip_s == 1) {
                 reg_counters.write(meta.flow_id, counter_start);
             }
         }
     }
 
     apply {
+        // TODO: remove, for testing purposes
+        standard_metadata.egress_spec = 2;
+
         if(hdr.ipv4.isValid()) {
             // if we have an entry hit, we get the group parameters and can proceed
             if (groups.apply().hit) {
                 // simulate coin flips
                 flip();
+                /*
                 // counter lookup
                 updateAndCheck();
-                if (metadata.flip_r) {
-                    sendReport;
+                */
+                if (meta.flip_r == 1) {
+                    sendReport();
                 }
             } else {
-                sendHello;
+                sendHello();
             }
         }
     }
