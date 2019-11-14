@@ -23,7 +23,7 @@ import random
 def GetSampling(switch_mem, train_data, mole_tau):
     sampl_prob = 1/(mole_tau)
     moles = CalculateMoles(train_data, sampl_prob)
-    while abs(moles) < switch_mem:
+    while len(moles) < switch_mem:
         mole_tau = mole_tau - 1
         moles = CalculateMoles(train_data, sampl_prob)
     return mole_tau
@@ -32,7 +32,7 @@ def DeriveReporting(comm_budget, epsilon, observers, sampl_prob):
     mule_tau = epsilon * glob_thresh / observers
     moles = CalculateMoles(train_data, sampl_prob)
     mules = CalculateMules(moles, mule_tau)
-    report_prob = comm_budget * mule_tau / (glob_thresh * abs(mules))
+    report_prob = comm_budget * mule_tau / (glob_thresh * len(mules))
     report_thresh = observers * report_prob / glob_thresh
     return report_thresh, mules, report_prob, mule_tau
 
