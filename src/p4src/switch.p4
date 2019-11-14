@@ -3,12 +3,16 @@
 #include <v1model.p4>
 
 //TODO (to replicate paper):
-// 1) Add hash table + functions
+// 1) Add hash table + functions (Storage D is a 1000 fields wide register)
 // 2) Add possibility to write s to the switch
+// 3) Add support for ipv6 and udp
 
 // Typedefs //
+// Used for threshold variables
 typedef bit<16> tau_t;
+// Probabilities converted as: u_p = 2^32*p - 1, p in (0,1)
 typedef bit<32> uint32_probability;
+// Used for hashes of a flow five tuple
 typedef bit<32> flow_id_t;
 
 typedef bit<48> macAddr_t;
@@ -34,10 +38,10 @@ const bit<16> counter_start = 4;
 #define COUNTER_BIT_WIDTH 16
 
 
-
 /*************************************************************************
-*********************** H E A D E R S  ***********************************
+*********************** S T R U C T S  ***********************************
 *************************************************************************/
+
 struct five_tuple_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
@@ -46,11 +50,16 @@ struct five_tuple_t {
     bit<8>    protocol;
 }
 
+// Used by the digest commands to transport data to the local controller
 struct report_data_t {
     five_tuple_t five_tuple;
     bit<16> flow_count;
 }
 
+// We need fields for: 2 coinflips,
+//                     1 local threshold,
+//                     1 five-tuple hash,
+//                     1 struct for digest command
 struct metadata {
     uint32_probability flip_s;
     uint32_probability flip_r;
@@ -58,6 +67,12 @@ struct metadata {
     flow_id_t flow_id;
     report_data_t data;
 }
+
+
+/*************************************************************************
+*********************** H E A D E R S  ***********************************
+*************************************************************************/
+
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -161,7 +176,7 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register<bit<COUNTER_BIT_WIDTH>>(COUNTERS) reg_counters;
+    ///         GENERAL PACKET PROCESSING STUFF        ///
 
     // extracts the five tuple identifying a flow from the packet
     action extractFiveTuple() {
@@ -172,12 +187,34 @@ control MyIngress(inout headers hdr,
         meta.data.five_tuple.protocol = hdr.ipv4.protocol;
     }
 
+    // Hashes the ip.src+dstAddr, ip.protocol and tcp.src+dstAddr to generate a
+    // flow id for register lookup
+    // OUT: writes result to meta.flow_id
+    action hashFlow() {
+        hash(meta.flow_id, HashAlgorithm.crc32, (bit<1>)0,
+            {hdr.ipv4.srcAddr,
+             hdr.ipv4.dstAddr,
+             hdr.tcp.srcPort,
+             hdr.tcp.dstPort,
+             hdr.ipv4.protocol},(bit<16>) COUNTER_BIT_WIDTH);
+    }
+
+
+        ///               HERD SECTION                  ///
+
+
+    register<bit<COUNTER_BIT_WIDTH>>(COUNTERS) reg_counters;
+
+    // sends a hello msg to the local controller with the 5tuple and a flow
+    // counter of 0 to indicate the flow is new.
     action sendHello() {
         extractFiveTuple();
         meta.data.flow_count = 0;
         digest(1, meta.data);
     }
 
+    // send a report msg to the local controller with the 5tuple and the current
+    // flow counter.
     action sendReport() {
         extractFiveTuple();
         digest(1, meta.data);
@@ -192,13 +229,13 @@ control MyIngress(inout headers hdr,
         meta.flip_r = p_report;
     }
 
+
     //TODO: introduce more randomness
     //      IDEA: Hash with some RndVal safed in a register
     // Takes timestamps and ip dst/srcAddr and hashes them to a bit 32 value
     // which is compared against the saved probabilities.
     // OUT: writes the outcome to the meta.flip_r and meta.flip_s fields of the
     //      packet
-
     action flip() {
         uint32_probability safe_p_report = meta.flip_r;
         hash(meta.flip_s, HashAlgorithm.crc32, (bit<1>)0,
@@ -221,20 +258,10 @@ control MyIngress(inout headers hdr,
         }
     }
 
-    // Hashes the ip.src+dstAddr, ip.protocol and tcp.src+dstAddr to generate a
-    // flow id for register lookup
-    // OUT: writes result to meta.flow_id
 
-    action hashFlow() {
-        hash(meta.flow_id, HashAlgorithm.crc32, (bit<1>)0,
-            {hdr.ipv4.srcAddr,
-             hdr.ipv4.dstAddr,
-             hdr.tcp.srcPort,
-             hdr.tcp.dstPort,
-             hdr.ipv4.protocol},(bit<16>) COUNTER_BIT_WIDTH);
-    }
-
-    // group id MAT to retrieve the group parameters
+    // group id MAT to retrieve the group parameters (local probability
+    // and local threshold). a hit calls the getValues action which writes them
+    // in the metadata
     //TODO: better idea for keys?
     table group_values {
         key = {
@@ -249,7 +276,14 @@ control MyIngress(inout headers hdr,
         default_action = NoAction;
     }
 
-    // Does the value lookup of a flow. If no value is found, we try to sample.
+
+    // Does the value lookup of a the meta.flow_id field in the key value
+    // storage reg_counters (which is a single register atm) and updates it
+    // with the new value (either +1 or reset to 0). Sets the
+    // meta.flip_r field to 0 if the criteria of a report are not met (No
+    // change otherwise).
+    // If no value is found, a counter is started if the meta.flip_1 field is
+    // equal to 1.
     action updateAndCheck() {
         //TODO: implement real hash table lookup
         hashFlow();
@@ -259,12 +293,12 @@ control MyIngress(inout headers hdr,
         if (flow_count > 0) {
             // if counter is over the threshold, reset and leave meta.flip_r as
             // is, else increment and set it to false
+            flow_count = flow_count + 1;
             if (flow_count >= meta.tau) {
                 meta.data.flow_count = flow_count;
                 flow_count = 0;
             } else {
                 meta.flip_r = 0;
-                flow_count = flow_count + 1;
             }
         } else {
             // set meta.flip_r to false since we don’t want to report
@@ -277,9 +311,12 @@ control MyIngress(inout headers hdr,
         reg_counters.write(meta.flow_id, flow_count);
     }
 
+
     apply {
 
-        if(hdr.ipv4.isValid()) {
+        // Herd section //
+
+        if(hdr.ipv4.isValid() && hdr.tcp.isValid()) {
             // if we have an entry hit, we get the group parameters and can proceed
             if (group_values.apply().hit) {
                 // simulate coin flips
@@ -295,6 +332,10 @@ control MyIngress(inout headers hdr,
                 sendHello();
             }
         }
+
+        // Other packet processing stuff //
+
+                   /* empty */
     }
 }
 
