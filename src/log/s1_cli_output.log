@@ -1,5 +1,9 @@
 Obtaining JSON from switch...
 Done
 Control utility for runtime P4 table manipulation
-RuntimeCmd: Error: Invalid table name (group)
+RuntimeCmd: Adding entry to exact match table group_values
+match key:           EXACT-0a:00:00:00	EXACT-0a:00:00:00
+action:              getValues
+runtime data:        ff:ff:ff:ff	00:02
+Entry has been added with handle 0
 RuntimeCmd: 

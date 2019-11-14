@@ -2,6 +2,10 @@
 #include <core.p4>
 #include <v1model.p4>
 
+//TODO (to replicate paper):
+// 1) Add hash table + functions
+// 2) Add possibility to write s to the switch
+
 // Typedefs //
 typedef bit<16> tau_t;
 typedef bit<32> uint32_probability;
@@ -23,8 +27,6 @@ const bit<16> GROUP_TABLE_SIZE = 1000;
 const uint32_probability SAMPLING_PROBABILITY = 1073741824;
 // 1/s such that we know where to start counting
 const bit<16> counter_start = 4;
-// equals 2^32 or r = 1, for testing purposes
-const bit<32> REPORTING_PROBABILITY = 4294967295;
 
 //TODO: add custom hash functions
 //TODO: add real key value storage D
@@ -56,9 +58,6 @@ struct metadata {
     flow_id_t flow_id;
     report_data_t data;
 }
-
-//TODO: add ipv6 and udp headers
-
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -102,7 +101,6 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
-// TODO: change to header union when ipv6 and udp are added
 struct headers {
     ethernet_t ethernet;
     ipv4_t ipv4;
@@ -118,8 +116,6 @@ parser MyParser(packet_in packet,
                 inout metadata meta,
                 inout standard_metadata_t standard_metadata) {
 
-//TODO: add states for ipv6 and udp; maybe change default and check for validity
-//      in ingress apply.
     state start {
         transition parse_ethernet;
     }
@@ -180,17 +176,11 @@ control MyIngress(inout headers hdr,
         extractFiveTuple();
         meta.data.flow_count = 0;
         digest(1, meta.data);
-
-        // TODO: remove, for testing purposes
-        standard_metadata.egress_spec = 4;
     }
 
     action sendReport() {
         extractFiveTuple();
         digest(1, meta.data);
-
-                // TODO: remove, for testing purposes
-        standard_metadata.egress_spec = 3;
     }
 
     // called by a table hit in group_table
@@ -224,8 +214,7 @@ control MyIngress(inout headers hdr,
         } else {
             meta.flip_s = 0;
         }
-        //TODO: change to safe_p_report
-        if (meta.flip_r < REPORTING_PROBABILITY) {
+        if (meta.flip_r < safe_p_report) {
             meta.flip_r = 1;
         } else {
             meta.flip_r = 0;
@@ -246,10 +235,11 @@ control MyIngress(inout headers hdr,
     }
 
     // group id MAT to retrieve the group parameters
-    //TODO: fix keys
-    table groups {
+    //TODO: better idea for keys?
+    table group_values {
         key = {
-            hdr.ipv4.srcAddr: lpm;
+            hdr.ipv4.srcAddr & 0xff000000: exact;
+            hdr.ipv4.dstAddr & 0xff000000: exact;
         }
         actions = {
             getValues;
@@ -271,34 +261,33 @@ control MyIngress(inout headers hdr,
             // is, else increment and set it to false
             if (flow_count >= meta.tau) {
                 meta.data.flow_count = flow_count;
-                reg_counters.write(meta.flow_id, 0);
+                flow_count = 0;
             } else {
                 meta.flip_r = 0;
                 flow_count = flow_count + 1;
-                reg_counters.write(meta.flow_id, flow_count);
             }
         } else {
             // set meta.flip_r to false since we don’t want to report
             meta.flip_r = 0;
             if (meta.flip_s == 1) {
-                reg_counters.write(meta.flow_id, counter_start);
+                flow_count = counter_start;
             }
         }
+        // write back adapted flow count
+        reg_counters.write(meta.flow_id, flow_count);
     }
 
     apply {
-        // TODO: remove, for testing purposes
-        standard_metadata.egress_spec = 2;
 
         if(hdr.ipv4.isValid()) {
             // if we have an entry hit, we get the group parameters and can proceed
-            if (groups.apply().hit) {
+            if (group_values.apply().hit) {
                 // simulate coin flips
                 flip();
-                /*
+
                 // counter lookup
                 updateAndCheck();
-                */
+
                 if (meta.flip_r == 1) {
                     sendReport();
                 }
@@ -337,7 +326,6 @@ control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
 
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
-        //TODO: add support for ipv6 and udp
         packet.emit(hdr.tcp);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ethernet);
