@@ -1,6 +1,6 @@
 import time
 
-from controller.l2_controller import L2Controller
+from l2_controller import L2Controller
 
 sw2 = L2Controller('sw2')
 
