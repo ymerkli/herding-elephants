@@ -3,11 +3,11 @@ import struct
 import pickle
 import os
 import rpyc
-#import nnpy
+import nnpy
 
-#from p4utils.utils.topology import Topology
-#from p4utils.utils.sswitch_API import *
-#from crc import Crc
+from p4utils.utils.topology import Topology
+from p4utils.utils.sswitch_API import *
+from crc import Crc
 from rpyc.utils.server import ThreadedServer
 from scapy.all import Ether, sniff, Packet, BitField
 
@@ -24,8 +24,8 @@ class CoordinatorService(rpyc.Service):
         reports (dict):             A dict of flows and their report count. Key is the flow hash
         elephant_threshold_R(int):  The thresholds on the report count for which we promote a mule to a heavy hitter
         l_g_table (dict):           A dict storing the locality parameter l_g for a flow based on the group g 
-                                    to which the flow belongs to. Key is a group_hash, value is an int
-        flow_to_switches (dict):    A dict storing which switches have seen a flow. Key is a flow_hash, value is an array
+                                    to which the flow belongs to. Key is a flow table, value is an int
+        flow_to_switches (dict):    A dict storing which switches have seen a flow. Key is a flow tuple, value is an array
                                     of sw_names
         callback_table (dict):      A dict storing the callbacks received from switches in hello messages.
                                     Callbacks are used to send l_g back to switches. Key is a sw_name (str), value is a function.
@@ -61,19 +61,15 @@ class CoordinatorService(rpyc.Service):
             flow (tuple): a 5 tuple identifying a flow
         '''
 
-        print('report: flow=', flow)
-        return
-        flow_hash = self.flow_to_hash(flow)
-
         # if the flow has been reported before, increase its count
         # otherwise, start counting
-        if flow_hash in self.reports:
-            self.reports[flow_hash] += 1
+        if flow in self.reports:
+            self.reports[flow] += 1
         else:
-            self.reports[flow_hash] = 1
+            self.reports[flow] = 1
 
         # if the number of reports reaches the report threshold, we have a heavy hitter
-        if self.reports[flow_hash] >= self.elephant_threshold_R:
+        if self.reports[flow] >= self.elephant_threshold_R:
             self.heavy_hitter_set.append(flow)
 
     def exposed_send_hello(self, flow, sw_name, hello_callback):
@@ -104,85 +100,29 @@ class CoordinatorService(rpyc.Service):
                                     callback(flow, l_g) (see L2Controller class)
         '''
 
-        print('hello: flow=', flow, 'sw_name=', sw_name)
-        hello_callback(flow, 1)
-        return
         # store the callback function since we need it several times
         if sw_name not in self.callback_table:
             self.callback_table[sw_name] = hello_callback
 
-        flow_hash  = self.flow_to_hash(flow)
-        group_hash = self.get_group_hash(flow)
-
         # lookup the group based locality parameter l_g
-        l_g = self.l_g_table[group_hash]
+        l_g = self.l_g_table[flow]
 
-        if sw_name not in self.flow_to_switches[flow_hash]:
-            self.flow_to_switches[flow_hash].append(sw_name)
+        if sw_name not in self.flow_to_switches[flow]:
+            self.flow_to_switches[flow].append(sw_name)
             if len(self.flow_to_switches[flow]) >= 2*l_g:
                 l_g = len(self.flow_to_switches[flow])
-                self.l_g_table[group_hash] = l_g
-                for switch in self.flow_to_switches[flow_hash]:
+                self.l_g_table[flow] = l_g
+                for switch in self.flow_to_switches[flow]:
                     self.callback_table[switch](flow, l_g)
             else:
                 self.callback_table[sw_name](flow, l_g)
 
-    def extract_flow(self, msg):
-        '''
-        Extracts the flow information and the sw_name from the hello message
-        sent by switch sw_name
-        Assumes naming convention for switches: "s" + sw_identifier (int)
-
-        Args:
-            msg (): hello message from data plane through digest
-        
-        Returns:
-            flow (tuple): a 5 tuple identifying a flow
-            sw_name (str): the name of the switch originating the hello message
-        '''
-
-        #TODO: extract fields from digest
-        flow    = None
-        sw_name = None
-
-        return flow, sw_name
-
-    def flow_to_hash(self, flow):
-        '''
-        Calculates a hash based on a flow tuple which is used to lookup
-        the flow in the reports table
-
-        Args:
-            flow (tuple): a 5 tuple identifying a flow
-
-        Returns:
-            flow_hash (str): the hash identifying the flow
-        '''
-
-        #TODO: extract flow fields and calculate hash
-        flow_hash = None
-
-        return flow_hash
-
-    def get_group_hash(self, flow):
-        '''
-        Returns the hash of the group to which the flow belongs to
-
-        Args:
-            flow (tuple): Check to which group this flow belongs
-
-        Returns:
-            group_hash (str): the hash identifying the group
-        '''
-
-        #TODO: flow to group lookup, calculate hash
-        group_hash = None
-
-        return group_hash
-
 class CoordinatorServer(object):
     '''
     The server running the Coordinator service
+
+    Args:
+        server_port (int):  The port on which the Coordinator will be running on
     '''
 
     def __init__(self, server_port=18812):
@@ -195,6 +135,6 @@ class CoordinatorServer(object):
         self.server.close()
 
 
-#if __name__ == '__main__':
-#    coordinator = CoordinatorServer()
-#    coordinator.start()
+if __name__ == '__main__':
+    coordinator = CoordinatorServer()
+    coordinator.start()
