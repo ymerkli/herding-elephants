@@ -51,6 +51,17 @@ class L2Controller(object):
         self.controller.reset_state()
 
     def unpack_digest(self, msg, num_samples):
+        '''
+        Unpacks a digest received from the data plane
+
+        Args:
+            msg ():             The received message
+            num_samples (int):  Number of samples
+
+        Returns:
+            digest (list):      An array of flow_info's (dicts), where we store the flow 5-tuple (key 'flow')
+                                and the flow_count (int) (key flow_count)
+        '''
 
         digest = []
         print(len(msg), num_samples)
@@ -70,6 +81,13 @@ class L2Controller(object):
         return digest
 
     def recv_msg_digest(self, msg):
+        '''
+        Handles a received digest message. Unpacks the digest using self.unpack_digest() and then
+        send a hello or a report to the Coordinator
+
+        Args:
+            msg (): The received digest message
+        '''
 
         topic, device_id, ctx_id, list_id, buffer_id, num = struct.unpack("<iQiiQi", msg[:32])
 
@@ -87,6 +105,10 @@ class L2Controller(object):
         self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
 
     def run_digest_loop(self):
+        '''
+        The blocking function that will be running on the controller. 
+        Waits for new digests and passes them on
+        '''
 
         sub = nnpy.Socket(nnpy.AF_SP, nnpy.SUB)
         notifications_socket = self.controller.client.bm_mgmt_get_info().notifications_socket
@@ -101,6 +123,9 @@ class L2Controller(object):
     def report_flow(self, flow):
         '''
         Reports a mule flow to the central coordinator
+
+        Args:
+            flow (tuple):   The flow 5-tuple to be reported
         '''
 
         self.coordinator_c.root.send_report(flow)
@@ -113,7 +138,7 @@ class L2Controller(object):
         in case our l_g needs to be updated
 
         Args:
-            flow (): The new flow we want to report
+            flow (): The new flow 5-tuple we want to let the Coordinator know about
         '''
 
         self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
@@ -123,6 +148,10 @@ class L2Controller(object):
         The callback function for the coordinator to receive the update l_g
         Will call the add_group_values function to update the group based values for
         the new value of l_g
+
+        Args:
+            flow (tuple):   The flow 5-tuple for which we sent a hello
+            l_g (int):      The locality parameter l_g for the group to which flow belongs  
         '''
 
         print('hello callback: flow=', flow, ', l_g=', l_g)
@@ -135,7 +164,7 @@ class L2Controller(object):
 
         Args:
             flow (tuple):   The flow for which we want the group values
-            l_g (int):      group based locality parameter l_g
+            l_g (int):      The locality parameter l_g for the group to which flow belongs  
         '''
 
         tau_g = self.epsilon * self.global_threshold_T / l_g
@@ -147,7 +176,7 @@ class L2Controller(object):
         srcIP_str = str(flow[0])
         dstIP_str = str(flow[1])
 
-        # extract group ids (i.e. the first 8 bits of the IPv4 address) from IPs using regex
+        # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
         # raises an error if the digest IPs have invalid format
         #TODO: IPv6?
         srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
@@ -184,7 +213,7 @@ def parser():
             help="The approximation factor epsilon"
     )
 
-   parser.add_argument(
+    parser.add_argument(
             "--t",
             type=int,
             required=True,

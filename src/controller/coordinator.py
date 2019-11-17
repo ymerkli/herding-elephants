@@ -107,14 +107,19 @@ class CoordinatorService(rpyc.Service):
         # lookup the group based locality parameter l_g
         l_g = self.l_g_table[flow]
 
+        # check if the switch has already sent a hello for this flow
         if sw_name not in self.flow_to_switches[flow]:
+            # remember that switch sw_name has seen flow
             self.flow_to_switches[flow].append(sw_name)
             if len(self.flow_to_switches[flow]) >= 2*l_g:
+                # localitiy parameter has changed significantly
                 l_g = len(self.flow_to_switches[flow])
                 self.l_g_table[flow] = l_g
+                # send it to all switches that have seen flow
                 for switch in self.flow_to_switches[flow]:
                     self.callback_table[switch](flow, l_g)
             else:
+                # only send locality parameter to sw_name
                 self.callback_table[sw_name](flow, l_g)
 
 class CoordinatorServer(object):
