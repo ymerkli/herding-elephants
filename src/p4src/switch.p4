@@ -394,13 +394,13 @@ control MyIngress(inout headers hdr,
                         if (meta.flip_s == 1) {
                             count_start.read(meta.data.flow_count, 0);
                         }
-                        meta.flip_r = 0;
                     // increase counter and check if we have to report
                     } else {
                         meta.data.flow_count = meta.data.flow_count + 1;
-                        if (meta.data.flow_count < meta.tau) {
-                            meta.flip_r = 0;
-                        }
+                    }
+                    // set the report coinflip to zero if the threshold is not reached
+                    if (meta.data.flow_count < meta.tau) {
+                        meta.flip_r = 0;
                     }
                 }
 

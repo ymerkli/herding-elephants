@@ -231,6 +231,9 @@ class L2Controller(object):
 
         print("flow: {0}, tau_g: {1}, r_g:{2}".format(flow, tau_g, r_g))
 
+        # convert r_g to use in coinflips on the switch (no floating point)
+        r_g = (2**32 - 1) * r_g
+
         # stringify digest IPs
         srcIP_str = str(flow[0])
         dstIP_str = str(flow[1])
