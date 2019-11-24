@@ -2,7 +2,7 @@ import socket
 import struct
 import pickle
 import os
-## import rpyc
+import rpyc
 import nnpy
 import argparse
 import re
@@ -10,7 +10,7 @@ import re
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
 ## from crc import Crc
-## from rpyc.utils.server import ThreadedServer
+from rpyc.utils.server import ThreadedServer
 from scapy.all import Ether, sniff, Packet, BitField
 
 # Copied from the excercises (taken from wikipedia probably), not all are needed
@@ -73,13 +73,6 @@ class L2Controller(object):
         flow = ("10.0.0.0", "10.0.0.0", 0, 0,0)
         self.add_group_values(flow, 1)
 
-        self.reset_hash_tables()
-
-
-    def reset_hash_tables(self):
-        self.controller.register_reset("hash_table_1")
-
-
     def set_crc_custom_hashes(self):
         '''
         Passes the custom crc32 polynomials to the switch
@@ -123,11 +116,14 @@ class L2Controller(object):
         '''
 
         digest = []
-        print(len(msg), num_samples)
         starting_index = 32
         for sample in range(num_samples):
-            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LHH", msg[starting_index:starting_index+8])
-            starting_index +=8
+            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBH", msg[starting_index:])
+            print(ipaddress.IPv4Address(srcIP), ipaddress.IPv4Address(dstIP), srcPort, dstPort, protocol, flow_count)
+
+            # convert int IPs to str
+            srcIP = ipaddress.IPv4Address(srcIP)
+            dstIP = ipaddress.IPv4Address(dstIP)
 
             # construct flow tuple
             flow = (srcIP, dstIP, srcPort, dstPort, protocol)
@@ -156,8 +152,10 @@ class L2Controller(object):
             # if the flow count is zero, the digest is just a hello message
             # otherwise, it's a report
             if flow_info['flow_count'] == 0:
+                print('sending a hello for: ', flow_info['flow'])
                 self.send_hello(flow_info['flow'])
             else:
+                print('sending a report for: ', flow_info['flow'])
                 self.report_flow(flow_info['flow'])
 
         #Acknowledge digest
@@ -187,7 +185,7 @@ class L2Controller(object):
             flow (tuple):   The flow 5-tuple to be reported
         '''
 
-        ## self.coordinator_c.root.send_report(flow)
+        self.coordinator_c.root.send_report(flow)
 
     def send_hello(self, flow):
         '''
@@ -200,7 +198,7 @@ class L2Controller(object):
             flow (): The new flow 5-tuple we want to let the Coordinator know about
         '''
 
-        ## self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
+        self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
 
     def hello_callback(self, flow, l_g):
         '''
@@ -253,7 +251,6 @@ class L2Controller(object):
         else:
             dstGroup = dstGroup.group(1)
 
-        print("adding table entry")
         # add an entry to the group_values table
         self.controller.table_add('group_values', 'getValues',\
             [srcGroup, dstGroup], [str(r_g), str(tau_g)])

@@ -77,7 +77,7 @@ class L2Controller(object):
             # construct flow tuple
             flow = (srcIP, dstIP, srcPort, dstPort, protocol)
             flow_info = {
-                'flow': flow, 
+                'flow': flow,
                 'flow_count': flow_count
             }
             digest.append(flow_info)
@@ -112,7 +112,7 @@ class L2Controller(object):
 
     def run_digest_loop(self):
         '''
-        The blocking function that will be running on the controller. 
+        The blocking function that will be running on the controller.
         Waits for new digests and passes them on
         '''
 
@@ -134,11 +134,11 @@ class L2Controller(object):
         '''
 
         self.coordinator_c.root.send_report(flow)
-    
+
     def send_hello(self, flow):
         '''
         Sends a hello message to the central coordinator, notifying that the switch has seen
-        a flow it's never seen before. We also send a callback to the coordinator, through 
+        a flow it's never seen before. We also send a callback to the coordinator, through
         which the coordiantor can send back the l_g. The coordinator will store the callback
         in case our l_g needs to be updated
 
@@ -156,7 +156,7 @@ class L2Controller(object):
 
         Args:
             flow (tuple):   The flow 5-tuple for which we sent a hello
-            l_g (int):      The locality parameter l_g for the group to which flow belongs  
+            l_g (int):      The locality parameter l_g for the group to which flow belongs
         '''
 
         print('hello callback: flow=', flow, ', l_g=', l_g)
@@ -169,7 +169,7 @@ class L2Controller(object):
 
         Args:
             flow (tuple):   The flow for which we want the group values
-            l_g (int):      The locality parameter l_g for the group to which flow belongs  
+            l_g (int):      The locality parameter l_g for the group to which flow belongs
         '''
 
         tau_g = self.epsilon * self.global_threshold_T / l_g
@@ -196,11 +196,6 @@ class L2Controller(object):
             raise ValueError("Error: invalid srcIP format: {0}".format(dstIP_str))
         else:
             dstGroup = dstGroup.group(1)
-
-        # pad groups to IPs
-        # eg srcGroup <10> becomes <10.0.0.0>
-        srcGroup = "{0}.0.0.0".format(srcGroup)
-        dstGroup = "{0}.0.0.0".format(dstGroup)
 
         # add an entry to the group_values table
         self.controller.table_add('group_values', 'getValues',\
