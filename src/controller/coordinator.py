@@ -7,7 +7,7 @@ import nnpy
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
-from crc import Crc
+#from crc import Crc
 from rpyc.utils.server import ThreadedServer
 from scapy.all import Ether, sniff, Packet, BitField
 
@@ -100,12 +100,20 @@ class CoordinatorService(rpyc.Service):
                                     callback(flow, l_g) (see L2Controller class)
         '''
 
+        print(flow, sw_name)
         # store the callback function since we need it several times
         if sw_name not in self.callback_table:
             self.callback_table[sw_name] = hello_callback
 
         # lookup the group based locality parameter l_g
+        # initialize l_g to 1 if no switch has seen the flow yet
+        if flow not in self.l_g_table:
+            self.l_g_table[flow] = 1
         l_g = self.l_g_table[flow]
+
+        # initialize flow_to_switch array if no switch has seen the flow yet
+        if flow not in self.flow_to_switches:
+            self.flow_to_switches[flow] = []
 
         # check if the switch has already sent a hello for this flow
         if sw_name not in self.flow_to_switches[flow]:
