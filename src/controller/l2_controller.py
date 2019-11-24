@@ -6,10 +6,11 @@ import rpyc
 import nnpy
 import argparse
 import re
+import ipaddress
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
-from crc import Crc
+#from crc import Crc
 from rpyc.utils.server import ThreadedServer
 from scapy.all import Ether, sniff, Packet, BitField
 
@@ -35,7 +36,7 @@ class L2Controller(object):
 
     def __init__(self, sw_name, epsilon, global_threshold_T):
 
-        self.topo               = Topology(db="topology.db")
+        self.topo               = Topology(db="../topology.db")
         self.sw_name            = sw_name
         self.thrift_port        = self.topo.get_thrift_port(sw_name)
         self.controller         = SimpleSwitchAPI(self.thrift_port)
@@ -64,11 +65,14 @@ class L2Controller(object):
         '''
 
         digest = []
-        print(len(msg), num_samples)
         starting_index = 32
         for sample in range(num_samples):
-            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LHH", msg[starting_index:starting_index+8])
-            starting_index +=8
+            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBH", msg[starting_index:])
+            print(ipaddress.IPv4Address(srcIP), ipaddress.IPv4Address(dstIP), srcPort, dstPort, protocol, flow_count)
+
+            # convert int IPs to str
+            srcIP = ipaddress.IPv4Address(srcIP)
+            dstIP = ipaddress.IPv4Address(dstIP)
 
             # construct flow tuple
             flow = (srcIP, dstIP, srcPort, dstPort, protocol)
@@ -97,8 +101,10 @@ class L2Controller(object):
             # if the flow count is zero, the digest is just a hello message
             # otherwise, it's a report
             if flow_info['flow_count'] == 0:
+                print('sending a hello for: ', flow_info['flow'])
                 self.send_hello(flow_info['flow'])
             else:
+                print('sending a report for: ', flow_info['flow'])
                 self.report_flow(flow_info['flow'])
 
         #Acknowledge digest
@@ -118,7 +124,6 @@ class L2Controller(object):
         while True:
             msg = sub.recv()
             self.recv_msg_digest(msg)
-
 
     def report_flow(self, flow):
         '''
@@ -168,6 +173,7 @@ class L2Controller(object):
         '''
 
         tau_g = self.epsilon * self.global_threshold_T / l_g
+        tau_g = int(tau_g) # cast to int for adding to table
         r_g   = 1 / l_g
 
         print("flow: {0}, tau_g: {1}, r_g:{2}".format(flow, tau_g, r_g))
@@ -190,6 +196,11 @@ class L2Controller(object):
             raise ValueError("Error: invalid srcIP format: {0}".format(dstIP_str))
         else:
             dstGroup = dstGroup.group(1)
+
+        # pad groups to IPs
+        # eg srcGroup <10> becomes <10.0.0.0>
+        srcGroup = "{0}.0.0.0".format(srcGroup)
+        dstGroup = "{0}.0.0.0".format(dstGroup)
 
         # add an entry to the group_values table
         self.controller.table_add('group_values', 'getValues',\
