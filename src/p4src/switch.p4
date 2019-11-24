@@ -74,6 +74,11 @@ struct hash_data_t {
     bit<32> read_key;
 }
 
+struct flow_group_t {
+    bit<8> srcGroup;
+    bit<8> dstGroup;
+}
+
 
 
 // We need fields for: 2 coinflips,
@@ -88,6 +93,7 @@ struct metadata {
     report_data_t data;
     hash_data_t hash_data;
     bit<2> found_flag;
+    flow_group_t group;
 }
 
 
@@ -210,6 +216,11 @@ control MyIngress(inout headers hdr,
         meta.data.five_tuple.protocol = hdr.ipv4.protocol;
     }
 
+    action extractGroup() {
+        meta.group.srcGroup = (bit<8>) (hdr.ipv4.srcAddr & 0xff000000 >> 24);
+        meta.group.dstGroup = (bit<8>) (hdr.ipv4.dstAddr & 0xff000000 >> 24);
+        }
+
     // Hashes the ip.src+dstAddr, ip.protocol and tcp.src+dstAddr to generate a
     // flow id for register lookup
     // OUT: writes result to meta.flow_id
@@ -298,8 +309,8 @@ control MyIngress(inout headers hdr,
     //TODO: better idea for keys?
     table group_values {
         key = {
-            hdr.ipv4.srcAddr & 0xff000000: exact;
-            hdr.ipv4.dstAddr & 0xff000000: exact;
+            meta.group.srcGroup: exact;
+            meta.group.dstGroup: exact;
         }
         actions = {
             getValues;
@@ -352,6 +363,7 @@ control MyIngress(inout headers hdr,
         // Herd section //
 
         if(hdr.ipv4.isValid()) {
+            extractGroup();
             // if we have an entry hit, we get the group parameters and can proceed
             if (group_values.apply().hit) {
                 // simulate coin flips
@@ -400,7 +412,7 @@ control MyIngress(inout headers hdr,
 
                 // store counter
                 if (meta.data.flow_count > 0) {
-                    meta.hash_data.read_value = (bit<64>) meta.hash_data.hash_value;
+                    meta.hash_data.read_value = (bit<64>) meta.hash_data.hash_key;
                     meta.hash_data.read_value =  meta.hash_data.read_value << 32;
                     meta.hash_data.read_value =  meta.hash_data.read_value + (bit<64>) meta.data.flow_count;
                     if (meta.found_flag == 1) {

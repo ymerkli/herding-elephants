@@ -70,7 +70,14 @@ class L2Controller(object):
         print("Written probability:")
         print(self.controller.register_read("sampling_probability"))
 
-        self.add_group_values((10.0.0.0, 10.0.0.0), 1)
+        flow = ("10.0.0.0", "10.0.0.0", 0, 0,0)
+        self.add_group_values(flow, 1)
+
+        self.reset_hash_tables()
+
+
+    def reset_hash_tables(self):
+        self.controller.register_reset("hash_table_1")
 
 
     def set_crc_custom_hashes(self):
@@ -219,7 +226,7 @@ class L2Controller(object):
             l_g (int):      The locality parameter l_g for the group to which flow belongs
         '''
 
-        tau_g = self.epsilon * self.global_threshold_T / l_g
+        tau_g = int(self.epsilon * self.global_threshold_T / l_g)
         r_g   = 1 / l_g
 
         print("flow: {0}, tau_g: {1}, r_g:{2}".format(flow, tau_g, r_g))
@@ -243,6 +250,7 @@ class L2Controller(object):
         else:
             dstGroup = dstGroup.group(1)
 
+        print("adding table entry")
         # add an entry to the group_values table
         self.controller.table_add('group_values', 'getValues',\
             [srcGroup, dstGroup], [str(r_g), str(tau_g)])
