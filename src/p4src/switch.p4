@@ -3,17 +3,16 @@
 #include <v1model.p4>
 
 //TODO (to replicate paper):
-// 1) Add hash table + functions (Storage D is a 1000 fields wide register)
-// 2) Add possibility to write s to the switch
 // 3) Add support for ipv6 and udp
 
 // Typedefs //
 // Used for threshold variables
-typedef bit<16> tau_t;
+typedef bit<32> tau_t;
 // Probabilities converted as: u_p = 2^32*p - 1, p in (0,1)
 typedef bit<32> uint32_probability;
 // Used for hashes of a flow five tuple
 typedef bit<32> flow_id_t;
+typedef bit<8> error_code_t;
 
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
@@ -23,19 +22,27 @@ const uint32_probability INT32_MAX = 4294967295;
 
 const bit<16> ipv4_type = 0x800;
 
-//TODO: adapt group table size
-// there are 2^16 possible group pairs (8bit scr and 8bit dst)
-const bit<16> GROUP_TABLE_SIZE = 1000;
-//TODO: make these writable at launch
-// equals 2^30 or s = 0.25, which is way too high for testing purposes
-const uint32_probability SAMPLING_PROBABILITY = 1073741824;
-// 1/s such that we know where to start counting
-const bit<16> counter_start = 4;
 
-//TODO: add custom hash functions
-//TODO: add real key value storage D
-#define COUNTERS 1000
-#define COUNTER_BIT_WIDTH 16
+#define HASH_TABLE_FIELD_WIDHT 64
+#define ENTRIES_HASH_TABLE_1 1000
+#define ENTRIES_HASH_TABLE_2 100
+#define ENTRIES_HASH_TABLE_3 10
+
+#define GROUP_TABLE_SIZE 1000
+
+
+#define HASH_AND_CHECK(num) hash(meta.hash_data.hash_value, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, \
+         hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)ENTRIES_HASH_TABLE_##num); \
+         hash_table_##num.read(meta.hash_data.read_value, meta.hash_data.hash_value); \
+         if (meta.hash_data.read_value == 0) { \
+             meta.found_flag = ##num; \
+         } else { \
+             meta.hash_data.read_key = (bit<32>) (meta.hash_data.read_value >> 32); \
+             if (meta.hash_data.read_key == meta.hash_data.hash_key) { \
+                 meta.data.flow_count = (bit<32>) meta.hash_data.read_value & 0x00000000ffffffff; \
+                 meta.found_flag = ##num; \
+             } \
+         }
 
 
 /*************************************************************************
@@ -53,8 +60,21 @@ struct five_tuple_t {
 // Used by the digest commands to transport data to the local controller
 struct report_data_t {
     five_tuple_t five_tuple;
-    bit<16> flow_count;
+    bit<32> flow_count;
 }
+
+struct report_error_t {
+    error_code_t data;
+}
+
+struct hash_data_t {
+    bit<32> hash_key;
+    bit<32> hash_value;
+    bit<64> read_value;
+    bit<32> read_key;
+}
+
+
 
 // We need fields for: 2 coinflips,
 //                     1 local threshold,
@@ -66,6 +86,8 @@ struct metadata {
     tau_t tau;
     flow_id_t flow_id;
     report_data_t data;
+    hash_data_t hash_data;
+    bit<2> found_flag;
 }
 
 
@@ -177,6 +199,7 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     ///         GENERAL PACKET PROCESSING STUFF        ///
+    report_error_t error_code;
 
     // extracts the five tuple identifying a flow from the packet
     action extractFiveTuple() {
@@ -191,19 +214,23 @@ control MyIngress(inout headers hdr,
     // flow id for register lookup
     // OUT: writes result to meta.flow_id
     action hashFlow() {
-        hash(meta.flow_id, HashAlgorithm.crc32, (bit<1>)0,
+        hash(meta.hash_data.hash_key, HashAlgorithm.crc32, (bit<1>)0,
             {hdr.ipv4.srcAddr,
              hdr.ipv4.dstAddr,
              hdr.tcp.srcPort,
              hdr.tcp.dstPort,
-             hdr.ipv4.protocol},(bit<16>) COUNTER_BIT_WIDTH);
+             hdr.ipv4.protocol},(bit<32>) INT32_MAX);
     }
 
 
         ///               HERD SECTION                  ///
 
+    register<bit<32>>(1) sampling_probability;
+    register<bit<32>>(1) count_start; // equals 1/sampling_probability
 
-    register<bit<COUNTER_BIT_WIDTH>>(COUNTERS) reg_counters;
+    register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_1) hash_table_1;
+    register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_2) hash_table_2;
+    register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_3) hash_table_3;
 
     // sends a hello msg to the local controller with the 5tuple and a flow
     // counter of 0 to indicate the flow is new.
@@ -218,6 +245,10 @@ control MyIngress(inout headers hdr,
     action sendReport() {
         extractFiveTuple();
         digest(1, meta.data);
+    }
+    action sendTableError() {
+        error_code.data = 0x00;
+        digest(1, error_code.data);
     }
 
     // called by a table hit in group_table
@@ -237,7 +268,9 @@ control MyIngress(inout headers hdr,
     // OUT: writes the outcome to the meta.flip_r and meta.flip_s fields of the
     //      packet
     action flip() {
-        uint32_probability safe_p_report = meta.flip_r;
+        uint32_probability p_report = meta.flip_r;
+        uint32_probability p_sample;
+        sampling_probability.read(p_sample, 0);
         hash(meta.flip_s, HashAlgorithm.crc32, (bit<1>)0,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
@@ -246,12 +279,12 @@ control MyIngress(inout headers hdr,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
                 hdr.ipv4.srcAddr}, INT32_MAX);
-        if (meta.flip_s < SAMPLING_PROBABILITY) {
+        if (meta.flip_s < p_sample) {
             meta.flip_s = 1;
         } else {
             meta.flip_s = 0;
         }
-        if (meta.flip_r < safe_p_report) {
+        if (meta.flip_r < p_report) {
             meta.flip_r = 1;
         } else {
             meta.flip_r = 0;
@@ -276,6 +309,7 @@ control MyIngress(inout headers hdr,
         default_action = NoAction;
     }
 
+    /*
 
     // Does the value lookup of a the meta.flow_id field in the key value
     // storage reg_counters (which is a single register atm) and updates it
@@ -284,8 +318,7 @@ control MyIngress(inout headers hdr,
     // change otherwise).
     // If no value is found, a counter is started if the meta.flip_1 field is
     // equal to 1.
-    action updateAndCheck() {
-        //TODO: implement real hash table lookup
+    action updateAndCheckLegacy() {
         hashFlow();
         bit<16> flow_count;
         reg_counters.read(flow_count, meta.flow_id);
@@ -311,23 +344,76 @@ control MyIngress(inout headers hdr,
         reg_counters.write(meta.flow_id, flow_count);
     }
 
+    */
+
 
     apply {
 
         // Herd section //
 
-        if(hdr.ipv4.isValid() && hdr.tcp.isValid()) {
+        if(hdr.ipv4.isValid()) {
             // if we have an entry hit, we get the group parameters and can proceed
             if (group_values.apply().hit) {
                 // simulate coin flips
                 flip();
 
-                // counter lookup
-                updateAndCheck();
+                // reset fields and get hash key
+                meta.found_flag = 0;
+                meta.data.flow_count = 0;
+                hashFlow();
 
+                // search for a stored value
+                HASH_AND_CHECK(1)
+                if (meta.found_flag == 0) {
+                    HASH_AND_CHECK(2);
+                }
+                if (meta.found_flag == 0) {
+                    HASH_AND_CHECK(3);
+                }
+
+
+
+                // send error if no space and value found
+                if (meta.found_flag == 0) {
+                    sendTableError();
+                } else {
+                    // check if we found an empty space, if so, try to sample
+                    if (meta.data.flow_count == 0) {
+                        if (meta.flip_s == 1) {
+                            count_start.read(meta.data.flow_count, 0);
+                        }
+                        meta.flip_r = 0;
+                    // increase counter and check if we have to report
+                    } else {
+                        meta.data.flow_count = meta.data.flow_count + 1;
+                        if (meta.data.flow_count < meta.tau) {
+                            meta.flip_r = 0;
+                        }
+                    }
+                }
+
+                // report and reset counter if necessary
                 if (meta.flip_r == 1) {
                     sendReport();
+                    meta.data.flow_count = 0;
                 }
+
+                // store counter
+                if (meta.data.flow_count > 0) {
+                    meta.hash_data.read_value = (bit<64>) meta.hash_data.hash_value;
+                    meta.hash_data.read_value =  meta.hash_data.read_value << 32;
+                    meta.hash_data.read_value =  meta.hash_data.read_value + (bit<64>) meta.data.flow_count;
+                    if (meta.found_flag == 1) {
+                    hash_table_1.write(meta.hash_data.hash_value, meta.hash_data.read_value);
+                    }
+                    if (meta.found_flag == 2) {
+                    hash_table_2.write(meta.hash_data.hash_value, meta.hash_data.read_value);
+                    }
+                    if (meta.found_flag == 3) {
+                    hash_table_3.write(meta.hash_data.hash_value, meta.hash_data.read_value);
+                    }
+                }
+
             } else {
                 sendHello();
             }
