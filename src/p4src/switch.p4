@@ -12,34 +12,37 @@ typedef bit<32> tau_t;
 typedef bit<32> uint32_probability;
 // Used for hashes of a flow five tuple
 typedef bit<32> flow_id_t;
-typedef bit<8> error_code_t;
 
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 
 // Constants //
 const uint32_probability INT32_MAX = 4294967295;
-
 const bit<16> ipv4_type = 0x800;
 
-
+// Hash table and group table properties
 #define HASH_TABLE_FIELD_WIDHT 64
-#define ENTRIES_HASH_TABLE_1 1000
-#define ENTRIES_HASH_TABLE_2 100
-#define ENTRIES_HASH_TABLE_3 10
+#define ENTRIES_HASH_TABLE_1 250000
+#define ENTRIES_HASH_TABLE_2 50000
+#define ENTRIES_HASH_TABLE_3 10000
 
-#define GROUP_TABLE_SIZE 1000
+#define GROUP_TABLE_SIZE 2<<16
 
 
-#define HASH_AND_CHECK(num) hash(meta.hash_data.hash_value, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, \
+// Does the flow counter lookup for a given hash table.
+// IN:  num defining which hash table should be used
+// REQ: meta.hash_data.hash_key
+// STORED:  found flag (if empty space or flow is found) -> meta.found_flag
+//          flow count (if found) -> meta.data.flow_count
+#define HASH_AND_CHECK(num) hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, \
          hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)ENTRIES_HASH_TABLE_##num); \
-         hash_table_##num.read(meta.hash_data.read_value, meta.hash_data.hash_value); \
-         if (meta.hash_data.read_value == 0) { \
+         hash_table_##num.read(meta.hash_data.value, meta.hash_data.hash_table_entry); \
+         if (meta.hash_data.value == 0) { \
              meta.found_flag = ##num; \
          } else { \
-             meta.hash_data.read_key = (bit<32>) (meta.hash_data.read_value >> 32); \
+             meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32); \
              if (meta.hash_data.read_key == meta.hash_data.hash_key) { \
-                 meta.data.flow_count = (bit<32>) meta.hash_data.read_value & 0x00000000ffffffff; \
+                 meta.data.flow_count = (bit<32>) meta.hash_data.value & 0x00000000ffffffff; \
                  meta.found_flag = ##num; \
              } \
          }
@@ -63,33 +66,30 @@ struct report_data_t {
     bit<32> flow_count;
 }
 
-struct report_error_t {
-    error_code_t data;
-}
-
+// Used by hash functions and the table lookup to store data
 struct hash_data_t {
-    bit<32> hash_key;
-    bit<32> hash_value;
-    bit<64> read_value;
-    bit<32> read_key;
+    flow_id_t hash_key;
+    flow_id_t read_key;
+    bit<32> hash_table_entry;
+    bit<64> value;
 }
 
+// Used for the group table lookup
 struct flow_group_t {
     bit<8> srcGroup;
     bit<8> dstGroup;
 }
 
-
-
 // We need fields for: 2 coinflips,
 //                     1 local threshold,
-//                     1 five-tuple hash,
-//                     1 struct for digest command
+//                     1 report_data struct for digest command
+//                     1 hash_data struct for counter lookup
+//                     1 found_flag to indicate which table we are operating on
+//                     1 flow_group struct for the group_values table lookup
 struct metadata {
     uint32_probability flip_s;
     uint32_probability flip_r;
     tau_t tau;
-    flow_id_t flow_id;
     report_data_t data;
     hash_data_t hash_data;
     bit<2> found_flag;
@@ -205,7 +205,7 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     ///         GENERAL PACKET PROCESSING STUFF        ///
-    report_error_t error_code;
+    bit<4> error_code;
 
     // extracts the five tuple identifying a flow from the packet
     action extractFiveTuple() {
@@ -221,9 +221,8 @@ control MyIngress(inout headers hdr,
         meta.group.dstGroup = (bit<8>) (hdr.ipv4.dstAddr & 0xff000000 >> 24);
         }
 
-    // Hashes the ip.src+dstAddr, ip.protocol and tcp.src+dstAddr to generate a
-    // flow id for register lookup
-    // OUT: writes result to meta.flow_id
+    // Hashes the 5-tuple to generate an id
+    // STORED: hash_key -> meta.hash_data.hash_key
     action hashFlow() {
         hash(meta.hash_data.hash_key, HashAlgorithm.crc32, (bit<1>)0,
             {hdr.ipv4.srcAddr,
@@ -236,9 +235,11 @@ control MyIngress(inout headers hdr,
 
         ///               HERD SECTION                  ///
 
+    // registers set by local controller
     register<bit<32>>(1) sampling_probability;
     register<bit<32>>(1) count_start; // equals 1/sampling_probability
 
+    // hash tables to store counters
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_1) hash_table_1;
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_2) hash_table_2;
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_3) hash_table_3;
@@ -251,21 +252,30 @@ control MyIngress(inout headers hdr,
         digest(1, meta.data);
     }
 
-    // send a report msg to the local controller with the 5tuple and the current
+    // sends a report msg to the local controller with the 5tuple and the current
     // flow counter.
     action sendReport() {
         extractFiveTuple();
         digest(1, meta.data);
     }
-    action sendTableError() {
-        error_code.data = 0x00;
-        digest(1, error_code.data);
+
+    // sends an error message, indicated by an all zero 5-tuple to the
+    // controller. the flow counter is used to transmit the error code.
+    action sendError() {
+        meta.data.five_tuple.srcAddr = 0;
+        meta.data.five_tuple.dstAddr = 0;
+        meta.data.five_tuple.srcPort = 0;
+        meta.data.five_tuple.dstPort = 0;
+        meta.data.five_tuple.protocol = 0;
+        meta.data.flow_count = (bit<32>) error_code;
+        digest(1, meta.data);
     }
 
     // called by a table hit in group_table
     // IN:  group report probability (converted to uint32) p_report,
     //      group parameter tau (threshold)
-    // OUT: Safes the given parameters in meta.tau and meta.flip_r
+    // STORED:  group threshold -> meta.tau
+    //          report probability -> meta.flip_r
     action getValues(uint32_probability p_report, tau_t tau_g) {
         meta.tau = tau_g;
         meta.flip_r = p_report;
@@ -276,8 +286,10 @@ control MyIngress(inout headers hdr,
     //      IDEA: Hash with some RndVal safed in a register
     // Takes timestamps and ip dst/srcAddr and hashes them to a bit 32 value
     // which is compared against the saved probabilities.
-    // OUT: writes the outcome to the meta.flip_r and meta.flip_s fields of the
-    //      packet
+    // REQ: meta.flip_r (report probability)
+    //      sampling_probability(0)
+    // STORED:  sampling coinflip -> meta.flip_s
+    //          report coinflip -> meta.flip_r
     action flip() {
         uint32_probability p_report = meta.flip_r;
         uint32_probability p_sample;
@@ -306,7 +318,6 @@ control MyIngress(inout headers hdr,
     // group id MAT to retrieve the group parameters (local probability
     // and local threshold). a hit calls the getValues action which writes them
     // in the metadata
-    //TODO: better idea for keys?
     table group_values {
         key = {
             meta.group.srcGroup: exact;
@@ -320,56 +331,20 @@ control MyIngress(inout headers hdr,
         default_action = NoAction;
     }
 
-    /*
-
-    // Does the value lookup of a the meta.flow_id field in the key value
-    // storage reg_counters (which is a single register atm) and updates it
-    // with the new value (either +1 or reset to 0). Sets the
-    // meta.flip_r field to 0 if the criteria of a report are not met (No
-    // change otherwise).
-    // If no value is found, a counter is started if the meta.flip_1 field is
-    // equal to 1.
-    action updateAndCheckLegacy() {
-        hashFlow();
-        bit<16> flow_count;
-        reg_counters.read(flow_count, meta.flow_id);
-        // if we found a counter, proceed, else try to sample it
-        if (flow_count > 0) {
-            // if counter is over the threshold, reset and leave meta.flip_r as
-            // is, else increment and set it to false
-            flow_count = flow_count + 1;
-            if (flow_count >= meta.tau) {
-                meta.data.flow_count = flow_count;
-                flow_count = 0;
-            } else {
-                meta.flip_r = 0;
-            }
-        } else {
-            // set meta.flip_r to false since we don’t want to report
-            meta.flip_r = 0;
-            if (meta.flip_s == 1) {
-                flow_count = counter_start;
-            }
-        }
-        // write back adapted flow count
-        reg_counters.write(meta.flow_id, flow_count);
-    }
-
-    */
-
-
     apply {
 
         // Herd section //
 
         if(hdr.ipv4.isValid()) {
+            // extract the first 8 bits of the ip addresses to use in the
+            // group_values table lookup
             extractGroup();
             // if we have an entry hit, we get the group parameters and can proceed
             if (group_values.apply().hit) {
-                // simulate coin flips
+                // simulate coin flips (meta.flip_r is now set)
                 flip();
 
-                // reset fields and get hash key
+                // reset fields and generate flow id
                 meta.found_flag = 0;
                 meta.data.flow_count = 0;
                 hashFlow();
@@ -383,18 +358,18 @@ control MyIngress(inout headers hdr,
                     HASH_AND_CHECK(3);
                 }
 
-
-
                 // send error if no space and value found
                 if (meta.found_flag == 0) {
-                    sendTableError();
+                    meta.flip_r = 0;
+                    error_code = 0x0;
+                    sendError();
                 } else {
                     // check if we found an empty space, if so, try to sample
                     if (meta.data.flow_count == 0) {
                         if (meta.flip_s == 1) {
                             count_start.read(meta.data.flow_count, 0);
                         }
-                    // increase counter and check if we have to report
+                    // increase counter
                     } else {
                         meta.data.flow_count = meta.data.flow_count + 1;
                     }
@@ -410,22 +385,22 @@ control MyIngress(inout headers hdr,
                     meta.data.flow_count = 0;
                 }
 
-                // store counter
-                if (meta.data.flow_count > 0) {
-                    meta.hash_data.read_value = (bit<64>) meta.hash_data.hash_key;
-                    meta.hash_data.read_value =  meta.hash_data.read_value << 32;
-                    meta.hash_data.read_value =  meta.hash_data.read_value + (bit<64>) meta.data.flow_count;
+                // store counter if necessary
+                if (meta.data.flow_count > 0 || meta.flip_r == 1) {
+                    meta.hash_data.value = (bit<64>) meta.hash_data.hash_key;
+                    meta.hash_data.value =  meta.hash_data.value << 32;
+                    meta.hash_data.value =  meta.hash_data.value + (bit<64>) meta.data.flow_count;
                     if (meta.found_flag == 1) {
-                    hash_table_1.write(meta.hash_data.hash_value, meta.hash_data.read_value);
+                    hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
                     }
                     if (meta.found_flag == 2) {
-                    hash_table_2.write(meta.hash_data.hash_value, meta.hash_data.read_value);
+                    hash_table_2.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
                     }
                     if (meta.found_flag == 3) {
-                    hash_table_3.write(meta.hash_data.hash_value, meta.hash_data.read_value);
+                    hash_table_3.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
                     }
                 }
-
+            // no group_values table hit -> send hello message to controller
             } else {
                 sendHello();
             }

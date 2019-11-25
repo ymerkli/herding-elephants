@@ -25,7 +25,7 @@
   },
   "topology": {
     "assignment_strategy": "l2",
-    "links": [["h1", "s1"], ["h2", "s1"], ["h3", "s1"], ["h4","s1"]],
+    "links": [["h1", "s1"], ["h2", "s1"], ["h3", "s1"], ["h4","s1"], ["h5", "s1"]],
     "hosts": {
       "h1": {
       },
@@ -37,10 +37,13 @@
       ,
       "h4": {
       }
+      ,
+      "h5": {
+
+      }
     },
     "switches": {
       "s1": {
-        "cli_input": "s1-commands.txt"
       }
     }
   }
