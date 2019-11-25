@@ -1,0 +1,10 @@
+# Ignore the src/log folder
+src/log
+
+# Ignore the src/pcap folder
+src/pcap
+
+# Ignore all swap files
+*.swp
+
+
