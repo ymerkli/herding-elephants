@@ -244,6 +244,9 @@ control MyIngress(inout headers hdr,
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_2) hash_table_2;
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_3) hash_table_3;
 
+    // used to introduce more randomness in the flip function
+    register<bit<32>>(2) last_coinflips;
+
     // sends a hello msg to the local controller with the 5tuple and a flow
     // counter of 0 to indicate the flow is new.
     action sendHello() {
@@ -293,15 +296,26 @@ control MyIngress(inout headers hdr,
     action flip() {
         uint32_probability p_report = meta.flip_r;
         uint32_probability p_sample;
+        // load last coin flip values to use them as fields in the new coin flip
+        bit<32> last_flip_s;
+        bit<32> last_flip_r;
+        last_coinflips.read(last_flip_s, 0);
+        last_coinflips.read(last_flip_r, 1);
         sampling_probability.read(p_sample, 0);
+        // generate hashes
         hash(meta.flip_s, HashAlgorithm.crc32, (bit<1>)0,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
-                hdr.ipv4.dstAddr}, INT32_MAX);
+                hdr.ipv4.dstAddr, last_flip_r}, INT32_MAX);
         hash(meta.flip_r, HashAlgorithm.crc32, (bit<1>)0,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
-                hdr.ipv4.srcAddr}, INT32_MAX);
+                hdr.ipv4.srcAddr, last_flip_s}, INT32_MAX);
+        // safe hashes
+        last_coinflips.write(0, meta.flip_s);
+        last_coinflips.write(1, meta.flip_r);
+        // compare against the stored probabilities and set the flip fields
+        // accordingly.
         if (meta.flip_s < p_sample) {
             meta.flip_s = 1;
         } else {
