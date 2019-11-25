@@ -9,32 +9,45 @@
         ["tmp_2", 16, false],
         ["tmp_3", 16, false],
         ["tmp_4", 8, false],
-        ["tmp_5", 16, false],
+        ["tmp_5", 32, false],
         ["tmp_6", 32, false],
         ["tmp_7", 32, false],
         ["tmp_8", 16, false],
         ["tmp_9", 16, false],
         ["tmp_10", 8, false],
-        ["tmp_11", 16, false],
-        ["safe_p_report_0", 32, false],
-        ["flow_count_0", 16, false],
+        ["tmp_11", 32, false],
+        ["tmp_12", 32, false],
+        ["tmp_13", 32, false],
+        ["tmp_14", 16, false],
+        ["tmp_15", 16, false],
+        ["tmp_16", 8, false],
+        ["tmp_17", 32, false],
+        ["tmp_18", 64, false],
+        ["tmp_19", 64, false],
+        ["tmp_20", 64, false],
+        ["error_code_0", 4, false],
+        ["p_report_0", 32, false],
+        ["p_sample_0", 32, false],
         ["tmp", 1, false],
         ["cond", 1, false],
         ["cond_0", 1, false],
-        ["cond_1", 1, false],
-        ["pred_1", 1, false],
-        ["cond_2", 1, false],
         ["metadata._flip_s0", 32, false],
         ["metadata._flip_r1", 32, false],
-        ["metadata._tau2", 16, false],
-        ["metadata._flow_id3", 32, false],
-        ["metadata._data_five_tuple_srcAddr4", 32, false],
-        ["metadata._data_five_tuple_dstAddr5", 32, false],
-        ["metadata._data_five_tuple_srcPort6", 16, false],
-        ["metadata._data_five_tuple_dstPort7", 16, false],
-        ["metadata._data_five_tuple_protocol8", 8, false],
-        ["metadata._data_flow_count9", 16, false],
-        ["_padding_0", 2, false]
+        ["metadata._tau2", 32, false],
+        ["metadata._data_five_tuple_srcAddr3", 32, false],
+        ["metadata._data_five_tuple_dstAddr4", 32, false],
+        ["metadata._data_five_tuple_srcPort5", 16, false],
+        ["metadata._data_five_tuple_dstPort6", 16, false],
+        ["metadata._data_five_tuple_protocol7", 8, false],
+        ["metadata._data_flow_count8", 32, false],
+        ["metadata._hash_data_hash_key9", 32, false],
+        ["metadata._hash_data_read_key10", 32, false],
+        ["metadata._hash_data_hash_table_entry11", 32, false],
+        ["metadata._hash_data_value12", 64, false],
+        ["metadata._found_flag13", 2, false],
+        ["metadata._group_srcGroup14", 8, false],
+        ["metadata._group_dstGroup15", 8, false],
+        ["_padding_0", 7, false]
       ]
     },
     {
@@ -271,7 +284,7 @@
       "id" : 0,
       "source_info" : {
         "filename" : "p4src/switch.p4",
-        "line" : 331,
+        "line" : 440,
         "column" : 8,
         "source_fragment" : "MyDeparser"
       },
@@ -282,16 +295,64 @@
   "counter_arrays" : [],
   "register_arrays" : [
     {
-      "name" : "MyIngress.reg_counters",
+      "name" : "MyIngress.sampling_probability",
       "id" : 0,
       "source_info" : {
         "filename" : "p4src/switch.p4",
-        "line" : 166,
+        "line" : 239,
+        "column" : 25,
+        "source_fragment" : "sampling_probability"
+      },
+      "size" : 1,
+      "bitwidth" : 32
+    },
+    {
+      "name" : "MyIngress.count_start",
+      "id" : 1,
+      "source_info" : {
+        "filename" : "p4src/switch.p4",
+        "line" : 240,
+        "column" : 25,
+        "source_fragment" : "count_start"
+      },
+      "size" : 1,
+      "bitwidth" : 32
+    },
+    {
+      "name" : "MyIngress.hash_table_1",
+      "id" : 2,
+      "source_info" : {
+        "filename" : "p4src/switch.p4",
+        "line" : 243,
         "column" : 28,
-        "source_fragment" : "reg_counters"
+        "source_fragment" : "hash_table_1"
       },
       "size" : 1000,
-      "bitwidth" : 16
+      "bitwidth" : 64
+    },
+    {
+      "name" : "MyIngress.hash_table_2",
+      "id" : 3,
+      "source_info" : {
+        "filename" : "p4src/switch.p4",
+        "line" : 244,
+        "column" : 27,
+        "source_fragment" : "hash_table_2"
+      },
+      "size" : 100,
+      "bitwidth" : 64
+    },
+    {
+      "name" : "MyIngress.hash_table_3",
+      "id" : 4,
+      "source_info" : {
+        "filename" : "p4src/switch.p4",
+        "line" : 245,
+        "column" : 26,
+        "source_fragment" : "hash_table_3"
+      },
+      "size" : 10,
+      "bitwidth" : 64
     }
   ],
   "calculations" : [
@@ -302,15 +363,23 @@
       "input" : [
         {
           "type" : "field",
-          "value" : ["standard_metadata", "enq_timestamp"]
-        },
-        {
-          "type" : "field",
-          "value" : ["standard_metadata", "ingress_global_timestamp"]
+          "value" : ["ipv4", "srcAddr"]
         },
         {
           "type" : "field",
           "value" : ["ipv4", "dstAddr"]
+        },
+        {
+          "type" : "field",
+          "value" : ["tcp", "srcPort"]
+        },
+        {
+          "type" : "field",
+          "value" : ["tcp", "dstPort"]
+        },
+        {
+          "type" : "field",
+          "value" : ["ipv4", "protocol"]
         }
       ]
     },
@@ -329,7 +398,7 @@
         },
         {
           "type" : "field",
-          "value" : ["ipv4", "srcAddr"]
+          "value" : ["ipv4", "dstAddr"]
         }
       ]
     },
@@ -337,6 +406,79 @@
       "name" : "calc_1",
       "id" : 2,
       "algo" : "crc32",
+      "input" : [
+        {
+          "type" : "field",
+          "value" : ["standard_metadata", "enq_timestamp"]
+        },
+        {
+          "type" : "field",
+          "value" : ["standard_metadata", "ingress_global_timestamp"]
+        },
+        {
+          "type" : "field",
+          "value" : ["ipv4", "srcAddr"]
+        }
+      ]
+    },
+    {
+      "name" : "calc_2",
+      "id" : 3,
+      "algo" : "crc32_custom",
+      "input" : [
+        {
+          "type" : "field",
+          "value" : ["ipv4", "srcAddr"]
+        },
+        {
+          "type" : "field",
+          "value" : ["ipv4", "dstAddr"]
+        },
+        {
+          "type" : "field",
+          "value" : ["tcp", "srcPort"]
+        },
+        {
+          "type" : "field",
+          "value" : ["tcp", "dstPort"]
+        },
+        {
+          "type" : "field",
+          "value" : ["ipv4", "protocol"]
+        }
+      ]
+    },
+    {
+      "name" : "calc_3",
+      "id" : 4,
+      "algo" : "crc32_custom",
+      "input" : [
+        {
+          "type" : "field",
+          "value" : ["ipv4", "srcAddr"]
+        },
+        {
+          "type" : "field",
+          "value" : ["ipv4", "dstAddr"]
+        },
+        {
+          "type" : "field",
+          "value" : ["tcp", "srcPort"]
+        },
+        {
+          "type" : "field",
+          "value" : ["tcp", "dstPort"]
+        },
+        {
+          "type" : "field",
+          "value" : ["ipv4", "protocol"]
+        }
+      ]
+    },
+    {
+      "name" : "calc_4",
+      "id" : 5,
+      "algo" : "crc32_custom",
       "input" : [
         {
           "type" : "field",
@@ -367,7 +509,7 @@
       "name" : "report_data_t",
       "source_info" : {
         "filename" : "p4src/switch.p4",
-        "line" : 180,
+        "line" : 252,
         "column" : 18,
         "source_fragment" : "meta"
       },
@@ -403,7 +545,7 @@
       "name" : "report_data_t",
       "source_info" : {
         "filename" : "p4src/switch.p4",
-        "line" : 185,
+        "line" : 259,
         "column" : 18,
         "source_fragment" : "meta"
       },
@@ -433,6 +575,42 @@
           "value" : ["scalars", "tmp_11"]
         }
       ]
+    },
+    {
+      "id" : 3,
+      "name" : "report_data_t",
+      "source_info" : {
+        "filename" : "p4src/switch.p4",
+        "line" : 271,
+        "column" : 18,
+        "source_fragment" : "meta"
+      },
+      "elements" : [
+        {
+          "type" : "field",
+          "value" : ["scalars", "tmp_12"]
+        },
+        {
+          "type" : "field",
+          "value" : ["scalars", "tmp_13"]
+        },
+        {
+          "type" : "field",
+          "value" : ["scalars", "tmp_14"]
+        },
+        {
+          "type" : "field",
+          "value" : ["scalars", "tmp_15"]
+        },
+        {
+          "type" : "field",
+          "value" : ["scalars", "tmp_16"]
+        },
+        {
+          "type" : "field",
+          "value" : ["scalars", "tmp_17"]
+        }
+      ]
     }
   ],
   "actions" : [
@@ -443,7 +621,7 @@
       "primitives" : []
     },
     {
-      "name" : "MyIngress.sendHello",
+      "name" : "MyIngress.extractGroup",
       "id" : 1,
       "runtime_data" : [],
       "primitives" : [
@@ -452,7 +630,172 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_srcAddr4"]
+              "value" : ["scalars", "metadata._group_srcGroup14"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "&",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : ">>",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "&",
+                              "left" : {
+                                "type" : "field",
+                                "value" : ["ipv4", "srcAddr"]
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0xff000000"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0x18"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0xffffffff"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 220,
+            "column" : 8,
+            "source_fragment" : "meta.group.srcGroup = (bit<8>) (hdr.ipv4.srcAddr & 0xff000000 >> 24)"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._group_dstGroup15"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "&",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : ">>",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "&",
+                              "left" : {
+                                "type" : "field",
+                                "value" : ["ipv4", "dstAddr"]
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0xff000000"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0x18"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0xffffffff"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 221,
+            "column" : 8,
+            "source_fragment" : "meta.group.dstGroup = (bit<8>) (hdr.ipv4.dstAddr & 0xff000000 >> 24)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.hashFlow",
+      "id" : 2,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "modify_field_with_hash_based_offset",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_key9"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            },
+            {
+              "type" : "calculation",
+              "value" : "calc"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0xffffffff"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 227,
+            "column" : 8,
+            "source_fragment" : "hash(meta.hash_data.hash_key, HashAlgorithm.crc32, (bit<1>)0, ..."
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.sendHello",
+      "id" : 3,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_five_tuple_srcAddr3"]
             },
             {
               "type" : "field",
@@ -461,7 +804,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 170,
+            "line" : 212,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.srcAddr = hdr.ipv4.srcAddr"
           }
@@ -471,7 +814,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_dstAddr5"]
+              "value" : ["scalars", "metadata._data_five_tuple_dstAddr4"]
             },
             {
               "type" : "field",
@@ -480,7 +823,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 171,
+            "line" : 213,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.dstAddr = hdr.ipv4.dstAddr"
           }
@@ -490,7 +833,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_srcPort6"]
+              "value" : ["scalars", "metadata._data_five_tuple_srcPort5"]
             },
             {
               "type" : "field",
@@ -499,7 +842,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 172,
+            "line" : 214,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.srcPort = hdr.tcp.srcPort"
           }
@@ -509,7 +852,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_dstPort7"]
+              "value" : ["scalars", "metadata._data_five_tuple_dstPort6"]
             },
             {
               "type" : "field",
@@ -518,7 +861,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 173,
+            "line" : 215,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.dstPort = hdr.tcp.dstPort"
           }
@@ -528,7 +871,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_protocol8"]
+              "value" : ["scalars", "metadata._data_five_tuple_protocol7"]
             },
             {
               "type" : "field",
@@ -537,7 +880,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 174,
+            "line" : 216,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.protocol = hdr.ipv4.protocol"
           }
@@ -547,16 +890,16 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_flow_count9"]
+              "value" : ["scalars", "metadata._data_flow_count8"]
             },
             {
               "type" : "hexstr",
-              "value" : "0x0000"
+              "value" : "0x00000000"
             }
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 179,
+            "line" : 251,
             "column" : 8,
             "source_fragment" : "meta.data.flow_count = 0"
           }
@@ -575,7 +918,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 170,
+            "line" : 212,
             "column" : 39,
             "source_fragment" : "hdr.ipv4.srcAddr"
           }
@@ -594,7 +937,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 171,
+            "line" : 213,
             "column" : 39,
             "source_fragment" : "hdr.ipv4.dstAddr"
           }
@@ -613,7 +956,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 172,
+            "line" : 214,
             "column" : 39,
             "source_fragment" : "hdr.tcp.srcPort"
           }
@@ -632,7 +975,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 173,
+            "line" : 215,
             "column" : 39,
             "source_fragment" : "hdr.tcp.dstPort"
           }
@@ -651,7 +994,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 174,
+            "line" : 216,
             "column" : 40,
             "source_fragment" : "hdr.ipv4.protocol"
           }
@@ -665,12 +1008,12 @@
             },
             {
               "type" : "hexstr",
-              "value" : "0x0000"
+              "value" : "0x00000000"
             }
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 179,
+            "line" : 251,
             "column" : 31,
             "source_fragment" : "0"
           }
@@ -689,7 +1032,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 180,
+            "line" : 252,
             "column" : 8,
             "source_fragment" : "digest(1, meta.data)"
           }
@@ -698,7 +1041,7 @@
     },
     {
       "name" : "MyIngress.sendReport",
-      "id" : 2,
+      "id" : 4,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -706,7 +1049,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_srcAddr4"]
+              "value" : ["scalars", "metadata._data_five_tuple_srcAddr3"]
             },
             {
               "type" : "field",
@@ -715,7 +1058,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 170,
+            "line" : 212,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.srcAddr = hdr.ipv4.srcAddr"
           }
@@ -725,7 +1068,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_dstAddr5"]
+              "value" : ["scalars", "metadata._data_five_tuple_dstAddr4"]
             },
             {
               "type" : "field",
@@ -734,7 +1077,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 171,
+            "line" : 213,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.dstAddr = hdr.ipv4.dstAddr"
           }
@@ -744,7 +1087,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_srcPort6"]
+              "value" : ["scalars", "metadata._data_five_tuple_srcPort5"]
             },
             {
               "type" : "field",
@@ -753,7 +1096,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 172,
+            "line" : 214,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.srcPort = hdr.tcp.srcPort"
           }
@@ -763,7 +1106,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_dstPort7"]
+              "value" : ["scalars", "metadata._data_five_tuple_dstPort6"]
             },
             {
               "type" : "field",
@@ -772,7 +1115,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 173,
+            "line" : 215,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.dstPort = hdr.tcp.dstPort"
           }
@@ -782,7 +1125,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_five_tuple_protocol8"]
+              "value" : ["scalars", "metadata._data_five_tuple_protocol7"]
             },
             {
               "type" : "field",
@@ -791,7 +1134,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 174,
+            "line" : 216,
             "column" : 8,
             "source_fragment" : "meta.data.five_tuple.protocol = hdr.ipv4.protocol"
           }
@@ -810,7 +1153,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 170,
+            "line" : 212,
             "column" : 39,
             "source_fragment" : "hdr.ipv4.srcAddr"
           }
@@ -829,7 +1172,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 171,
+            "line" : 213,
             "column" : 39,
             "source_fragment" : "hdr.ipv4.dstAddr"
           }
@@ -848,7 +1191,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 172,
+            "line" : 214,
             "column" : 39,
             "source_fragment" : "hdr.tcp.srcPort"
           }
@@ -867,7 +1210,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 173,
+            "line" : 215,
             "column" : 39,
             "source_fragment" : "hdr.tcp.dstPort"
           }
@@ -886,7 +1229,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 174,
+            "line" : 216,
             "column" : 40,
             "source_fragment" : "hdr.ipv4.protocol"
           }
@@ -900,12 +1243,12 @@
             },
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_flow_count9"]
+              "value" : ["scalars", "metadata._data_flow_count8"]
             }
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 185,
+            "line" : 259,
             "column" : 18,
             "source_fragment" : "meta"
           }
@@ -924,7 +1267,287 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 185,
+            "line" : 259,
+            "column" : 8,
+            "source_fragment" : "digest(1, meta.data)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "MyIngress.sendError",
+      "id" : 5,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_five_tuple_srcAddr3"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 265,
+            "column" : 8,
+            "source_fragment" : "meta.data.five_tuple.srcAddr = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_five_tuple_dstAddr4"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 266,
+            "column" : 8,
+            "source_fragment" : "meta.data.five_tuple.dstAddr = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_five_tuple_srcPort5"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x0000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 267,
+            "column" : 8,
+            "source_fragment" : "meta.data.five_tuple.srcPort = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_five_tuple_dstPort6"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x0000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 268,
+            "column" : 8,
+            "source_fragment" : "meta.data.five_tuple.dstPort = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_five_tuple_protocol7"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 269,
+            "column" : 8,
+            "source_fragment" : "meta.data.five_tuple.protocol = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_flow_count8"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["scalars", "error_code_0"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 270,
+            "column" : 8,
+            "source_fragment" : "meta.data.flow_count = (bit<32>) error_code"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_12"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 265,
+            "column" : 39,
+            "source_fragment" : "0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_13"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 266,
+            "column" : 39,
+            "source_fragment" : "0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_14"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x0000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 267,
+            "column" : 39,
+            "source_fragment" : "0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_15"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x0000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 268,
+            "column" : 39,
+            "source_fragment" : "0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_16"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 269,
+            "column" : 40,
+            "source_fragment" : "0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_17"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["scalars", "error_code_0"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 270,
+            "column" : 31,
+            "source_fragment" : "(bit<32>) error_code"
+          }
+        },
+        {
+          "op" : "generate_digest",
+          "parameters" : [
+            {
+              "type" : "hexstr",
+              "value" : "0x00000001"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x3"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 271,
             "column" : 8,
             "source_fragment" : "digest(1, meta.data)"
           }
@@ -933,7 +1556,7 @@
     },
     {
       "name" : "MyIngress.getValues",
-      "id" : 3,
+      "id" : 6,
       "runtime_data" : [
         {
           "name" : "p_report",
@@ -941,7 +1564,7 @@
         },
         {
           "name" : "tau_g",
-          "bitwidth" : 16
+          "bitwidth" : 32
         }
       ],
       "primitives" : [
@@ -959,7 +1582,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 193,
+            "line" : 280,
             "column" : 8,
             "source_fragment" : "meta.tau = tau_g"
           }
@@ -978,7 +1601,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 194,
+            "line" : 281,
             "column" : 8,
             "source_fragment" : "meta.flip_r = p_report"
           }
@@ -987,7 +1610,7 @@
     },
     {
       "name" : "MyIngress.flip",
-      "id" : 4,
+      "id" : 7,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -995,7 +1618,7 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "safe_p_report_0"]
+              "value" : ["scalars", "p_report_0"]
             },
             {
               "type" : "field",
@@ -1004,9 +1627,32 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 205,
+            "line" : 294,
             "column" : 8,
-            "source_fragment" : "uint32_probability safe_p_report = meta.flip_r;"
+            "source_fragment" : "uint32_probability p_report = meta.flip_r;"
+          }
+        },
+        {
+          "op" : "register_read",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "p_sample_0"]
+            },
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.sampling_probability"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 296,
+            "column" : 8,
+            "source_fragment" : "sampling_probability.read(p_sample, 0)"
           }
         },
         {
@@ -1022,7 +1668,7 @@
             },
             {
               "type" : "calculation",
-              "value" : "calc"
+              "value" : "calc_0"
             },
             {
               "type" : "hexstr",
@@ -1031,7 +1677,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 206,
+            "line" : 297,
             "column" : 8,
             "source_fragment" : "hash(meta.flip_s, HashAlgorithm.crc32, (bit<1>)0, ..."
           }
@@ -1049,7 +1695,7 @@
             },
             {
               "type" : "calculation",
-              "value" : "calc_0"
+              "value" : "calc_1"
             },
             {
               "type" : "hexstr",
@@ -1058,7 +1704,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 210,
+            "line" : 301,
             "column" : 8,
             "source_fragment" : "hash(meta.flip_r, HashAlgorithm.crc32, (bit<1>)0, ..."
           }
@@ -1086,8 +1732,8 @@
                         "value" : ["scalars", "metadata._flip_s0"]
                       },
                       "right" : {
-                        "type" : "hexstr",
-                        "value" : "0x40000000"
+                        "type" : "field",
+                        "value" : ["scalars", "p_sample_0"]
                       }
                     }
                   }
@@ -1126,8 +1772,8 @@
                         "value" : ["scalars", "metadata._flip_s0"]
                       },
                       "right" : {
-                        "type" : "hexstr",
-                        "value" : "0x40000000"
+                        "type" : "field",
+                        "value" : ["scalars", "p_sample_0"]
                       }
                     }
                   }
@@ -1137,7 +1783,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 215,
+            "line" : 306,
             "column" : 12,
             "source_fragment" : "meta.flip_s ="
           }
@@ -1217,7 +1863,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 217,
+            "line" : 308,
             "column" : 12,
             "source_fragment" : "meta.flip_s ="
           }
@@ -1246,7 +1892,7 @@
                       },
                       "right" : {
                         "type" : "field",
-                        "value" : ["scalars", "safe_p_report_0"]
+                        "value" : ["scalars", "p_report_0"]
                       }
                     }
                   }
@@ -1286,7 +1932,7 @@
                       },
                       "right" : {
                         "type" : "field",
-                        "value" : ["scalars", "safe_p_report_0"]
+                        "value" : ["scalars", "p_report_0"]
                       }
                     }
                   }
@@ -1296,7 +1942,7 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 220,
+            "line" : 311,
             "column" : 12,
             "source_fragment" : "meta.flip_r ="
           }
@@ -1376,677 +2022,16 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 222,
+            "line" : 313,
             "column" : 12,
             "source_fragment" : "meta.flip_r ="
-          }
-        }
-      ]
-    },
-    {
-      "name" : "MyIngress.updateAndCheck",
-      "id" : 5,
-      "runtime_data" : [],
-      "primitives" : [
-        {
-          "op" : "modify_field_with_hash_based_offset",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "metadata._flow_id3"]
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x00"
-            },
-            {
-              "type" : "calculation",
-              "value" : "calc_1"
-            },
-            {
-              "type" : "hexstr",
-              "value" : "0x0010"
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 231,
-            "column" : 8,
-            "source_fragment" : "hash(meta.flow_id, HashAlgorithm.crc32, (bit<1>)0, ..."
-          }
-        },
-        {
-          "op" : "register_read",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "flow_count_0"]
-            },
-            {
-              "type" : "register_array",
-              "value" : "MyIngress.reg_counters"
-            },
-            {
-              "type" : "field",
-              "value" : ["scalars", "metadata._flow_id3"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 259,
-            "column" : 8,
-            "source_fragment" : "reg_counters.read(flow_count, meta.flow_id)"
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "cond_1"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "b2d",
-                  "left" : null,
-                  "right" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : ">",
-                      "left" : {
-                        "type" : "field",
-                        "value" : ["scalars", "flow_count_0"]
-                      },
-                      "right" : {
-                        "type" : "hexstr",
-                        "value" : "0x0000"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "pred_1"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "b2d",
-                  "left" : null,
-                  "right" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : ">",
-                      "left" : {
-                        "type" : "field",
-                        "value" : ["scalars", "flow_count_0"]
-                      },
-                      "right" : {
-                        "type" : "hexstr",
-                        "value" : "0x0000"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "cond_2"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "b2d",
-                  "left" : null,
-                  "right" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : ">=",
-                      "left" : {
-                        "type" : "field",
-                        "value" : ["scalars", "flow_count_0"]
-                      },
-                      "right" : {
-                        "type" : "field",
-                        "value" : ["scalars", "metadata._tau2"]
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "metadata._data_flow_count9"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "?",
-                  "left" : {
-                    "type" : "field",
-                    "value" : ["scalars", "flow_count_0"]
-                  },
-                  "right" : {
-                    "type" : "field",
-                    "value" : ["scalars", "metadata._data_flow_count9"]
-                  },
-                  "cond" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "and",
-                      "left" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : ">",
-                          "left" : {
-                            "type" : "field",
-                            "value" : ["scalars", "flow_count_0"]
-                          },
-                          "right" : {
-                            "type" : "hexstr",
-                            "value" : "0x0000"
-                          }
-                        }
-                      },
-                      "right" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : ">=",
-                          "left" : {
-                            "type" : "field",
-                            "value" : ["scalars", "flow_count_0"]
-                          },
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "metadata._tau2"]
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 265,
-            "column" : 16,
-            "source_fragment" : "meta.data.flow_count ="
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "flow_count_0"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "?",
-                  "left" : {
-                    "type" : "hexstr",
-                    "value" : "0x0000"
-                  },
-                  "right" : {
-                    "type" : "field",
-                    "value" : ["scalars", "flow_count_0"]
-                  },
-                  "cond" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "and",
-                      "left" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : ">",
-                          "left" : {
-                            "type" : "field",
-                            "value" : ["scalars", "flow_count_0"]
-                          },
-                          "right" : {
-                            "type" : "hexstr",
-                            "value" : "0x0000"
-                          }
-                        }
-                      },
-                      "right" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : ">=",
-                          "left" : {
-                            "type" : "field",
-                            "value" : ["scalars", "flow_count_0"]
-                          },
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "metadata._tau2"]
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 266,
-            "column" : 16,
-            "source_fragment" : "flow_count ="
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "cond_2"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "b2d",
-                  "left" : null,
-                  "right" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "not",
-                      "left" : null,
-                      "right" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "d2b",
-                          "left" : null,
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "cond_2"]
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "metadata._flip_r1"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "?",
-                  "left" : {
-                    "type" : "hexstr",
-                    "value" : "0x00000000"
-                  },
-                  "right" : {
-                    "type" : "field",
-                    "value" : ["scalars", "metadata._flip_r1"]
-                  },
-                  "cond" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "and",
-                      "left" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "d2b",
-                          "left" : null,
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "pred_1"]
-                          }
-                        }
-                      },
-                      "right" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "d2b",
-                          "left" : null,
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "cond_2"]
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 268,
-            "column" : 16,
-            "source_fragment" : "meta.flip_r ="
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "flow_count_0"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "?",
-                  "left" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "&",
-                      "left" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "+",
-                          "left" : {
-                            "type" : "field",
-                            "value" : ["scalars", "flow_count_0"]
-                          },
-                          "right" : {
-                            "type" : "hexstr",
-                            "value" : "0x0001"
-                          }
-                        }
-                      },
-                      "right" : {
-                        "type" : "hexstr",
-                        "value" : "0xffff"
-                      }
-                    }
-                  },
-                  "right" : {
-                    "type" : "field",
-                    "value" : ["scalars", "flow_count_0"]
-                  },
-                  "cond" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "and",
-                      "left" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "d2b",
-                          "left" : null,
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "pred_1"]
-                          }
-                        }
-                      },
-                      "right" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "d2b",
-                          "left" : null,
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "cond_2"]
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 269,
-            "column" : 16,
-            "source_fragment" : "flow_count ="
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "cond_1"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "b2d",
-                  "left" : null,
-                  "right" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "not",
-                      "left" : null,
-                      "right" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "d2b",
-                          "left" : null,
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "cond_1"]
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "pred_1"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "b2d",
-                  "left" : null,
-                  "right" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "d2b",
-                      "left" : null,
-                      "right" : {
-                        "type" : "field",
-                        "value" : ["scalars", "cond_1"]
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "metadata._flip_r1"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "?",
-                  "left" : {
-                    "type" : "hexstr",
-                    "value" : "0x00000000"
-                  },
-                  "right" : {
-                    "type" : "field",
-                    "value" : ["scalars", "metadata._flip_r1"]
-                  },
-                  "cond" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "d2b",
-                      "left" : null,
-                      "right" : {
-                        "type" : "field",
-                        "value" : ["scalars", "cond_1"]
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 273,
-            "column" : 12,
-            "source_fragment" : "meta.flip_r ="
-          }
-        },
-        {
-          "op" : "assign",
-          "parameters" : [
-            {
-              "type" : "field",
-              "value" : ["scalars", "flow_count_0"]
-            },
-            {
-              "type" : "expression",
-              "value" : {
-                "type" : "expression",
-                "value" : {
-                  "op" : "?",
-                  "left" : {
-                    "type" : "hexstr",
-                    "value" : "0x0004"
-                  },
-                  "right" : {
-                    "type" : "field",
-                    "value" : ["scalars", "flow_count_0"]
-                  },
-                  "cond" : {
-                    "type" : "expression",
-                    "value" : {
-                      "op" : "and",
-                      "left" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "d2b",
-                          "left" : null,
-                          "right" : {
-                            "type" : "field",
-                            "value" : ["scalars", "cond_1"]
-                          }
-                        }
-                      },
-                      "right" : {
-                        "type" : "expression",
-                        "value" : {
-                          "op" : "==",
-                          "left" : {
-                            "type" : "field",
-                            "value" : ["scalars", "metadata._flip_s0"]
-                          },
-                          "right" : {
-                            "type" : "hexstr",
-                            "value" : "0x00000001"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 275,
-            "column" : 16,
-            "source_fragment" : "flow_count ="
-          }
-        },
-        {
-          "op" : "register_write",
-          "parameters" : [
-            {
-              "type" : "register_array",
-              "value" : "MyIngress.reg_counters"
-            },
-            {
-              "type" : "field",
-              "value" : ["scalars", "metadata._flow_id3"]
-            },
-            {
-              "type" : "field",
-              "value" : ["scalars", "flow_count_0"]
-            }
-          ],
-          "source_info" : {
-            "filename" : "p4src/switch.p4",
-            "line" : 279,
-            "column" : 8,
-            "source_fragment" : "reg_counters.write(meta.flow_id, flow_count)"
           }
         }
       ]
     },
     {
       "name" : "act",
-      "id" : 6,
+      "id" : 8,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -2076,7 +2061,7 @@
     },
     {
       "name" : "act_0",
-      "id" : 7,
+      "id" : 9,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -2105,8 +2090,8 @@
       ]
     },
     {
-      "name" : "switch291",
-      "id" : 8,
+      "name" : "switch348",
+      "id" : 10,
       "runtime_data" : [],
       "primitives" : [
         {
@@ -2114,7 +2099,78 @@
           "parameters" : [
             {
               "type" : "field",
-              "value" : ["scalars", "metadata._data_flow_count9"]
+              "value" : ["scalars", "metadata._found_flag13"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 348,
+            "column" : 16,
+            "source_fragment" : "meta.found_flag = 0"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_flow_count8"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 349,
+            "column" : 16,
+            "source_fragment" : "meta.data.flow_count = 0"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch353",
+      "id" : 11,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._found_flag13"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
+            "column" : 307,
+            "source_fragment" : "meta.found_flag =1"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch353_0",
+      "id" : 12,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_flow_count8"]
             },
             {
               "type" : "expression",
@@ -2124,11 +2180,11 @@
                   "op" : "&",
                   "left" : {
                     "type" : "field",
-                    "value" : ["scalars", "metadata._flip_r1"]
+                    "value" : ["scalars", "metadata._hash_data_value12"]
                   },
                   "right" : {
                     "type" : "hexstr",
-                    "value" : "0xffff"
+                    "value" : "0xffffffff"
                   }
                 }
               }
@@ -2136,9 +2192,1210 @@
           ],
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 291,
+            "line" : 353,
+            "column" : 460,
+            "source_fragment" : "meta.data.flow_count = (bit<32>) meta.hash_data.value"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._found_flag13"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x01"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
+            "column" : 536,
+            "source_fragment" : "meta.found_flag =1"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch353_1",
+      "id" : 13,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_read_key10"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "&",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : ">>",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._hash_data_value12"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0x20"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0xffffffffffffffff"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
+            "column" : 336,
+            "source_fragment" : "meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch353_2",
+      "id" : 14,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "modify_field_with_hash_based_offset",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            },
+            {
+              "type" : "calculation",
+              "value" : "calc_2"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x000003e8"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
             "column" : 16,
-            "source_fragment" : "meta.data.flow_count = (bit<16>) meta.flip_r"
+            "source_fragment" : "hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)1000)"
+          }
+        },
+        {
+          "op" : "register_read",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_value12"]
+            },
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.hash_table_1"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
+            "column" : 200,
+            "source_fragment" : "hash_table_1.read(meta.hash_data.value, meta.hash_data.hash_table_entry)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch355",
+      "id" : 15,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._found_flag13"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x02"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 310,
+            "source_fragment" : "meta.found_flag =2"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch355_0",
+      "id" : 16,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_flow_count8"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["scalars", "metadata._hash_data_value12"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 463,
+            "source_fragment" : "meta.data.flow_count = (bit<32>) meta.hash_data.value"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._found_flag13"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x02"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 539,
+            "source_fragment" : "meta.found_flag =2"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch355_1",
+      "id" : 17,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_read_key10"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "&",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : ">>",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._hash_data_value12"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0x20"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0xffffffffffffffff"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 339,
+            "source_fragment" : "meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch355_2",
+      "id" : 18,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "modify_field_with_hash_based_offset",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            },
+            {
+              "type" : "calculation",
+              "value" : "calc_3"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000064"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 20,
+            "source_fragment" : "hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)100)"
+          }
+        },
+        {
+          "op" : "register_read",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_value12"]
+            },
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.hash_table_2"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 203,
+            "source_fragment" : "hash_table_2.read(meta.hash_data.value, meta.hash_data.hash_table_entry)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch358",
+      "id" : 19,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._found_flag13"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x03"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 309,
+            "source_fragment" : "meta.found_flag =3"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch358_0",
+      "id" : 20,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_flow_count8"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["scalars", "metadata._hash_data_value12"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 462,
+            "source_fragment" : "meta.data.flow_count = (bit<32>) meta.hash_data.value"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._found_flag13"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x03"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 538,
+            "source_fragment" : "meta.found_flag =3"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch358_1",
+      "id" : 21,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_read_key10"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "&",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : ">>",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._hash_data_value12"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0x20"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0xffffffffffffffff"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 338,
+            "source_fragment" : "meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch358_2",
+      "id" : 22,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "modify_field_with_hash_based_offset",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            },
+            {
+              "type" : "calculation",
+              "value" : "calc_4"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x0000000a"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 20,
+            "source_fragment" : "hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)10)"
+          }
+        },
+        {
+          "op" : "register_read",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_value12"]
+            },
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.hash_table_3"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 202,
+            "source_fragment" : "hash_table_3.read(meta.hash_data.value, meta.hash_data.hash_table_entry)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch363",
+      "id" : 23,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "error_code_0"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 363,
+            "column" : 20,
+            "source_fragment" : "error_code = 0x0"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch369",
+      "id" : 24,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "register_read",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_flow_count8"]
+            },
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.count_start"
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 369,
+            "column" : 28,
+            "source_fragment" : "count_start.read(meta.data.flow_count, 0)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch373",
+      "id" : 25,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_flow_count8"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "+",
+                      "left" : {
+                        "type" : "field",
+                        "value" : ["scalars", "metadata._data_flow_count8"]
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0x00000001"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 373,
+            "column" : 24,
+            "source_fragment" : "meta.data.flow_count = meta.data.flow_count + 1"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch377",
+      "id" : 26,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._flip_r1"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 377,
+            "column" : 24,
+            "source_fragment" : "meta.flip_r = 0"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch384",
+      "id" : 27,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._data_flow_count8"]
+            },
+            {
+              "type" : "hexstr",
+              "value" : "0x00000000"
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 384,
+            "column" : 20,
+            "source_fragment" : "meta.data.flow_count = 0"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch393",
+      "id" : 28,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_18"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "+",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "<<",
+                              "left" : {
+                                "type" : "expression",
+                                "value" : {
+                                  "op" : "&",
+                                  "left" : {
+                                    "type" : "field",
+                                    "value" : ["scalars", "metadata._hash_data_hash_key9"]
+                                  },
+                                  "right" : {
+                                    "type" : "hexstr",
+                                    "value" : "0xffffffffffffffff"
+                                  }
+                                }
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0x20"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._data_flow_count8"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffffffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 391,
+            "column" : 43,
+            "source_fragment" : "meta.hash_data.value + (bit<64>) meta.data.flow_count"
+          }
+        },
+        {
+          "op" : "register_write",
+          "parameters" : [
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.hash_table_1"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_18"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 393,
+            "column" : 20,
+            "source_fragment" : "hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch389",
+      "id" : 29,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_value12"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["scalars", "metadata._hash_data_hash_key9"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffffffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 389,
+            "column" : 20,
+            "source_fragment" : "meta.hash_data.value = (bit<64>) meta.hash_data.hash_key"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_value12"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "<<",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._hash_data_hash_key9"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0x20"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffffffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 390,
+            "column" : 20,
+            "source_fragment" : "meta.hash_data.value = meta.hash_data.value << 32"
+          }
+        },
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_value12"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "+",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "<<",
+                              "left" : {
+                                "type" : "expression",
+                                "value" : {
+                                  "op" : "&",
+                                  "left" : {
+                                    "type" : "field",
+                                    "value" : ["scalars", "metadata._hash_data_hash_key9"]
+                                  },
+                                  "right" : {
+                                    "type" : "hexstr",
+                                    "value" : "0xffffffffffffffff"
+                                  }
+                                }
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0x20"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._data_flow_count8"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffffffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 391,
+            "column" : 20,
+            "source_fragment" : "meta.hash_data.value = meta.hash_data.value + (bit<64>) meta.data.flow_count"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch396",
+      "id" : 30,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_19"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "+",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "<<",
+                              "left" : {
+                                "type" : "expression",
+                                "value" : {
+                                  "op" : "&",
+                                  "left" : {
+                                    "type" : "field",
+                                    "value" : ["scalars", "metadata._hash_data_hash_key9"]
+                                  },
+                                  "right" : {
+                                    "type" : "hexstr",
+                                    "value" : "0xffffffffffffffff"
+                                  }
+                                }
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0x20"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._data_flow_count8"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffffffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 391,
+            "column" : 43,
+            "source_fragment" : "meta.hash_data.value + (bit<64>) meta.data.flow_count"
+          }
+        },
+        {
+          "op" : "register_write",
+          "parameters" : [
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.hash_table_2"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_19"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 396,
+            "column" : 20,
+            "source_fragment" : "hash_table_2.write(meta.hash_data.hash_table_entry, meta.hash_data.value)"
+          }
+        }
+      ]
+    },
+    {
+      "name" : "switch399",
+      "id" : 31,
+      "runtime_data" : [],
+      "primitives" : [
+        {
+          "op" : "assign",
+          "parameters" : [
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_20"]
+            },
+            {
+              "type" : "expression",
+              "value" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "+",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "expression",
+                            "value" : {
+                              "op" : "<<",
+                              "left" : {
+                                "type" : "expression",
+                                "value" : {
+                                  "op" : "&",
+                                  "left" : {
+                                    "type" : "field",
+                                    "value" : ["scalars", "metadata._hash_data_hash_key9"]
+                                  },
+                                  "right" : {
+                                    "type" : "hexstr",
+                                    "value" : "0xffffffffffffffff"
+                                  }
+                                }
+                              },
+                              "right" : {
+                                "type" : "hexstr",
+                                "value" : "0x20"
+                              }
+                            }
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : "&",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._data_flow_count8"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0xffffffffffffffff"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffffffffffff"
+                  }
+                }
+              }
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 391,
+            "column" : 43,
+            "source_fragment" : "meta.hash_data.value + (bit<64>) meta.data.flow_count"
+          }
+        },
+        {
+          "op" : "register_write",
+          "parameters" : [
+            {
+              "type" : "register_array",
+              "value" : "MyIngress.hash_table_3"
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "metadata._hash_data_hash_table_entry11"]
+            },
+            {
+              "type" : "field",
+              "value" : ["scalars", "tmp_20"]
+            }
+          ],
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 399,
+            "column" : 20,
+            "source_fragment" : "hash_table_3.write(meta.hash_data.hash_table_entry, meta.hash_data.value)"
           }
         }
       ]
@@ -2150,33 +3407,62 @@
       "id" : 0,
       "source_info" : {
         "filename" : "p4src/switch.p4",
-        "line" : 162,
+        "line" : 203,
         "column" : 8,
         "source_fragment" : "MyIngress"
       },
       "init_table" : "node_2",
       "tables" : [
         {
-          "name" : "MyIngress.group_values",
+          "name" : "tbl_extractGroup",
           "id" : 0,
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 241,
+            "line" : 341,
+            "column" : 12,
+            "source_fragment" : "extractGroup()"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [1],
+          "actions" : ["MyIngress.extractGroup"],
+          "base_default_next" : "MyIngress.group_values",
+          "next_tables" : {
+            "MyIngress.extractGroup" : "MyIngress.group_values"
+          },
+          "default_entry" : {
+            "action_id" : 1,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "MyIngress.group_values",
+          "id" : 1,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 321,
             "column" : 10,
             "source_fragment" : "group_values"
           },
           "key" : [
             {
               "match_type" : "exact",
-              "name" : "hdr.ipv4.srcAddr & 0xff000000",
-              "target" : ["ipv4", "srcAddr"],
-              "mask" : "0xff000000"
+              "name" : "meta.group.srcGroup",
+              "target" : ["scalars", "metadata._group_srcGroup14"],
+              "mask" : null
             },
             {
               "match_type" : "exact",
-              "name" : "hdr.ipv4.dstAddr & 0xff000000",
-              "target" : ["ipv4", "dstAddr"],
-              "mask" : "0xff000000"
+              "name" : "meta.group.dstGroup",
+              "target" : ["scalars", "metadata._group_dstGroup15"],
+              "mask" : null
             }
           ],
           "match_type" : "exact",
@@ -2185,7 +3471,7 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [3, 0],
+          "action_ids" : [6, 0],
           "actions" : ["MyIngress.getValues", "NoAction"],
           "base_default_next" : null,
           "next_tables" : {
@@ -2201,29 +3487,6 @@
         },
         {
           "name" : "tbl_act",
-          "id" : 1,
-          "key" : [],
-          "match_type" : "exact",
-          "type" : "simple",
-          "max_size" : 1024,
-          "with_counters" : false,
-          "support_timeout" : false,
-          "direct_meters" : null,
-          "action_ids" : [6],
-          "actions" : ["act"],
-          "base_default_next" : "node_6",
-          "next_tables" : {
-            "act" : "node_6"
-          },
-          "default_entry" : {
-            "action_id" : 6,
-            "action_const" : true,
-            "action_data" : [],
-            "action_entry_const" : true
-          }
-        },
-        {
-          "name" : "tbl_act_0",
           "id" : 2,
           "key" : [],
           "match_type" : "exact",
@@ -2232,14 +3495,37 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [7],
-          "actions" : ["act_0"],
-          "base_default_next" : "node_6",
+          "action_ids" : [8],
+          "actions" : ["act"],
+          "base_default_next" : "node_7",
           "next_tables" : {
-            "act_0" : "node_6"
+            "act" : "node_7"
           },
           "default_entry" : {
-            "action_id" : 7,
+            "action_id" : 8,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_act_0",
+          "id" : 3,
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [9],
+          "actions" : ["act_0"],
+          "base_default_next" : "node_7",
+          "next_tables" : {
+            "act_0" : "node_7"
+          },
+          "default_entry" : {
+            "action_id" : 9,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2247,10 +3533,10 @@
         },
         {
           "name" : "tbl_flip",
-          "id" : 3,
+          "id" : 4,
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 288,
+            "line" : 345,
             "column" : 16,
             "source_fragment" : "flip()"
           },
@@ -2261,26 +3547,113 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [4],
+          "action_ids" : [7],
           "actions" : ["MyIngress.flip"],
-          "base_default_next" : "tbl_switch291",
+          "base_default_next" : "tbl_switch348",
           "next_tables" : {
-            "MyIngress.flip" : "tbl_switch291"
+            "MyIngress.flip" : "tbl_switch348"
           },
           "default_entry" : {
-            "action_id" : 4,
+            "action_id" : 7,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_switch291",
-          "id" : 4,
+          "name" : "tbl_switch348",
+          "id" : 5,
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 291,
-            "column" : 37,
+            "line" : 348,
+            "column" : 32,
+            "source_fragment" : "= 0; ..."
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [10],
+          "actions" : ["switch348"],
+          "base_default_next" : "tbl_hashFlow",
+          "next_tables" : {
+            "switch348" : "tbl_hashFlow"
+          },
+          "default_entry" : {
+            "action_id" : 10,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_hashFlow",
+          "id" : 6,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 350,
+            "column" : 16,
+            "source_fragment" : "hashFlow()"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [2],
+          "actions" : ["MyIngress.hashFlow"],
+          "base_default_next" : "tbl_switch353",
+          "next_tables" : {
+            "MyIngress.hashFlow" : "tbl_switch353"
+          },
+          "default_entry" : {
+            "action_id" : 2,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch353",
+          "id" : 7,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
+            "column" : 16,
+            "source_fragment" : "hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)1000); hash_table_1.read(meta.hash_data.value, meta.hash_data.hash_table_entry)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [14],
+          "actions" : ["switch353_2"],
+          "base_default_next" : "node_12",
+          "next_tables" : {
+            "switch353_2" : "node_12"
+          },
+          "default_entry" : {
+            "action_id" : 14,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch353_0",
+          "id" : 8,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
+            "column" : 323,
             "source_fragment" : "="
           },
           "key" : [],
@@ -2290,27 +3663,346 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [8],
-          "actions" : ["switch291"],
-          "base_default_next" : "tbl_updateAndCheck",
+          "action_ids" : [11],
+          "actions" : ["switch353"],
+          "base_default_next" : "node_17",
           "next_tables" : {
-            "switch291" : "tbl_updateAndCheck"
+            "switch353" : "node_17"
           },
           "default_entry" : {
-            "action_id" : 8,
+            "action_id" : 11,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
           }
         },
         {
-          "name" : "tbl_updateAndCheck",
-          "id" : 5,
+          "name" : "tbl_switch353_1",
+          "id" : 9,
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 293,
-            "column" : 16,
-            "source_fragment" : "updateAndCheck()"
+            "line" : 353,
+            "column" : 360,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [13],
+          "actions" : ["switch353_1"],
+          "base_default_next" : "node_15",
+          "next_tables" : {
+            "switch353_1" : "node_15"
+          },
+          "default_entry" : {
+            "action_id" : 13,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch353_2",
+          "id" : 10,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
+            "column" : 481,
+            "source_fragment" : "= (bit<32>) meta.hash_data.value & 0x00000000ffffffff; meta.found_flag ="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [12],
+          "actions" : ["switch353_0"],
+          "base_default_next" : "node_17",
+          "next_tables" : {
+            "switch353_0" : "node_17"
+          },
+          "default_entry" : {
+            "action_id" : 12,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch355",
+          "id" : 11,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 20,
+            "source_fragment" : "hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)100); hash_table_2.read(meta.hash_data.value, meta.hash_data.hash_table_entry)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [18],
+          "actions" : ["switch355_2"],
+          "base_default_next" : "node_19",
+          "next_tables" : {
+            "switch355_2" : "node_19"
+          },
+          "default_entry" : {
+            "action_id" : 18,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch355_0",
+          "id" : 12,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 326,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [15],
+          "actions" : ["switch355"],
+          "base_default_next" : "node_24",
+          "next_tables" : {
+            "switch355" : "node_24"
+          },
+          "default_entry" : {
+            "action_id" : 15,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch355_1",
+          "id" : 13,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 363,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [17],
+          "actions" : ["switch355_1"],
+          "base_default_next" : "node_22",
+          "next_tables" : {
+            "switch355_1" : "node_22"
+          },
+          "default_entry" : {
+            "action_id" : 17,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch355_2",
+          "id" : 14,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 484,
+            "source_fragment" : "= (bit<32>) meta.hash_data.value & 0x00000000ffffffff; meta.found_flag ="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [16],
+          "actions" : ["switch355_0"],
+          "base_default_next" : "node_24",
+          "next_tables" : {
+            "switch355_0" : "node_24"
+          },
+          "default_entry" : {
+            "action_id" : 16,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch358",
+          "id" : 15,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 20,
+            "source_fragment" : "hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)10); hash_table_3.read(meta.hash_data.value, meta.hash_data.hash_table_entry)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [22],
+          "actions" : ["switch358_2"],
+          "base_default_next" : "node_26",
+          "next_tables" : {
+            "switch358_2" : "node_26"
+          },
+          "default_entry" : {
+            "action_id" : 22,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch358_0",
+          "id" : 16,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 325,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [19],
+          "actions" : ["switch358"],
+          "base_default_next" : "node_31",
+          "next_tables" : {
+            "switch358" : "node_31"
+          },
+          "default_entry" : {
+            "action_id" : 19,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch358_1",
+          "id" : 17,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 362,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [21],
+          "actions" : ["switch358_1"],
+          "base_default_next" : "node_29",
+          "next_tables" : {
+            "switch358_1" : "node_29"
+          },
+          "default_entry" : {
+            "action_id" : 21,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch358_2",
+          "id" : 18,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 483,
+            "source_fragment" : "= (bit<32>) meta.hash_data.value & 0x00000000ffffffff; meta.found_flag ="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [20],
+          "actions" : ["switch358_0"],
+          "base_default_next" : "node_31",
+          "next_tables" : {
+            "switch358_0" : "node_31"
+          },
+          "default_entry" : {
+            "action_id" : 20,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch363",
+          "id" : 19,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 363,
+            "column" : 31,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [23],
+          "actions" : ["switch363"],
+          "base_default_next" : "tbl_sendError",
+          "next_tables" : {
+            "switch363" : "tbl_sendError"
+          },
+          "default_entry" : {
+            "action_id" : 23,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_sendError",
+          "id" : 20,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 364,
+            "column" : 20,
+            "source_fragment" : "sendError()"
           },
           "key" : [],
           "match_type" : "exact",
@@ -2320,10 +4012,10 @@
           "support_timeout" : false,
           "direct_meters" : null,
           "action_ids" : [5],
-          "actions" : ["MyIngress.updateAndCheck"],
-          "base_default_next" : "node_10",
+          "actions" : ["MyIngress.sendError"],
+          "base_default_next" : "node_40",
           "next_tables" : {
-            "MyIngress.updateAndCheck" : "node_10"
+            "MyIngress.sendError" : "node_40"
           },
           "default_entry" : {
             "action_id" : 5,
@@ -2333,11 +4025,98 @@
           }
         },
         {
-          "name" : "tbl_sendReport",
-          "id" : 6,
+          "name" : "tbl_switch369",
+          "id" : 21,
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 296,
+            "line" : 369,
+            "column" : 28,
+            "source_fragment" : "count_start.read(meta.data.flow_count, 0)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [24],
+          "actions" : ["switch369"],
+          "base_default_next" : "node_38",
+          "next_tables" : {
+            "switch369" : "node_38"
+          },
+          "default_entry" : {
+            "action_id" : 24,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch373",
+          "id" : 22,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 373,
+            "column" : 45,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [25],
+          "actions" : ["switch373"],
+          "base_default_next" : "node_38",
+          "next_tables" : {
+            "switch373" : "node_38"
+          },
+          "default_entry" : {
+            "action_id" : 25,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch377",
+          "id" : 23,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 377,
+            "column" : 36,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [26],
+          "actions" : ["switch377"],
+          "base_default_next" : "node_40",
+          "next_tables" : {
+            "switch377" : "node_40"
+          },
+          "default_entry" : {
+            "action_id" : 26,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_sendReport",
+          "id" : 24,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 383,
             "column" : 20,
             "source_fragment" : "sendReport()"
           },
@@ -2348,14 +4127,159 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [2],
+          "action_ids" : [4],
           "actions" : ["MyIngress.sendReport"],
-          "base_default_next" : null,
+          "base_default_next" : "tbl_switch384",
           "next_tables" : {
-            "MyIngress.sendReport" : null
+            "MyIngress.sendReport" : "tbl_switch384"
           },
           "default_entry" : {
-            "action_id" : 2,
+            "action_id" : 4,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch384",
+          "id" : 25,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 384,
+            "column" : 41,
+            "source_fragment" : "="
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [27],
+          "actions" : ["switch384"],
+          "base_default_next" : "node_43",
+          "next_tables" : {
+            "switch384" : "node_43"
+          },
+          "default_entry" : {
+            "action_id" : 27,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch389",
+          "id" : 26,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 389,
+            "column" : 41,
+            "source_fragment" : "= (bit<64>) meta.hash_data.hash_key; ..."
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [29],
+          "actions" : ["switch389"],
+          "base_default_next" : "node_45",
+          "next_tables" : {
+            "switch389" : "node_45"
+          },
+          "default_entry" : {
+            "action_id" : 29,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch393",
+          "id" : 27,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 393,
+            "column" : 20,
+            "source_fragment" : "hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [28],
+          "actions" : ["switch393"],
+          "base_default_next" : "node_47",
+          "next_tables" : {
+            "switch393" : "node_47"
+          },
+          "default_entry" : {
+            "action_id" : 28,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch396",
+          "id" : 28,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 396,
+            "column" : 20,
+            "source_fragment" : "hash_table_2.write(meta.hash_data.hash_table_entry, meta.hash_data.value)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [30],
+          "actions" : ["switch396"],
+          "base_default_next" : "node_49",
+          "next_tables" : {
+            "switch396" : "node_49"
+          },
+          "default_entry" : {
+            "action_id" : 30,
+            "action_const" : true,
+            "action_data" : [],
+            "action_entry_const" : true
+          }
+        },
+        {
+          "name" : "tbl_switch399",
+          "id" : 29,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 399,
+            "column" : 20,
+            "source_fragment" : "hash_table_3.write(meta.hash_data.hash_table_entry, meta.hash_data.value)"
+          },
+          "key" : [],
+          "match_type" : "exact",
+          "type" : "simple",
+          "max_size" : 1024,
+          "with_counters" : false,
+          "support_timeout" : false,
+          "direct_meters" : null,
+          "action_ids" : [31],
+          "actions" : ["switch399"],
+          "base_default_next" : null,
+          "next_tables" : {
+            "switch399" : null
+          },
+          "default_entry" : {
+            "action_id" : 31,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2363,10 +4287,10 @@
         },
         {
           "name" : "tbl_sendHello",
-          "id" : 7,
+          "id" : 30,
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 299,
+            "line" : 404,
             "column" : 16,
             "source_fragment" : "sendHello()"
           },
@@ -2377,14 +4301,14 @@
           "with_counters" : false,
           "support_timeout" : false,
           "direct_meters" : null,
-          "action_ids" : [1],
+          "action_ids" : [3],
           "actions" : ["MyIngress.sendHello"],
           "base_default_next" : null,
           "next_tables" : {
             "MyIngress.sendHello" : null
           },
           "default_entry" : {
-            "action_id" : 1,
+            "action_id" : 3,
             "action_const" : true,
             "action_data" : [],
             "action_entry_const" : true
@@ -2398,7 +4322,7 @@
           "id" : 0,
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 284,
+            "line" : 338,
             "column" : 11,
             "source_fragment" : "hdr.ipv4.isValid()"
           },
@@ -2414,10 +4338,10 @@
             }
           },
           "false_next" : null,
-          "true_next" : "MyIngress.group_values"
+          "true_next" : "tbl_extractGroup"
         },
         {
-          "name" : "node_6",
+          "name" : "node_7",
           "id" : 1,
           "expression" : {
             "type" : "expression",
@@ -2434,11 +4358,413 @@
           "false_next" : "tbl_sendHello"
         },
         {
-          "name" : "node_10",
+          "name" : "node_12",
           "id" : 2,
           "source_info" : {
             "filename" : "p4src/switch.p4",
-            "line" : 295,
+            "line" : 353,
+            "column" : 278,
+            "source_fragment" : "meta.hash_data.value == 0"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._hash_data_value12"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x0000000000000000"
+              }
+            }
+          },
+          "true_next" : "tbl_switch353_0",
+          "false_next" : "tbl_switch353_1"
+        },
+        {
+          "name" : "node_15",
+          "id" : 3,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 353,
+            "column" : 406,
+            "source_fragment" : "meta.hash_data.read_key == meta.hash_data.hash_key"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "&",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : ">>",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._hash_data_value12"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0x20"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0xffffffffffffffff"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              },
+              "right" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._hash_data_hash_key9"]
+              }
+            }
+          },
+          "true_next" : "tbl_switch353_2",
+          "false_next" : "node_17"
+        },
+        {
+          "name" : "node_17",
+          "id" : 4,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 354,
+            "column" : 20,
+            "source_fragment" : "meta.found_flag == 0"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._found_flag13"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x00"
+              }
+            }
+          },
+          "true_next" : "tbl_switch355",
+          "false_next" : "node_24"
+        },
+        {
+          "name" : "node_19",
+          "id" : 5,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 281,
+            "source_fragment" : "meta.hash_data.value == 0"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._hash_data_value12"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x0000000000000000"
+              }
+            }
+          },
+          "true_next" : "tbl_switch355_0",
+          "false_next" : "tbl_switch355_1"
+        },
+        {
+          "name" : "node_22",
+          "id" : 6,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 355,
+            "column" : 409,
+            "source_fragment" : "meta.hash_data.read_key == meta.hash_data.hash_key"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "&",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : ">>",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._hash_data_value12"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0x20"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0xffffffffffffffff"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              },
+              "right" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._hash_data_hash_key9"]
+              }
+            }
+          },
+          "true_next" : "tbl_switch355_2",
+          "false_next" : "node_24"
+        },
+        {
+          "name" : "node_24",
+          "id" : 7,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 357,
+            "column" : 20,
+            "source_fragment" : "meta.found_flag == 0"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._found_flag13"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x00"
+              }
+            }
+          },
+          "true_next" : "tbl_switch358",
+          "false_next" : "node_31"
+        },
+        {
+          "name" : "node_26",
+          "id" : 8,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 280,
+            "source_fragment" : "meta.hash_data.value == 0"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._hash_data_value12"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x0000000000000000"
+              }
+            }
+          },
+          "true_next" : "tbl_switch358_0",
+          "false_next" : "tbl_switch358_1"
+        },
+        {
+          "name" : "node_29",
+          "id" : 9,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 358,
+            "column" : 408,
+            "source_fragment" : "meta.hash_data.read_key == meta.hash_data.hash_key"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "&",
+                  "left" : {
+                    "type" : "expression",
+                    "value" : {
+                      "op" : "&",
+                      "left" : {
+                        "type" : "expression",
+                        "value" : {
+                          "op" : ">>",
+                          "left" : {
+                            "type" : "field",
+                            "value" : ["scalars", "metadata._hash_data_value12"]
+                          },
+                          "right" : {
+                            "type" : "hexstr",
+                            "value" : "0x20"
+                          }
+                        }
+                      },
+                      "right" : {
+                        "type" : "hexstr",
+                        "value" : "0xffffffffffffffff"
+                      }
+                    }
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0xffffffff"
+                  }
+                }
+              },
+              "right" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._hash_data_hash_key9"]
+              }
+            }
+          },
+          "true_next" : "tbl_switch358_2",
+          "false_next" : "node_31"
+        },
+        {
+          "name" : "node_31",
+          "id" : 10,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 362,
+            "column" : 20,
+            "source_fragment" : "meta.found_flag == 0"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._found_flag13"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x00"
+              }
+            }
+          },
+          "true_next" : "tbl_switch363",
+          "false_next" : "node_34"
+        },
+        {
+          "name" : "node_34",
+          "id" : 11,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 367,
+            "column" : 24,
+            "source_fragment" : "meta.data.flow_count == 0"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._data_flow_count8"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x00000000"
+              }
+            }
+          },
+          "true_next" : "node_35",
+          "false_next" : "tbl_switch373"
+        },
+        {
+          "name" : "node_35",
+          "id" : 12,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 368,
+            "column" : 28,
+            "source_fragment" : "meta.flip_s == 1"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._flip_s0"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x00000001"
+              }
+            }
+          },
+          "true_next" : "tbl_switch369",
+          "false_next" : "node_38"
+        },
+        {
+          "name" : "node_38",
+          "id" : 13,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 376,
+            "column" : 24,
+            "source_fragment" : "meta.data.flow_count < meta.tau"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "<",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._data_flow_count8"]
+              },
+              "right" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._tau2"]
+              }
+            }
+          },
+          "true_next" : "tbl_switch377",
+          "false_next" : "node_40"
+        },
+        {
+          "name" : "node_40",
+          "id" : 14,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 382,
             "column" : 20,
             "source_fragment" : "meta.flip_r == 1"
           },
@@ -2456,8 +4782,132 @@
               }
             }
           },
+          "true_next" : "tbl_sendReport",
+          "false_next" : "node_43"
+        },
+        {
+          "name" : "node_43",
+          "id" : 15,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 388,
+            "column" : 20,
+            "source_fragment" : "meta.data.flow_count > 0 || meta.flip_r == 1"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "or",
+              "left" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : ">",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["scalars", "metadata._data_flow_count8"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0x00000000"
+                  }
+                }
+              },
+              "right" : {
+                "type" : "expression",
+                "value" : {
+                  "op" : "==",
+                  "left" : {
+                    "type" : "field",
+                    "value" : ["scalars", "metadata._flip_r1"]
+                  },
+                  "right" : {
+                    "type" : "hexstr",
+                    "value" : "0x00000001"
+                  }
+                }
+              }
+            }
+          },
           "false_next" : null,
-          "true_next" : "tbl_sendReport"
+          "true_next" : "tbl_switch389"
+        },
+        {
+          "name" : "node_45",
+          "id" : 16,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 392,
+            "column" : 24,
+            "source_fragment" : "meta.found_flag == 1"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._found_flag13"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x01"
+              }
+            }
+          },
+          "true_next" : "tbl_switch393",
+          "false_next" : "node_47"
+        },
+        {
+          "name" : "node_47",
+          "id" : 17,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 395,
+            "column" : 24,
+            "source_fragment" : "meta.found_flag == 2"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._found_flag13"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x02"
+              }
+            }
+          },
+          "true_next" : "tbl_switch396",
+          "false_next" : "node_49"
+        },
+        {
+          "name" : "node_49",
+          "id" : 18,
+          "source_info" : {
+            "filename" : "p4src/switch.p4",
+            "line" : 398,
+            "column" : 24,
+            "source_fragment" : "meta.found_flag == 3"
+          },
+          "expression" : {
+            "type" : "expression",
+            "value" : {
+              "op" : "==",
+              "left" : {
+                "type" : "field",
+                "value" : ["scalars", "metadata._found_flag13"]
+              },
+              "right" : {
+                "type" : "hexstr",
+                "value" : "0x03"
+              }
+            }
+          },
+          "false_next" : null,
+          "true_next" : "tbl_switch399"
         }
       ]
     },
@@ -2466,7 +4916,7 @@
       "id" : 1,
       "source_info" : {
         "filename" : "p4src/switch.p4",
-        "line" : 309,
+        "line" : 418,
         "column" : 8,
         "source_fragment" : "MyEgress"
       },
@@ -2517,7 +4967,7 @@
       ["standard_metadata", "priority"]
     ]
   ],
-  "program" : "/home/p4/adv-comm-net-19/02-herding/src/p4src/switch.p4i",
+  "program" : "/home/p4/02-herding/src/p4src/switch.p4i",
   "__meta__" : {
     "version" : [2, 18],
     "compiler" : "https://github.com/p4lang/p4c"

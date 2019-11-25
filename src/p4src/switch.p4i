@@ -782,9 +782,15 @@ package V1Switch<H, M>(Parser<H, M> p,
                        );
 # 4 "p4src/switch.p4" 2
 
+//TODO (to replicate paper):
+// 3) Add support for ipv6 and udp
+
 // Typedefs //
-typedef bit<16> tau_t;
+// Used for threshold variables
+typedef bit<32> tau_t;
+// Probabilities converted as: u_p = 2^32*p - 1, p in (0,1)
 typedef bit<32> uint32_probability;
+// Used for hashes of a flow five tuple
 typedef bit<32> flow_id_t;
 
 typedef bit<48> macAddr_t;
@@ -792,28 +798,20 @@ typedef bit<32> ip4Addr_t;
 
 // Constants //
 const uint32_probability INT32_MAX = 4294967295;
-
 const bit<16> ipv4_type = 0x800;
 
-//TODO: adapt group table size
-// there are 2^16 possible group pairs (8bit scr and 8bit dst)
-const bit<16> GROUP_TABLE_SIZE = 1000;
-//TODO: make these writable at launch
-// equals 2^30 or s = 0.25, which is way too high for testing purposes
-const uint32_probability SAMPLING_PROBABILITY = 1073741824;
-// 1/s such that we know where to start counting
-const bit<16> counter_start = 4;
-
-//TODO: add custom hash functions
-//TODO: add real key value storage D
-
-
-
-
-
+// Hash table and group table properties
+# 32 "p4src/switch.p4"
+// Does the flow counter lookup for a given hash table.
+// IN:  num defining which hash table should be used
+// REQ: meta.hash_data.hash_key
+// STORED:  found flag (if empty space or flow is found) -> meta.found_flag
+//          flow count (if found) -> meta.data.flow_count
+# 51 "p4src/switch.p4"
 /*************************************************************************
-*********************** H E A D E R S  ***********************************
+*********************** S T R U C T S  ***********************************
 *************************************************************************/
+
 struct five_tuple_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
@@ -822,20 +820,46 @@ struct five_tuple_t {
     bit<8> protocol;
 }
 
+// Used by the digest commands to transport data to the local controller
 struct report_data_t {
     five_tuple_t five_tuple;
-    bit<16> flow_count;
+    bit<32> flow_count;
 }
 
+// Used by hash functions and the table lookup to store data
+struct hash_data_t {
+    flow_id_t hash_key;
+    flow_id_t read_key;
+    bit<32> hash_table_entry;
+    bit<64> value;
+}
+
+// Used for the group table lookup
+struct flow_group_t {
+    bit<8> srcGroup;
+    bit<8> dstGroup;
+}
+
+// We need fields for: 2 coinflips,
+//                     1 local threshold,
+//                     1 report_data struct for digest command
+//                     1 hash_data struct for counter lookup
+//                     1 found_flag to indicate which table we are operating on
+//                     1 flow_group struct for the group_values table lookup
 struct metadata {
     uint32_probability flip_s;
     uint32_probability flip_r;
     tau_t tau;
-    flow_id_t flow_id;
     report_data_t data;
+    hash_data_t hash_data;
+    bit<2> found_flag;
+    flow_group_t group;
 }
 
-//TODO: add ipv6 and udp headers
+
+/*************************************************************************
+*********************** H E A D E R S  ***********************************
+*************************************************************************/
 
 
 header ethernet_t {
@@ -880,7 +904,6 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
-// TODO: change to header union when ipv6 and udp are added
 struct headers {
     ethernet_t ethernet;
     ipv4_t ipv4;
@@ -896,8 +919,6 @@ parser MyParser(packet_in packet,
                 inout metadata meta,
                 inout standard_metadata_t standard_metadata) {
 
-//TODO: add states for ipv6 and udp; maybe change default and check for validity
-//      in ingress apply.
     state start {
         transition parse_ethernet;
     }
@@ -943,7 +964,8 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register<bit<16>>(1000) reg_counters;
+    ///         GENERAL PACKET PROCESSING STUFF        ///
+    bit<4> error_code;
 
     // extracts the five tuple identifying a flow from the packet
     action extractFiveTuple() {
@@ -954,35 +976,84 @@ control MyIngress(inout headers hdr,
         meta.data.five_tuple.protocol = hdr.ipv4.protocol;
     }
 
+    action extractGroup() {
+        meta.group.srcGroup = (bit<8>) (hdr.ipv4.srcAddr & 0xff000000 >> 24);
+        meta.group.dstGroup = (bit<8>) (hdr.ipv4.dstAddr & 0xff000000 >> 24);
+        }
+
+    // Hashes the 5-tuple to generate an id
+    // STORED: hash_key -> meta.hash_data.hash_key
+    action hashFlow() {
+        hash(meta.hash_data.hash_key, HashAlgorithm.crc32, (bit<1>)0,
+            {hdr.ipv4.srcAddr,
+             hdr.ipv4.dstAddr,
+             hdr.tcp.srcPort,
+             hdr.tcp.dstPort,
+             hdr.ipv4.protocol},(bit<32>) INT32_MAX);
+    }
+
+
+        ///               HERD SECTION                  ///
+
+    // registers set by local controller
+    register<bit<32>>(1) sampling_probability;
+    register<bit<32>>(1) count_start; // equals 1/sampling_probability
+
+    // hash tables to store counters
+    register<bit<64>>(1000) hash_table_1;
+    register<bit<64>>(100) hash_table_2;
+    register<bit<64>>(10) hash_table_3;
+
+    // sends a hello msg to the local controller with the 5tuple and a flow
+    // counter of 0 to indicate the flow is new.
     action sendHello() {
         extractFiveTuple();
         meta.data.flow_count = 0;
         digest(1, meta.data);
     }
 
+    // sends a report msg to the local controller with the 5tuple and the current
+    // flow counter.
     action sendReport() {
         extractFiveTuple();
+        digest(1, meta.data);
+    }
+
+    // sends an error message, indicated by an all zero 5-tuple to the
+    // controller. the flow counter is used to transmit the error code.
+    action sendError() {
+        meta.data.five_tuple.srcAddr = 0;
+        meta.data.five_tuple.dstAddr = 0;
+        meta.data.five_tuple.srcPort = 0;
+        meta.data.five_tuple.dstPort = 0;
+        meta.data.five_tuple.protocol = 0;
+        meta.data.flow_count = (bit<32>) error_code;
         digest(1, meta.data);
     }
 
     // called by a table hit in group_table
     // IN:  group report probability (converted to uint32) p_report,
     //      group parameter tau (threshold)
-    // OUT: Safes the given parameters in meta.tau and meta.flip_r
+    // STORED:  group threshold -> meta.tau
+    //          report probability -> meta.flip_r
     action getValues(uint32_probability p_report, tau_t tau_g) {
         meta.tau = tau_g;
         meta.flip_r = p_report;
     }
 
+
     //TODO: introduce more randomness
     //      IDEA: Hash with some RndVal safed in a register
     // Takes timestamps and ip dst/srcAddr and hashes them to a bit 32 value
     // which is compared against the saved probabilities.
-    // OUT: writes the outcome to the meta.flip_r and meta.flip_s fields of the
-    //      packet
-
+    // REQ: meta.flip_r (report probability)
+    //      sampling_probability(0)
+    // STORED:  sampling coinflip -> meta.flip_s
+    //          report coinflip -> meta.flip_r
     action flip() {
-        uint32_probability safe_p_report = meta.flip_r;
+        uint32_probability p_report = meta.flip_r;
+        uint32_probability p_sample;
+        sampling_probability.read(p_sample, 0);
         hash(meta.flip_s, HashAlgorithm.crc32, (bit<1>)0,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
@@ -991,94 +1062,112 @@ control MyIngress(inout headers hdr,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
                 hdr.ipv4.srcAddr}, INT32_MAX);
-        if (meta.flip_s < SAMPLING_PROBABILITY) {
+        if (meta.flip_s < p_sample) {
             meta.flip_s = 1;
         } else {
             meta.flip_s = 0;
         }
-        if (meta.flip_r < safe_p_report) {
+        if (meta.flip_r < p_report) {
             meta.flip_r = 1;
         } else {
             meta.flip_r = 0;
         }
     }
 
-    // Hashes the ip.src+dstAddr, ip.protocol and tcp.src+dstAddr to generate a
-    // flow id for register lookup
-    // OUT: writes result to meta.flow_id
 
-    action hashFlow() {
-        hash(meta.flow_id, HashAlgorithm.crc32, (bit<1>)0,
-            {hdr.ipv4.srcAddr,
-             hdr.ipv4.dstAddr,
-             hdr.tcp.srcPort,
-             hdr.tcp.dstPort,
-             hdr.ipv4.protocol},(bit<16>) 16);
-    }
-
-    // group id MAT to retrieve the group parameters
-    //TODO: better idea for keys?
+    // group id MAT to retrieve the group parameters (local probability
+    // and local threshold). a hit calls the getValues action which writes them
+    // in the metadata
     table group_values {
         key = {
-            hdr.ipv4.srcAddr & 0xff000000: exact;
-            hdr.ipv4.dstAddr & 0xff000000: exact;
+            meta.group.srcGroup: exact;
+            meta.group.dstGroup: exact;
         }
         actions = {
             getValues;
             NoAction;
         }
-        size = GROUP_TABLE_SIZE;
+        size = 1000;
         default_action = NoAction;
-    }
-
-    // Does the value lookup of a flow. If no value is found, we try to sample.
-    action updateAndCheck() {
-        //TODO: implement real hash table lookup
-        hashFlow();
-        bit<16> flow_count;
-        reg_counters.read(flow_count, meta.flow_id);
-        // if we found a counter, proceed, else try to sample it
-        if (flow_count > 0) {
-            // if counter is over the threshold, reset and leave meta.flip_r as
-            // is, else increment and set it to false
-            if (flow_count >= meta.tau) {
-                meta.data.flow_count = flow_count;
-                flow_count = 0;
-            } else {
-                meta.flip_r = 0;
-                flow_count = flow_count + 1;
-            }
-        } else {
-            // set meta.flip_r to false since we don’t want to report
-            meta.flip_r = 0;
-            if (meta.flip_s == 1) {
-                flow_count = counter_start;
-            }
-        }
-        // write back adapted flow count
-        reg_counters.write(meta.flow_id, flow_count);
     }
 
     apply {
 
+        // Herd section //
+
         if(hdr.ipv4.isValid()) {
+            // extract the first 8 bits of the ip addresses to use in the
+            // group_values table lookup
+            extractGroup();
             // if we have an entry hit, we get the group parameters and can proceed
             if (group_values.apply().hit) {
-                // simulate coin flips
+                // simulate coin flips (meta.flip_r is now set)
                 flip();
 
-                meta.data.flow_count = (bit<16>) meta.flip_s;
-                meta.data.flow_count = (bit<16>) meta.flip_r;
-                // counter lookup
-                updateAndCheck();
+                // reset fields and generate flow id
+                meta.found_flag = 0;
+                meta.data.flow_count = 0;
+                hashFlow();
 
+                // search for a stored value
+                hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)1000); hash_table_1.read(meta.hash_data.value, meta.hash_data.hash_table_entry); if (meta.hash_data.value == 0) { meta.found_flag =1; } else { meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32); if (meta.hash_data.read_key == meta.hash_data.hash_key) { meta.data.flow_count = (bit<32>) meta.hash_data.value & 0x00000000ffffffff; meta.found_flag =1; } }
+                if (meta.found_flag == 0) {
+                    hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)100); hash_table_2.read(meta.hash_data.value, meta.hash_data.hash_table_entry); if (meta.hash_data.value == 0) { meta.found_flag =2; } else { meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32); if (meta.hash_data.read_key == meta.hash_data.hash_key) { meta.data.flow_count = (bit<32>) meta.hash_data.value & 0x00000000ffffffff; meta.found_flag =2; } };
+                }
+                if (meta.found_flag == 0) {
+                    hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)10); hash_table_3.read(meta.hash_data.value, meta.hash_data.hash_table_entry); if (meta.hash_data.value == 0) { meta.found_flag =3; } else { meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32); if (meta.hash_data.read_key == meta.hash_data.hash_key) { meta.data.flow_count = (bit<32>) meta.hash_data.value & 0x00000000ffffffff; meta.found_flag =3; } };
+                }
+
+                // send error if no space and value found
+                if (meta.found_flag == 0) {
+                    error_code = 0x0;
+                    sendError();
+                } else {
+                    // check if we found an empty space, if so, try to sample
+                    if (meta.data.flow_count == 0) {
+                        if (meta.flip_s == 1) {
+                            count_start.read(meta.data.flow_count, 0);
+                        }
+                    // increase counter
+                    } else {
+                        meta.data.flow_count = meta.data.flow_count + 1;
+                    }
+                    // set the report coinflip to zero if the threshold is not reached
+                    if (meta.data.flow_count < meta.tau) {
+                        meta.flip_r = 0;
+                    }
+                }
+
+                // report and reset counter if necessary
                 if (meta.flip_r == 1) {
                     sendReport();
+                    meta.data.flow_count = 0;
                 }
+
+                // store counter if necessary
+                if (meta.data.flow_count > 0 || meta.flip_r == 1) {
+                    meta.hash_data.value = (bit<64>) meta.hash_data.hash_key;
+                    meta.hash_data.value = meta.hash_data.value << 32;
+                    meta.hash_data.value = meta.hash_data.value + (bit<64>) meta.data.flow_count;
+                    if (meta.found_flag == 1) {
+                    hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+                    }
+                    if (meta.found_flag == 2) {
+                    hash_table_2.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+                    }
+                    if (meta.found_flag == 3) {
+                    hash_table_3.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+                    }
+                }
+            // no group_values table hit -> send hello message to controller
             } else {
                 sendHello();
             }
         }
+
+        // Other packet processing stuff //
+
+                   /* empty */
     }
 }
 
@@ -1110,7 +1199,6 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
-        //TODO: add support for ipv6 and udp
         packet.emit(hdr.tcp);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ethernet);
