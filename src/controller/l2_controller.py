@@ -273,6 +273,9 @@ class L2Controller(object):
         self.controller.table_add('group_values', 'getValues',\
             [srcGroup, dstGroup], [str(r_g), str(tau_g)])
 
+class InputValueError(Exception):
+    pass
+
 
 def parser():
     parser = argparse.ArgumentParser(description='parse the keyword arguments')
@@ -307,11 +310,17 @@ def parser():
 
     args = parser.parse_args()
 
+    if (args.s < 0 or 1 < args.s):
+        raise InputValueError
+
     return args.n, args.e, args.t, args.s
 
 if __name__ == '__main__':
-    sw_name, epsilon, global_threshold_T, sampling_probability_s = parser()
+    try:
+        sw_name, epsilon, global_threshold_T, sampling_probability_s = parser()
+        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s)
 
-    l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s)
+        l2_controller.run_digest_loop()
 
-    l2_controller.run_digest_loop()
+    except InputValueError:
+        print("The sampling probability should be between 0 and 1")
