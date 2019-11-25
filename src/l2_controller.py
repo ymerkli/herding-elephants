@@ -5,6 +5,7 @@ import os
 import rpyc
 import nnpy
 import argparse
+import ipaddress
 import re
 
 from p4utils.utils.topology import Topology
@@ -128,7 +129,7 @@ class L2Controller(object):
         digest = []
         starting_index = 32
         for sample in range(num_samples):
-            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBH", msg[starting_index:])
+            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBH", msg[starting_index:starting_index + 15])
             print(ipaddress.IPv4Address(srcIP), ipaddress.IPv4Address(dstIP), srcPort, dstPort, protocol, flow_count)
 
             # convert int IPs to str
