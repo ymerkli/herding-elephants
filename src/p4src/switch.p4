@@ -284,9 +284,6 @@ control MyIngress(inout headers hdr,
         meta.flip_r = p_report;
     }
 
-
-    //TODO: introduce more randomness
-    //      IDEA: Hash with some RndVal safed in a register
     // Takes timestamps and ip dst/srcAddr and hashes them to a bit 32 value
     // which is compared against the saved probabilities.
     // REQ: meta.flip_r (report probability)

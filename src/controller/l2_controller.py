@@ -313,7 +313,7 @@ def parser():
     if (args.s < 0 or 1 < args.s):
         raise InputValueError
 
-    if (args.e < 0 or 1 < args.e):
+    if (args.e <= 0 or 1 < args.e):
         raise InputValueError
 
     return args.n, args.e, args.t, args.s
