@@ -72,6 +72,7 @@ class L2Controller(object):
 
         flow = ("10.0.0.0", "10.0.0.0", 0, 0,0)
         self.add_group_values(flow, 1)
+        self.reset_hash_tables()
 
     def set_crc_custom_hashes(self):
         '''
@@ -100,6 +101,15 @@ class L2Controller(object):
         # register names are defined in switch.p4
         self.controller.register_write("sampling_probability", 0, sampling_probability)
         self.controller.register_write("count_start", 0, counter_startvalue)
+
+    def reset_hash_tables(self):
+        for i in range (1,4):
+            self.controller.register_reset("hash_table_{}".format(i))
+
+    def handle_Error(self, error_code):
+        print("Received error message with error code: %s" % error_code)
+        if (error_code == 0):
+            self.reset_hash_tables()
 
 
     def unpack_digest(self, msg, num_samples):
@@ -151,12 +161,15 @@ class L2Controller(object):
         for flow_info in digest:
             # if the flow count is zero, the digest is just a hello message
             # otherwise, it's a report
-            if flow_info['flow_count'] == 0:
-                print('sending a hello for: ', flow_info['flow'])
-                self.send_hello(flow_info['flow'])
+            if flow_info['flow'] == (0,0,0,0,0):
+                self.handle_Error(flow_info['flow_count'])
             else:
-                print('sending a report for: ', flow_info['flow'])
-                self.report_flow(flow_info['flow'])
+                if flow_info['flow_count'] == 0:
+                    print('sending a hello for: ', flow_info['flow'])
+                    self.send_hello(flow_info['flow'])
+                else:
+                    print('sending a report for: ', flow_info['flow'])
+                    self.report_flow(flow_info['flow'])
 
         #Acknowledge digest
         self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
