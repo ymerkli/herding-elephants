@@ -22,9 +22,9 @@ const bit<16> ipv4_type = 0x800;
 
 // Hash table and group table properties
 #define HASH_TABLE_FIELD_WIDHT 64
-#define ENTRIES_HASH_TABLE_1 1000
-#define ENTRIES_HASH_TABLE_2 100
-#define ENTRIES_HASH_TABLE_3 10
+#define ENTRIES_HASH_TABLE_1 1
+#define ENTRIES_HASH_TABLE_2 1
+#define ENTRIES_HASH_TABLE_3 1
 
 #define GROUP_TABLE_SIZE 1000
 

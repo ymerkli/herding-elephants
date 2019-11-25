@@ -104,10 +104,19 @@ class L2Controller(object):
         self.controller.register_write("count_start", 0, counter_startvalue)
 
     def reset_hash_tables(self):
+        '''
+        Resets the hash tables on the switch
+
+        '''
+
         for i in range (1,4):
             self.controller.register_reset("hash_table_{}".format(i))
 
     def handle_Error(self, error_code):
+        '''
+        Handles received error messages.
+
+        '''
         print("Received error message with error code: %s" % error_code)
         if (error_code == 0):
             self.reset_hash_tables()
@@ -129,9 +138,9 @@ class L2Controller(object):
         digest = []
         starting_index = 32
         for sample in range(num_samples):
-            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBH", msg[starting_index:starting_index + 15])
+            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBL", msg[starting_index:starting_index + 17])
             print(ipaddress.IPv4Address(srcIP), ipaddress.IPv4Address(dstIP), srcPort, dstPort, protocol, flow_count)
-
+            print("flow count = %s" % flow_count)
             # convert int IPs to str
             srcIP = ipaddress.IPv4Address(srcIP)
             dstIP = ipaddress.IPv4Address(dstIP)
@@ -199,7 +208,7 @@ class L2Controller(object):
             flow (tuple):   The flow 5-tuple to be reported
         '''
 
-        self.coordinator_c.root.send_report(flow)
+        # self.coordinator_c.root.send_report(flow)
 
     def send_hello(self, flow):
         '''
@@ -212,7 +221,7 @@ class L2Controller(object):
             flow (): The new flow 5-tuple we want to let the Coordinator know about
         '''
 
-        self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
+        # self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
 
     def hello_callback(self, flow, l_g):
         '''
