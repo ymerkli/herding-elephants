@@ -127,11 +127,10 @@ def CalculateMoles(train_data, sampl_prob):
     print("CalculateMoles started")
     moles = {}
     for i in train_data:
-        if random.randint(0, 1) <= sampl_prob:
-            if i in moles:
-                moles[i] = moles[i]+1
-            else:
-                moles[i] = 1
+        if i in moles:
+            moles[i] = moles[i]+1
+        elif random.randint(0, 1) <= sampl_prob:
+            moles[i] = 1
     # print("CalculateMoles: moles = {0}".format(moles))
     print("len(moles)={}".format(len(moles)))
     return moles
@@ -179,7 +178,7 @@ if __name__ == "__main__":
         return lisst
 
 
-    glob_thresh = 1000
+    glob_thresh = 250
     comm_budget = 25
     switch_mem = 25
     ingress_switches = 10
