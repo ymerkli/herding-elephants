@@ -1,0 +1,12 @@
+# Ignore the src/log folder
+src/log
+
+# Ignore the src/pcap folder
+src/pcap
+
+# Ignore all swap files
+*.swp
+
+# Ignore these files
+src/p4src/switch.json
+src/p4src/switch.p4i

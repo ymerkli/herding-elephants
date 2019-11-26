@@ -48,8 +48,8 @@ class L2Controller(object):
         self.epsilon            = epsilon
         self.global_threshold_T = global_threshold_T
         self.p_sampling         = sampling_probability_s
-        self.coordinator_c = rpyc.connect('localhost', 18812)
-        self.custom_calcs = self.controller.get_custom_crc_calcs()
+        self.coordinator_c      = rpyc.connect('localhost', 18812)
+        self.custom_calcs       = self.controller.get_custom_crc_calcs()
 
         self.init()
 
