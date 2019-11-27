@@ -47,7 +47,7 @@ def get_dst_mac(ip):
     except:
         return None
 
-def send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, random_ports, manual_mode):
+def send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, manual_mode):
     '''
     Sends a single packet for the given parameters
     '''
@@ -55,16 +55,14 @@ def send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port,
     if manual_mode == True:
         raw_input("Press the return key to send a packet:")
 
-    print "Sending on interface %s to %s" % (iface, str(addr))
-    print(src_ip, dst_ip, src_port, dst_port, protocol)
+    print("Sending on interface {0}: ({1}, {2}, {3}, {4}, {5})".format(
+            iface, src_ip, dst_ip, src_port, dst_port, protocol)
+    )
 
     # assemble the packet
-    pkt =  Ether(src=ether_src, dst=ether_dst)
+    pkt = Ether(src=ether_src, dst=ether_dst)
     pkt = pkt /IP(src=src_ip, dst=dst_ip, tos=0)
-    if random_ports:
-        pkt = pkt /TCP(sport=random.randint(49152,65535), dport=random.randint(5000,60000))
-    else:
-        pkt = pkt /TCP(sport=src_por, tdport=dst_port)
+    pkt = pkt /TCP(sport=src_port, dport=dst_port)
     sendp(pkt, iface=iface, verbose=False)
 
 def send_pcap(pcap_path, internal_host_ip, manual_mode):
@@ -85,15 +83,17 @@ def send_pcap(pcap_path, internal_host_ip, manual_mode):
             dst_port = pkt[IP].dport
 
             ether_src = get_if_hwaddr(iface)
+
             # we want to send all packets to a host inside the network
             # Since not all IPs in the pcap packets are mapped to the interal host, we use its real IP
             # to get the destination MAC
             ether_dst = get_dst_mac(internal_host_ip)
+
             if not ether_dst:
                 print "Mac address for %s was not found in the ARP table" % internal_host_ip
                 continue
 
-            send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, random_ports, manual_mode)
+            send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, manual_mode)
 
 def parser():
     '''
