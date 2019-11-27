@@ -39,28 +39,31 @@ class CoordinatorService(rpyc.Service):
         self.flow_to_switches       = {}
         self.callback_table         = {}
 
-    def exposed_send_report(self, flow):
+    def exposed_send_report(self, flow, sw_name):
         '''
         Remotely accessible function for switches to report flows to the Coordinator.
         This will be invoked from switches.
 
         Args:
-            flow (tuple): The flow the switch reports
+            flow (tuple):   The flow the switch reports
+            sw_name (str):  The name of the switch that sent the report
         '''
 
-        self.handle_report(flow)
+        self.handle_report(flow, sw_name)
 
 
-    def handle_report(self, flow):
+    def handle_report(self, flow, sw_name):
         '''
         After receiving a report for a flow, the coordinator looks up its
         number of previous reports and depending whether the count exceeds
         the threshold, promotes it to a heavy hitter
 
         Args:
-            flow (tuple): a 5 tuple identifying a flow
+            flow (tuple):   The flow the switch reports
+            sw_name (str):  The name of the switch that sent the report
         '''
 
+        print("Received report from {0} for {1}".format(sw_name, flow))
         # if the flow has been reported before, increase its count
         # otherwise, start counting
         if flow in self.reports:
@@ -81,7 +84,7 @@ class CoordinatorService(rpyc.Service):
             flow (tuple):           The flow which the switch has newly seen and reports
             sw_name (str):          The name of the reporting switch
             hello_callback (func):  The callback function to send l_g back to switch. Callback
-                                    fucntions will be stored.
+                                    functions will be stored.
         '''
 
         self.handle_hello(flow, sw_name, hello_callback)
@@ -100,7 +103,7 @@ class CoordinatorService(rpyc.Service):
                                     callback(flow, l_g) (see L2Controller class)
         '''
 
-        print(flow, sw_name)
+        print("Received hello from {0} for {1}".format(sw_name, flow))
         # store the callback function since we need it several times
         if sw_name not in self.callback_table:
             self.callback_table[sw_name] = hello_callback
@@ -151,3 +154,4 @@ class CoordinatorServer(object):
 if __name__ == '__main__':
     coordinator = CoordinatorServer()
     coordinator.start()
+
