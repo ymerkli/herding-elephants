@@ -4,10 +4,11 @@ import pickle
 import os
 import rpyc
 import nnpy
+import json
+import signal
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
-#from crc import Crc
 from rpyc.utils.server import ThreadedServer
 from scapy.all import Ether, sniff, Packet, BitField
 
@@ -133,25 +134,86 @@ class CoordinatorService(rpyc.Service):
                 # only send locality parameter to sw_name
                 self.callback_table[sw_name](flow, l_g)
 
+    def heavy_hitter_to_json(self, output_file_path):
+        '''
+        Writes all the found elephant flows to JSON
+
+        Args:
+            output_file_path (str): The file path where the JSON will be written to
+        '''
+        data = {
+            'found_elephants': self.heavy_hitter_set
+        }
+
+        with open(output_file_path, 'w') as outfile:
+            json.dump(data, outfile)
+            outfile.close()
+
 class CoordinatorServer(object):
     '''
     The server running the Coordinator service
 
     Args:
-        server_port (int):  The port on which the Coordinator will be running on
+        server_port (int):      The port on which the Coordinator will be running on
+        output_file_path (str): The file path where the heavy hitter set will be written to
     '''
 
-    def __init__(self, server_port=18812):
-        self.server = ThreadedServer(CoordinatorService, port=server_port)
+    def __init__(self, server_port=18812, output_file_path):
+        self.server           = ThreadedServer(CoordinatorService, port=server_port)
+        self.output_file_path = output_file_path
 
     def start(self):
+        '''
+        Starts the Coordinator server
+        '''
         self.server.start()
 
     def stop(self):
+        '''
+        Stops the Coordinator server
+        '''
         self.server.close()
 
+    def signal_handler(self):
+        '''
+        Upon SIGINT, the coordinator should write its heavy hitter set to JSON
+        and then gracefully shutdown
+        '''
+        self.server.heavy_hitter_to_json(self.output_file_path)
+        self.server.stop()
+        print('ByeBye')
+
+def parser():
+    parser = argparse.ArgumentParser(description='parse the keyword arguments')
+
+    parser.add_argument(
+        "--p",
+        type=int,
+        required=False,
+        default=18812,
+        help="The port on which the coordinator should run on"
+    )
+
+    parser.add_argument(
+        "--o", 
+        type=str,
+        required=False,
+        default='found_elephants.json',
+        help="The output path for the heavy hitter set"
+    )
+
+    args = parser.parse_args()
+
+    return args.p, args.o
 
 if __name__ == '__main__':
-    coordinator = CoordinatorServer()
-    coordinator.start()
 
+    coordinator_server_port, output_file_path = parser()
+
+    coordinator = CoordinatorServer(coordinator_server_port, output_file_path)
+
+    # register signal handler to handle shutdowns
+    signal.signal(SIGINT, coordinator.signal_handler())
+
+    # start the coordinator
+    coordinator.start()
