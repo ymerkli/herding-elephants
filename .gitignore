@@ -10,3 +10,4 @@ src/pcap
 # Ignore these files
 src/p4src/switch.json
 src/p4src/switch.p4i
+src/topology.db
