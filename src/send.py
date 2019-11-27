@@ -1,9 +1,9 @@
 #!/usr/bin/env python
+import argparse
 import sys
 import socket
 import random
-from subprocess import Popen, PIPE
-import re
+import struct
 
 from scapy.all import sendp, get_if_list, get_if_hwaddr
 from scapy.all import Ether, IP, UDP, TCP
@@ -20,41 +20,21 @@ def get_if():
         exit(1)
     return iface
 
-def get_dst_mac(ip):
-
-    try:
-        pid = Popen(["arp", "-n", ip], stdout=PIPE)
-        s = pid.communicate()[0]
-        mac = re.search(r"(([a-f\d]{1,2}\:){5}[a-f\d]{1,2})", s).groups()[0]
-        return mac
-    except:
-        return None
-
 def main():
 
     if len(sys.argv)<3:
-        print 'pass 2 arguments: <destination> "<message>"'
+        print 'pass 2 arguments: <destination> <number_of_random_packets>'
         exit(1)
 
     addr = socket.gethostbyname(sys.argv[1])
     iface = get_if()
 
-    if len(sys.argv) > 3:
-        tos = int(sys.argv[3]) % 256
-    else:
-        tos = 0
+    print "sending on interface %s to %s" % (iface, str(addr))
 
-    ether_dst = get_dst_mac(addr)
-
-    if not ether_dst:
-        print "Mac address for %s was not found in the ARP table" % addr
-        exit(1)
-
-    print "Sending on interface %s to %s" % (iface, str(addr))
-    pkt =  Ether(src=get_if_hwaddr(iface), dst=ether_dst)
-    pkt = pkt /IP(dst=addr,tos=tos) / sys.argv[2]
-    sendp(pkt, iface=iface, verbose=False)
-
+    for _ in range(int(sys.argv[2])):
+        pkt = Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
+        pkt = pkt /IP(dst=addr) / TCP(dport=random.randint(5000,60000), sport=random.randint(49152,65535))
+        sendp(pkt, iface=iface, verbose=False)
 
 if __name__ == '__main__':
     main()
