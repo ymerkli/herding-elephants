@@ -133,11 +133,10 @@ class L2Controller(object):
         starting_index = 32
         for sample in range(num_samples):
             srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBL", msg[starting_index:starting_index + 17])
-            print(ipaddress.IPv4Address(srcIP), ipaddress.IPv4Address(dstIP), srcPort, dstPort, protocol, flow_count)
 
             # convert int IPs to str
-            srcIP = ipaddress.IPv4Address(srcIP)
-            dstIP = ipaddress.IPv4Address(dstIP)
+            srcIP = str(ipaddress.IPv4Address(srcIP))
+            dstIP = str(ipaddress.IPv4Address(dstIP))
 
             # construct flow tuple
             flow = (srcIP, dstIP, srcPort, dstPort, protocol)
@@ -170,10 +169,10 @@ class L2Controller(object):
             # if the flow count is zero, the digest is just a hello message
             # otherwise, it's a report
                 if flow_info['flow_count'] == 0:
-                    print('sending a hello for: ', flow_info['flow'])
+                    print("Sending a hello for: {0}".format(flow_info['flow']))
                     self.send_hello(flow_info['flow'])
                 else:
-                    print('sending a report for: ', flow_info['flow'])
+                    print("Sending a report for: {0}".format(flow_info['flow']))
                     self.report_flow(flow_info['flow'])
 
         #Acknowledge digest
@@ -203,7 +202,7 @@ class L2Controller(object):
             flow (tuple):   The flow 5-tuple to be reported
         '''
 
-        self.coordinator_c.root.send_report(flow)
+        self.coordinator_c.root.send_report(flow, self.sw_name)
 
     def send_hello(self, flow):
         '''
@@ -245,7 +244,7 @@ class L2Controller(object):
         tau_g = int(self.epsilon * self.global_threshold_T / l_g)
         r_g   = 1 / l_g
 
-        print("flow: {0}, tau_g: {1}, r_g:{2}".format(flow, tau_g, r_g))
+        print("Adding table entry for flow: {0}, tau_g: {1}, r_g:{2}".format(flow, tau_g, r_g))
 
         # convert r_g to use in coinflips on the switch (no floating point)
         r_g = (2**32 - 1) * r_g
@@ -269,9 +268,25 @@ class L2Controller(object):
         else:
             dstGroup = dstGroup.group(1)
 
-        # add an entry to the group_values table
+        '''
+        Add an entry to the group_values table. In case the group already has
+        an entry, this wont do anything and return a value
+        '''
         self.controller.table_add('group_values', 'getValues',\
             [srcGroup, dstGroup], [str(r_g), str(tau_g)])
+
+        '''
+        In case the group already had an entry, the table_add won't update it
+        and simply return a warning. We simply do a table_update after every
+        single table_add. This doesn't hurt for new group adds and correctly
+        updates the group values for already existing groups
+        '''
+        entry_handle = self.controller.get_handle_from_match('group_values',\
+            [srcGroup, dstGroup])
+
+        self.controller.table_modify('group_values', 'getValues',\
+            entry_handle, [str(r_g), str(tau_g)])
+
 
 
 def parser():
