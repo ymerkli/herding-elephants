@@ -8,6 +8,7 @@ import argparse
 from scapy.all import sendp, get_if_list, get_if_hwaddr, rdpcap
 from scapy.all import Ether, IP, UDP, TCP
 from subprocess import Popen, PIPE
+from timeit import default_timer as timer
 
 def get_if():
     '''
@@ -71,9 +72,11 @@ def send_pcap(pcap_path, internal_host_ip, manual_mode):
     '''
 
     iface = get_if()
+
     # read the provide pcap file
     pcap_packets = rdpcap(pcap_path)
 
+    start_time = timer()
     for pkt in pcap_packets:
         if IP in pkt:
             src_ip = pkt[IP].src
@@ -94,6 +97,10 @@ def send_pcap(pcap_path, internal_host_ip, manual_mode):
                 continue
 
             send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, manual_mode)
+
+    end_time = timer()
+
+    print("Finished, this took {0} seconds".format(end_time - start_time))
 
 def parser():
     '''
