@@ -25,9 +25,11 @@ class L2Controller(object):
     the central coordiantor
 
     Args:
-        sw_name (str):              The name of the switch where the controller is running on
-        epsilon (int):              The approximation factor
-        global_threshold_T (int):   The global threshold
+        sw_name (str):                  The name of the switch where the controller is running on
+        epsilon (int):                  The approximation factor
+        global_threshold_T (int):       The global threshold
+        sampling_probability_s (float): The probability to sample a flow (s) [0-1]
+        coordinator_port (int):         The port on which the coordinator server is running on
 
     Attributes:
         topo (p4utils Topology):                The switch topology
@@ -36,10 +38,10 @@ class L2Controller(object):
         controller (p4utils SimpleSwitchAPI):   The controller of the switch
         coordinator_c (rpyc connection):        An rpyc connection to the Coordinator
         epsilon (int):                          The approximation factor
-        global_threshold_T (int):               The global threshol
+        global_threshold_T (int):               The global threshold
     '''
 
-    def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s):
+    def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
 
         self.topo               = Topology(db="../topology.db")
         self.sw_name            = sw_name
@@ -48,13 +50,16 @@ class L2Controller(object):
         self.epsilon            = epsilon
         self.global_threshold_T = global_threshold_T
         self.p_sampling         = sampling_probability_s
-        self.coordinator_c      = rpyc.connect('localhost', 18812)
+        self.coordinator_c      = rpyc.connect('localhost', coordinator_port)
         self.custom_calcs       = self.controller.get_custom_crc_calcs()
 
         self.init()
 
 
     def init(self):
+        '''
+        Initialize controller
+        '''
 
         self.controller.reset_state()
 
@@ -85,8 +90,7 @@ class L2Controller(object):
         Writes the registers needed to initialize counters in the switch.
 
         Args:
-            p_sampling:         The probability to sample a flow (s) [0-1]
-
+            p_sampling (float):         The probability to sample a flow (s) [0-1]
         '''
 
         counter_startvalue = int(1/p_sampling)
@@ -114,7 +118,6 @@ class L2Controller(object):
         print("Received error message with error code: %s" % error_code)
         if (error_code == 0):
             self.reset_hash_tables()
-
 
     def unpack_digest(self, msg, num_samples):
         '''
@@ -244,7 +247,7 @@ class L2Controller(object):
         tau_g = int(self.epsilon * self.global_threshold_T / l_g)
         r_g   = 1 / l_g
 
-        print("Adding table entry for flow: {0}, tau_g: {1}, r_g:{2}".format(flow, tau_g, r_g))
+        print("Adding table entry for flow: {0}, tau_g: {1}, r_g: {2}".format(flow, tau_g, r_g))
 
         # convert r_g to use in coinflips on the switch (no floating point)
         r_g = (2**32 - 1) * r_g
@@ -320,13 +323,21 @@ def parser():
             help="The sampling probability s"
     )
 
+    parser.add_argument(
+            "--p",
+            type=int,
+            required=False,
+            default=18812,
+            help="The port where the coordinator server is running on"
+    )
+
     args = parser.parse_args()
 
-    return args.n, args.e, args.t, args.s
+    return args.n, args.e, args.t, args.s, args.p
 
 if __name__ == '__main__':
-    sw_name, epsilon, global_threshold_T, sampling_probability_s = parser()
+    sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
 
-    l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s)
+    l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
 
     l2_controller.run_digest_loop()
