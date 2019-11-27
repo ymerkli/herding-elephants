@@ -6,6 +6,8 @@ import rpyc
 import nnpy
 import json
 import signal
+import argparse
+import sys
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
@@ -32,13 +34,14 @@ class CoordinatorService(rpyc.Service):
                                     Callbacks are used to send l_g back to switches. Key is a sw_name (str), value is a function.
     '''
 
-    def __init__(self):
+    def __init__(self, output_file_path):
         self.heavy_hitter_set       = []
         self.reports                = {}
         self.elephant_threshold_R   = None
         self.l_g_table              = {}
         self.flow_to_switches       = {}
         self.callback_table         = {}
+        self.output_file_path       = output_file_path
 
     def exposed_send_report(self, flow, sw_name):
         '''
@@ -134,7 +137,7 @@ class CoordinatorService(rpyc.Service):
                 # only send locality parameter to sw_name
                 self.callback_table[sw_name](flow, l_g)
 
-    def heavy_hitter_to_json(self, output_file_path):
+    def heavy_hitter_to_json(self):
         '''
         Writes all the found elephant flows to JSON
 
@@ -145,9 +148,11 @@ class CoordinatorService(rpyc.Service):
             'found_elephants': self.heavy_hitter_set
         }
 
-        with open(output_file_path, 'w') as outfile:
+        with open(self.output_file_path, 'w') as outfile:
             json.dump(data, outfile)
             outfile.close()
+
+        print("Wrote heavy hitter set to {0}".format(self.output_file_path))
 
 class CoordinatorServer(object):
     '''
@@ -158,9 +163,9 @@ class CoordinatorServer(object):
         output_file_path (str): The file path where the heavy hitter set will be written to
     '''
 
-    def __init__(self, server_port=18812, output_file_path):
-        self.server           = ThreadedServer(CoordinatorService, port=server_port)
-        self.output_file_path = output_file_path
+    def __init__(self, server_port, output_file_path):
+        self.coordinator_service = CoordinatorService(output_file_path)
+        self.server              = ThreadedServer(self.coordinator_service, port=server_port)
 
     def start(self):
         '''
@@ -174,14 +179,14 @@ class CoordinatorServer(object):
         '''
         self.server.close()
 
-    def signal_handler(self):
+    def signal_handler(self, sig, frame):
         '''
-        Upon SIGINT, the coordinator should write its heavy hitter set to JSON
-        and then gracefully shutdown
+        Writes the heavy hitter set to JSON and stops the Coordinator server upon SIGINT
         '''
-        self.server.heavy_hitter_to_json(self.output_file_path)
-        self.server.stop()
+        self.coordinator_service.heavy_hitter_to_json()
+        self.stop()
         print('ByeBye')
+        sys.exit(0)
 
 def parser():
     parser = argparse.ArgumentParser(description='parse the keyword arguments')
@@ -213,7 +218,7 @@ if __name__ == '__main__':
     coordinator = CoordinatorServer(coordinator_server_port, output_file_path)
 
     # register signal handler to handle shutdowns
-    signal.signal(SIGINT, coordinator.signal_handler())
+    signal.signal(signal.SIGINT, coordinator.signal_handler)
 
     # start the coordinator
     coordinator.start()
