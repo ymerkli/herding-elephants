@@ -1,5 +1,56 @@
 from __future__ import division
 import random
+import argparse
+from scapy.all import *
+
+def parser():
+    parser = argparse.ArgumentParser(description = 'parse the keyword arguments')
+    parser.add_argument('--p', required = True, help = 'Path to .pcap file')
+    parser.add_argument('--t', type = int, required = True, help = 'Global Threshold')
+    parser.add_argument('--c', type = int, required = True, help = 'Communication budget')
+    parser.add_argument('--s', type = int, required = True, help = 'switch memory')
+    args = parser.parse_args()
+    return args.p, args.t, args.c, args.s
+
+def pcap_to_list(pcap_path):
+    list = []
+
+    pkts = rdpcap(pcap_path)
+
+    for pkt in pkts:
+        '''
+        flag signals whether to include IPv6 packets or not.
+        '''
+        flag = 0
+
+        if IP in pkt:
+            src_ip = pkt[IP].src
+            dst_ip = pkt[IP].dst
+            protocol = pkt[IP].proto
+            src_port = pkt[IP].sport
+            dst_port = pkt[IP].dport
+            flag = 1
+        '''
+        elif IPv6 in pkt:
+            src_ip = pkt[IPv6].src
+            dst_ip = pkt[IPv6].dst
+            # IPv6 doens't have protocol, but all packets seem to be TCP?
+            protocol = 6
+            src_port = pkt[IPv6].sport
+            dst_port = pkt[IPv6].dport
+            flag = 1
+            '''
+
+        '''
+        When we don't want the IPv6 packets, we can simply make the IPv6 part
+        (from 'elif IPv6 ...' to 'flag = 1') a comment.
+        '''
+        if flag == 1:
+            five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
+            list.append(five_tuple)
+
+    return(list)
+
 
 ##### Given #####
 # (T) glob_thresh -> Global threshold
@@ -22,14 +73,14 @@ import random
 # determine the highest possible sampling prob-ability,
 # given the memory constraint
 def GetSampling(switch_mem, train_data, mole_tau):
-    print("GetSampling started")
+    #print("GetSampling started")
     sampl_prob = 1/(mole_tau)
     moles = CalculateMoles(train_data, sampl_prob)
     while len(moles) < switch_mem:
         mole_tau = mole_tau - 1
         sampl_prob = 1/mole_tau
         moles = CalculateMoles(train_data, sampl_prob)
-    print("GetSampling: mole_tau = {0}".format(mole_tau))
+    #print("GetSampling: mole_tau = {0}".format(mole_tau))
     return mole_tau
 
 # configures reporting parameters based on the gives contraints
@@ -39,12 +90,12 @@ def DeriveReporting(comm_budget, epsilon, observers, sampl_prob):
     moles = CalculateMoles(train_data, sampl_prob)
     mules = CalculateMules(moles, mule_tau)
     try:
-        report_prob = comm_budget * mule_tau / (glob_thresh * len(mules))
+        report_prob = min(comm_budget * mule_tau / (glob_thresh * len(mules)), 1)
     # if no mules found, always report
     except ZeroDivisionError:
         report_prob = 1
-    report_thresh = observers * report_prob / glob_thresh
-    print("DeriveReporting: report_thresh = {0}, mules = {1}, report_prob = {2}, mule_tau = {3}".format(report_thresh, "too big to show", report_prob, mule_tau))
+    report_thresh = max(int(round(observers * report_prob / glob_thresh)),1)
+    print("DeriveReporting: report_thresh = {0}, mules = {1}, report_prob = {2}, mule_tau = {3}".format(report_thresh, "x", report_prob, mule_tau))
     return report_thresh, mules, report_prob, mule_tau
 
 # determine the accuracy of the System
@@ -100,8 +151,8 @@ def GetAccuracy(train_data, report_thresh, glob_thresh, mules, report_prob, samp
         if real_count[i] >= glob_thresh:
             real_elephants.append(i)
     # print("real_count = {}".format(real_count))
-    print("elephants = {}".format(elephants))
-    print("real_elephants = {}".format(real_elephants))
+    print("len(elephants = {}".format(len(elephants)))
+    print("len(real_elephants) = {}".format(len(real_elephants)))
     perf = performance(elephants, real_elephants)
 
     tp = perf[0]
@@ -117,7 +168,7 @@ def GetAccuracy(train_data, report_thresh, glob_thresh, mules, report_prob, samp
     except ZeroDivisionError:
         re = 1
 
-    # we use as accuracy the F1 score
+    # we use the F1 score as accuracy
     accuracy = 2*pr*re/(pr+re)
     print("GetAccuracy: accuracy = {}".format(accuracy))
     return accuracy
@@ -171,21 +222,25 @@ def performance(my_list, real_list):
 if __name__ == "__main__":
     print("running tuningparameters.py as a script")
 
+    # Generate a list with random entries. Used for debugging.
     def randomlist(size):
         lisst = []
         for i in range(size):
             lisst.append(random.randint(0,50))
         return lisst
 
-
-    glob_thresh = 250
-    comm_budget = 25
-    switch_mem = 25
+    # Get arguments from argparse.
+    parser = parser()
+    pcap_path = parser[0]
+    glob_thresh = parser[1]
+    comm_budget = parser[2]
+    switch_mem = parser[3]
     ingress_switches = 10
     observers = 2
-    train_data = randomlist(25000)
+    train_data = pcap_to_list(pcap_path)
 
+    # Calculate epsilon for the given parameters.
     parameters = TuneAccuracy(glob_thresh, switch_mem, comm_budget, train_data, observers, ingress_switches)
 
-    print("epsilon = {0}, tau = {1}, report_prob = {2}".format(parameters[0], parameters[1], parameters[2]))
     # return epsilon, tau, report_prob
+    print("epsilon = {0}, tau = {1}, report_prob = {2}".format(parameters[0], parameters[1], parameters[2]))

@@ -43,8 +43,8 @@ def real_elephants(pcap_path, glob_thresh):
             '''
 
         '''
-        When we don't want the IPv6 packets, we can simply comment the IPv6 part
-        out, from 'elif IPv6 ...' to 'flag = 1'
+        When we don't want the IPv6 packets, we can simply make the IPv6 part
+        (from 'elif IPv6 ...' to 'flag = 1') a comment.
         '''
         if flag == 1:
             five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
