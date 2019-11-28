@@ -20,7 +20,7 @@ def main():
                 print("##### TCP: from [{}] --> to [{}]".format(src_port, dst_port))
             elif protocol == 17:
                 print("##### UDP: from [{}] --> to [{}]".format(src_port, dst_port))
-
+        '''
         elif IPv6 in pkt:
             src_ip = pkt[IPv6].src
             dst_ip = pkt[IPv6].dst
@@ -31,6 +31,7 @@ def main():
             print("##### ")
             print("##### IP: from [{}] --> to [{}]".format(src_ip, dst_ip))
             print("##### Ports: from [{}] --> to [{}]".format(src_port, dst_port))
+        '''
 
         if Ether in pkt:
             src_mac = pkt[Ether].src
