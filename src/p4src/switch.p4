@@ -15,6 +15,7 @@ typedef bit<32> flow_id_t;
 
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+typedef bit<9> egressSpec_t;
 
 // Constants //
 const uint32_probability INT32_MAX = 4294967295;
