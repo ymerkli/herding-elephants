@@ -4,6 +4,7 @@ import socket
 import random
 import re
 import argparse
+import time
 
 from scapy.all import sendp, get_if_list, get_if_hwaddr, rdpcap
 from scapy.all import Ether, IP, UDP, TCP
@@ -43,8 +44,9 @@ def get_dst_mac(ip):
     try:
         pid = Popen(["arp", "-n", ip], stdout=PIPE)
         s = pid.communicate()[0]
-        mac = re.search(r"(([a-f\d]{1,2}\:){5}[a-f\d]{1,2})", s).groups()[0]
-        return mac
+        macs = re.search(r"(([a-f\d]{1,2}\:){5}[a-f\d]{1,2})", s)
+
+        return macs.groups()[0]
     except:
         return None
 
@@ -76,7 +78,8 @@ def send_pcap(pcap_path, internal_host_ip, manual_mode):
     # read the provide pcap file
     pcap_packets = rdpcap(pcap_path)
 
-    start_time = timer()
+    start_time     = timer()
+    packet_counter = 0
     for pkt in pcap_packets:
         if IP in pkt:
             src_ip = pkt[IP].src
@@ -97,10 +100,12 @@ def send_pcap(pcap_path, internal_host_ip, manual_mode):
                 continue
 
             send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, manual_mode)
+            packet_counter += 1
 
     end_time = timer()
 
     print("Finished, this took {0} seconds".format(end_time - start_time))
+    print("Sent {0} packets".format(packet_counter))
 
 def parser():
     '''
