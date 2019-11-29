@@ -52,6 +52,7 @@ class L2Controller(object):
         self.p_sampling         = sampling_probability_s
         self.coordinator_c      = rpyc.connect('localhost', coordinator_port)
         self.custom_calcs       = self.controller.get_custom_crc_calcs()
+        self.seen_groups        = []
 
         self.init()
 
@@ -169,11 +170,16 @@ class L2Controller(object):
             if flow_info['flow'] == (ipaddress.IPv4Address(0),ipaddress.IPv4Address(0),0,0,0):
                 self.handle_Error(flow_info['flow_count'])
             else:
-            # if the flow count is zero, the digest is just a hello message
-            # otherwise, it's a report
+                # if the flow count is zero, the digest is just a hello message
+                # otherwise, it's a report
+                srcGroup, dstGroup = self.extract_group(flow_info['flow'])
+                group = (srcGroup, dstGroup)
                 if flow_info['flow_count'] == 0:
-                    print("Sending a hello for: {0}".format(flow_info['flow']))
-                    self.send_hello(flow_info['flow'])
+                    # only send a hello if we havent sent a hello yet for this flow
+                    if group not in self.sent_hellos:
+                        print("Sending a hello for: {0}".format(flow_info['flow']))
+                        self.send_hello(flow_info['flow'])
+                        self.sent_hellos.append(group)
                 else:
                     print("Sending a report for: {0}".format(flow_info['flow']))
                     self.report_flow(flow_info['flow'])
@@ -246,30 +252,13 @@ class L2Controller(object):
 
         tau_g = int(self.epsilon * self.global_threshold_T / l_g)
         r_g   = 1 / l_g
+        srcGroup, dstGroup = self.extract_group(flow)
 
-        print("Adding table entry for flow: {0}, tau_g: {1}, r_g: {2}".format(flow, tau_g, r_g))
+        print("Adding table entry for flow: ({0},{1}) tau_g: {2}, r_g: {3}".format(srcGroup, dstGroup, tau_g, r_g))
 
         # convert r_g to use in coinflips on the switch (no floating point)
         r_g = (2**32 - 1) * r_g
 
-        # stringify digest IPs
-        srcIP_str = str(flow[0])
-        dstIP_str = str(flow[1])
-
-        # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
-        # raises an error if the digest IPs have invalid format
-        #TODO: IPv6?
-        srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
-        if srcGroup is None:
-            raise ValueError("Error: invalid srcIP format: {0}".format(srcIP_str))
-        else:
-            srcGroup = srcGroup.group(1)
-
-        dstGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', dstIP_str)
-        if dstGroup is None:
-            raise ValueError("Error: invalid srcIP format: {0}".format(dstIP_str))
-        else:
-            dstGroup = dstGroup.group(1)
 
         '''
         Add an entry to the group_values table. In case the group already has
@@ -290,7 +279,37 @@ class L2Controller(object):
         self.controller.table_modify('group_values', 'getValues',\
             entry_handle, [str(r_g), str(tau_g)])
 
+    def extract_group(self, flow):
+        '''
+        Extracts the group of the given IP (i.e. the first 8 bits of
+        the srcIP and first 8 bits of the dstIP
 
+        Args:
+            flow (tuple):   The flow for which we want the group values
+
+        Returns:
+            group (tuple): 2-tuple with srcGroup and dstGroup
+        '''
+        # stringify digest IPs
+        srcIP_str = str(flow[0])
+        dstIP_str = str(flow[1])
+
+        # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
+        # raises an error if the digest IPs have invalid format
+        #TODO: IPv6?
+        srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
+        if srcGroup is None:
+            raise ValueError("Error: invalid srcIP format: {0}".format(srcIP_str))
+        else:
+            srcGroup = srcGroup.group(1)
+
+        dstGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', dstIP_str)
+        if dstGroup is None:
+            raise ValueError("Error: invalid srcIP format: {0}".format(dstIP_str))
+        else:
+            dstGroup = dstGroup.group(1)
+
+        return srcGroup, dstGroup
 
 def parser():
     parser = argparse.ArgumentParser(description='parse the keyword arguments')
