@@ -8,11 +8,13 @@ import json
 import signal
 import argparse
 import sys
+import time
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
 from rpyc.utils.server import ThreadedServer
 from scapy.all import Ether, sniff, Packet, BitField
+
 
 class CoordinatorService(rpyc.Service):
     '''
@@ -76,7 +78,7 @@ class CoordinatorService(rpyc.Service):
             self.reports[flow] = 1
 
         # if the number of reports reaches the report threshold, we have a heavy hitter
-        if self.reports[flow] >= self.elephant_threshold_R:
+        if flow not in self.heavy_hitter_set and self.reports[flow] >= self.elephant_threshold_R:
             self.heavy_hitter_set.append(flow)
 
     def exposed_send_hello(self, flow, sw_name, hello_callback):
@@ -91,6 +93,7 @@ class CoordinatorService(rpyc.Service):
                                     functions will be stored.
         '''
 
+        print(datetime.now())
         self.handle_hello(flow, sw_name, hello_callback)
 
     def handle_hello(self, flow, sw_name, hello_callback):
@@ -144,11 +147,12 @@ class CoordinatorService(rpyc.Service):
         Args:
             output_file_path (str): The file path where the JSON will be written to
         '''
+        key = "{0}_found_elephants".format(time.ctime())
         data = {
-            'found_elephants': self.heavy_hitter_set
+            key: self.heavy_hitter_set
         }
 
-        with open(self.output_file_path, 'w') as outfile:
+        with open(self.output_file_path, 'a') as outfile:
             json.dump(data, outfile)
             outfile.close()
 
