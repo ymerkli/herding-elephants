@@ -12,6 +12,7 @@ topo_base = {
   "cli": True,
   "pcap_dump": True,
   "enable_log": True,
+  "exec_scripts": [],
   "topo_module": {
     "file_path": "",
     "module_name": "p4utils.mininetlib.apptopo",
@@ -33,19 +34,24 @@ topo_base = {
   }
 }
 
-def create_linear_topo(num_switches):
+
+def create_topo(num_switches):
     topo_base["topology"]["links"] = []
 
-    #connect hosts with switches
+    #connect host 1 with switches
     for i in range(1, num_switches+1):
-        topo_base["topology"]["links"].append(["h{}".format(i), "s{0}".format(i)])
+        topo_base["topology"]["links"].append(["h1", "s{}".format(i)])
 
-    #connect switches
-    for i in range(1, num_switches):
-        topo_base["topology"]["links"].append(["s{}".format(i), "s{}".format(i + 1)])
+    #connect host 2 with switches
+    for i in range(1, num_switches +1):
+        topo_base["topology"]["links"].append(["s{}".format(i), "h2"])
 
-    topo_base["topology"]["hosts"] = {"h{0}".format(i): {} for i in range(1, num_switches + 1)}
-    topo_base["topology"]["switches"] = {"s{0}".format(i): {} for i in range(1, num_switches + 1)}
+    topo_base["exec_scripts"] = {("cmd": "sudo python ../controller/l2_controller.py --n s{} --e 1 --t 1 --s 1 &", "reboot_run": true).format(1)}
+
+    topo_base["topology"]["hosts"] = {"h{}".format(i): {} for i in range(1, 3)}
+    topo_base["topology"]["switches"] = {"s{}".format(i): {} for i in range(1, num_switches + 1)}
+
+"""
 
 def create_circular_topo(num_switches):
 
@@ -75,6 +81,8 @@ def create_random_topo(degree=4, num_switches=10):
     topo_base["topology"]["hosts"] = {"h{0}".format(i): {} for i in range(1, num_switches + 1)}
     topo_base["topology"]["switches"] = {"s{0}".format(i): {} for i in range(1, num_switches + 1)}
 
+"""
+
 
 def main():
     pass
@@ -82,16 +90,9 @@ def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--output_name', type=str, required=False, default="p4app_test.json")
-    parser.add_argument("--topo", type=str, default="linear")
-    parser.add_argument('-n', type=str, required=False, default=2)
-    parser.add_argument('-d', type=str, required=False, default=4)
+    parser.add_argument('-n', type=str, required=False, default=3)
     args = parser.parse_args()
 
-    if args.topo == "linear":
-        create_linear_topo(int(args.n))
-    elif args.topo == "circular":
-        create_circular_topo(int(args.n))
-    elif args.topo == "random":
-        create_random_topo(int(args.d), int(args.n))
+    create_topo(args.n)
 
     json.dump(topo_base, open(args.output_name, "w"), sort_keys=True, indent=2)

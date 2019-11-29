@@ -1,0 +1,78 @@
+{
+  "cli": true,
+  "compiler": "p4c",
+  "controller_module": null,
+  "enable_log": true,
+  "exec_scripts": [
+    {
+      "cmd": "sudo python controller/l2_controller_b.py --n s1 --e 1 --t 1 --s 1 &",
+      "reboot_run": true
+    },
+    {
+      "cmd": "sudo python controller/l2_controller_b.py --n s2 --e 1 --t 1 --s 1 &",
+      "reboot_run": true
+    },
+    {
+      "cmd": "sudo python controller/l2_controller_b.py --n s3 --e 1 --t 1 --s 1 &",
+      "reboot_run": true
+    }
+  ],
+  "mininet_module": {
+    "file_path": "",
+    "module_name": "p4utils.mininetlib.p4net",
+    "object_name": "P4Mininet"
+  },
+  "options": "--target bmv2 --arch v1model --std p4-16",
+  "pcap_dump": true,
+  "program": "p4src/switch.p4",
+  "switch": "simple_switch",
+  "switch_cli": "simple_switch_CLI",
+  "topo_module": {
+    "file_path": "",
+    "module_name": "p4utils.mininetlib.apptopo",
+    "object_name": "AppTopoStrategies"
+  },
+  "topodb_module": {
+    "file_path": "",
+    "module_name": "p4utils.utils.topology",
+    "object_name": "Topology"
+  },
+  "topology": {
+    "assignment_strategy": "l3",
+    "hosts": {
+      "h1": {},
+      "h2": {}
+    },
+    "links": [
+      [
+        "h1",
+        "s1"
+      ],
+      [
+        "h1",
+        "s2"
+      ],
+      [
+        "h1",
+        "s3"
+      ],
+      [
+        "s1",
+        "h2"
+      ],
+      [
+        "s2",
+        "h2"
+      ],
+      [
+        "s3",
+        "h2"
+      ]
+    ],
+    "switches": {
+      "s1": {},
+      "s2": {},
+      "s3": {}
+    }
+  }
+}
