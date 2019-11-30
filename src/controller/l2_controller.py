@@ -25,9 +25,11 @@ class L2Controller(object):
     the central coordiantor
 
     Args:
-        sw_name (str):              The name of the switch where the controller is running on
-        epsilon (int):              The approximation factor
-        global_threshold_T (int):   The global threshold
+        sw_name (str):                  The name of the switch where the controller is running on
+        epsilon (int):                  The approximation factor
+        global_threshold_T (int):       The global threshold
+        sampling_probability_s (float): The probability to sample a flow (s) [0-1]
+        coordinator_port (int):         The port on which the coordinator server is running on
 
     Attributes:
         topo (p4utils Topology):                The switch topology
@@ -36,10 +38,10 @@ class L2Controller(object):
         controller (p4utils SimpleSwitchAPI):   The controller of the switch
         coordinator_c (rpyc connection):        An rpyc connection to the Coordinator
         epsilon (int):                          The approximation factor
-        global_threshold_T (int):               The global threshol
+        global_threshold_T (int):               The global threshold
     '''
 
-    def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s):
+    def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
 
         self.topo               = Topology(db="../topology.db")
         self.sw_name            = sw_name
@@ -48,13 +50,17 @@ class L2Controller(object):
         self.epsilon            = epsilon
         self.global_threshold_T = global_threshold_T
         self.p_sampling         = sampling_probability_s
-        self.coordinator_c      = rpyc.connect('localhost', 18812)
+        self.coordinator_c      = rpyc.connect('localhost', coordinator_port)
         self.custom_calcs       = self.controller.get_custom_crc_calcs()
+        self.seen_groups        = []
 
         self.init()
 
 
     def init(self):
+        '''
+        Initialize controller
+        '''
 
         self.controller.reset_state()
 
@@ -88,8 +94,7 @@ class L2Controller(object):
         Writes the registers needed to initialize counters in the switch.
 
         Args:
-            p_sampling:         The probability to sample a flow (s) [0-1]
-
+            p_sampling (float):         The probability to sample a flow (s) [0-1]
         '''
 
         counter_startvalue = int(1/p_sampling)
@@ -118,7 +123,6 @@ class L2Controller(object):
         if (error_code == 0):
             self.reset_hash_tables()
 
-
     def unpack_digest(self, msg, num_samples):
         '''
         Unpacks a digest received from the data plane
@@ -136,11 +140,10 @@ class L2Controller(object):
         starting_index = 32
         for sample in range(num_samples):
             srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBL", msg[starting_index:starting_index + 17])
-            print(ipaddress.IPv4Address(srcIP), ipaddress.IPv4Address(dstIP), srcPort, dstPort, protocol, flow_count)
 
             # convert int IPs to str
-            srcIP = ipaddress.IPv4Address(srcIP)
-            dstIP = ipaddress.IPv4Address(dstIP)
+            srcIP = str(ipaddress.IPv4Address(srcIP))
+            dstIP = str(ipaddress.IPv4Address(dstIP))
 
             # construct flow tuple
             flow = (srcIP, dstIP, srcPort, dstPort, protocol)
@@ -170,13 +173,18 @@ class L2Controller(object):
             if flow_info['flow'] == (ipaddress.IPv4Address(0),ipaddress.IPv4Address(0),0,0,0):
                 self.handle_Error(flow_info['flow_count'])
             else:
-            # if the flow count is zero, the digest is just a hello message
-            # otherwise, it's a report
+                # if the flow count is zero, the digest is just a hello message
+                # otherwise, it's a report
+                srcGroup, dstGroup = self.extract_group(flow_info['flow'])
+                group = (srcGroup, dstGroup)
                 if flow_info['flow_count'] == 0:
-                    print('sending a hello for: ', flow_info['flow'])
-                    self.send_hello(flow_info['flow'])
+                    # only send a hello if we havent sent a hello yet for this flow
+                    if group not in self.sent_hellos:
+                        print("Sending a hello for: {0}".format(flow_info['flow']))
+                        self.send_hello(flow_info['flow'])
+                        self.sent_hellos.append(group)
                 else:
-                    print('sending a report for: ', flow_info['flow'])
+                    print("Sending a report for: {0}".format(flow_info['flow']))
                     self.report_flow(flow_info['flow'])
 
         #Acknowledge digest
@@ -206,7 +214,7 @@ class L2Controller(object):
             flow (tuple):   The flow 5-tuple to be reported
         '''
 
-        self.coordinator_c.root.send_report(flow)
+        self.coordinator_c.root.send_report(flow, self.sw_name)
 
     def send_hello(self, flow):
         '''
@@ -247,12 +255,44 @@ class L2Controller(object):
 
         tau_g = int(self.epsilon * self.global_threshold_T / l_g)
         r_g   = 1 / l_g
+        srcGroup, dstGroup = self.extract_group(flow)
 
-        print("flow: {0}, tau_g: {1}, r_g:{2}".format(flow, tau_g, r_g))
+        print("Adding table entry for flow: ({0},{1}) tau_g: {2}, r_g: {3}".format(srcGroup, dstGroup, tau_g, r_g))
 
         # convert r_g to use in coinflips on the switch (no floating point)
         r_g = (2**32 - 1) * r_g
 
+
+        '''
+        Add an entry to the group_values table. In case the group already has
+        an entry, this wont do anything and return a value
+        '''
+        self.controller.table_add('group_values', 'getValues',\
+            [srcGroup, dstGroup], [str(r_g), str(tau_g)])
+
+        '''
+        In case the group already had an entry, the table_add won't update it
+        and simply return a warning. We simply do a table_update after every
+        single table_add. This doesn't hurt for new group adds and correctly
+        updates the group values for already existing groups
+        '''
+        entry_handle = self.controller.get_handle_from_match('group_values',\
+            [srcGroup, dstGroup])
+
+        self.controller.table_modify('group_values', 'getValues',\
+            entry_handle, [str(r_g), str(tau_g)])
+
+    def extract_group(self, flow):
+        '''
+        Extracts the group of the given IP (i.e. the first 8 bits of
+        the srcIP and first 8 bits of the dstIP
+
+        Args:
+            flow (tuple):   The flow for which we want the group values
+
+        Returns:
+            group (tuple): 2-tuple with srcGroup and dstGroup
+        '''
         # stringify digest IPs
         srcIP_str = str(flow[0])
         dstIP_str = str(flow[1])
@@ -272,10 +312,7 @@ class L2Controller(object):
         else:
             dstGroup = dstGroup.group(1)
 
-        # add an entry to the group_values table
-        self.controller.table_add('group_values', 'getValues',\
-            [srcGroup, dstGroup], [str(r_g), str(tau_g)])
-
+        return srcGroup, dstGroup
 
     def route(self):
 
@@ -317,7 +354,6 @@ class L2Controller(object):
                             dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name),
                                                self.topo.node_to_node_port_num(sw_name, next_hop))
                                               for next_hop in next_hops]
-                            #import ipdb; ipdb.set_trace()
                             host_ip = self.topo.get_host_ip(host) + "/24"
 
                             #check if the ecmp group already exists. The ecmp group is defined by the number of next
@@ -344,8 +380,6 @@ class L2Controller(object):
                                 print "table_add at {}:".format(sw_name)
                                 self.controller.table_add("ipv4_lpm", "ecmp_group", [str(host_ip)],
                                                                     [str(new_ecmp_group_id), str(len(dst_macs_ports))])
-
-
 
 class InputValueError(Exception):
     pass
@@ -380,6 +414,14 @@ def parser():
             type=float,
             required=True,
             help="The sampling probability s"
+    )
+
+    parser.add_argument(
+            "--p",
+            type=int,
+            required=False,
+            default=18812,
+            help="The port where the coordinator server is running on"
     )
 
     args = parser.parse_args()
