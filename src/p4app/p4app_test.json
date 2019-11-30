@@ -25,7 +25,7 @@
     "object_name": "Topology"
   },
   "topology": {
-    "assignment_strategy": "l3",
+    "assignment_strategy": "l2",
     "hosts": {
       "h1": {},
       "h2": {}

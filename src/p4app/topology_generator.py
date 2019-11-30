@@ -3,7 +3,7 @@ import argparse
 import networkx
 
 topo_base = {
-  "program": "p4src/ecmp.p4",
+  "program": "p4src/switch.p4",
   "switch": "simple_switch",
   "compiler": "p4c",
   "options": "--target bmv2 --arch v1model --std p4-16",
@@ -30,7 +30,7 @@ topo_base = {
     "object_name": "P4Mininet"
   },
   "topology": {
-      "assignment_strategy": "l3"
+      "assignment_strategy": "l2"
   }
 }
 
@@ -40,16 +40,14 @@ def create_topo(num_switches):
 
     #connect host 1 with switches
     for i in range(1, num_switches+1):
-        topo_base["topology"]["links"].append(["h1", "s{}".format(i)])
+        topo_base["topology"]["links"].append(["h1", "s{0}".format(i)])
 
     #connect host 2 with switches
     for i in range(1, num_switches +1):
-        topo_base["topology"]["links"].append(["s{}".format(i), "h2"])
+        topo_base["topology"]["links"].append(["s{0}".format(i), "h2"])
 
-    topo_base["exec_scripts"] = {("cmd": "sudo python ../controller/l2_controller.py --n s{} --e 1 --t 1 --s 1 &", "reboot_run": true).format(1)}
-
-    topo_base["topology"]["hosts"] = {"h{}".format(i): {} for i in range(1, 3)}
-    topo_base["topology"]["switches"] = {"s{}".format(i): {} for i in range(1, num_switches + 1)}
+    topo_base["topology"]["hosts"] = {"h{0}".format(i): {} for i in range(1, 3)}
+    topo_base["topology"]["switches"] = {"s{0}".format(i): {} for i in range(1, num_switches + 1)}
 
 """
 
@@ -83,16 +81,12 @@ def create_random_topo(degree=4, num_switches=10):
 
 """
 
-
-def main():
-    pass
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_name', type=str, required=False, default="p4app_test.json")
-    parser.add_argument('-n', type=str, required=False, default=3)
+    parser.add_argument('--output_name', type=str, required=False, default="p4app_generated.json")
+    parser.add_argument('-n', type=int, required=False, default=3)
     args = parser.parse_args()
-
     create_topo(args.n)
 
-    json.dump(topo_base, open(args.output_name, "w"), sort_keys=True, indent=2)
+    json.dump(topo_base, open("p4app_generated.json", "w+"), sort_keys=True, indent=2)
+    print("Finished")
