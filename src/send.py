@@ -80,22 +80,27 @@ def send_pcap(pcap_path, internal_host_ip, manual_mode):
 
     start_time     = timer()
     packet_counter = 0
+
+    ether_src = get_if_hwaddr(iface)
+
+    # we want to send all packets to a host inside the network
+    # Since not all IPs in the pcap packets are mapped to the interal host, we use its real IP
+    # to get the destination MAC
+    ether_dst = get_dst_mac(internal_host_ip)
+
     for pkt in pcap_packets:
         if IP in pkt:
-            src_ip = pkt[IP].src
-            dst_ip = pkt[IP].dst
-            protocol = pkt[IP].proto
-            src_port = pkt[IP].sport
-            dst_port = pkt[IP].dport
+	    try:
+                src_ip = pkt[IP].src
+                dst_ip = pkt[IP].dst
+                protocol = pkt[IP].proto
+                src_port = pkt[IP].sport
+                dst_port = pkt[IP].dport
+	    except:
+                print('Could not extract all 5-tuple fields')
+                continue
 
-            ether_src = get_if_hwaddr(iface)
-
-            # we want to send all packets to a host inside the network
-            # Since not all IPs in the pcap packets are mapped to the interal host, we use its real IP
-            # to get the destination MAC
-            ether_dst = get_dst_mac(internal_host_ip)
-
-            if not ether_dst:
+	    if not ether_dst:
                 print "Mac address for %s was not found in the ARP table" % internal_host_ip
                 continue
 
