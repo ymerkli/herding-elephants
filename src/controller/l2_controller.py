@@ -179,10 +179,10 @@ class L2Controller(object):
                 group = (srcGroup, dstGroup)
                 if flow_info['flow_count'] == 0:
                     # only send a hello if we havent sent a hello yet for this flow
-                    if group not in self.sent_hellos:
+                    if group not in self.seen_groups:
                         print("Sending a hello for: {0}".format(flow_info['flow']))
                         self.send_hello(flow_info['flow'])
-                        self.sent_hellos.append(group)
+                        self.seen_groups.append(group)
                 else:
                     print("Sending a report for: {0}".format(flow_info['flow']))
                     self.report_flow(flow_info['flow'])
@@ -432,12 +432,12 @@ def parser():
     if (args.e <= 0 or 1 < args.e):
         raise InputValueError
 
-    return args.n, args.e, args.t, args.s
+    return args.n, args.e, args.t, args.s, args.p
 
 if __name__ == '__main__':
     try:
-        sw_name, epsilon, global_threshold_T, sampling_probability_s = parser()
-        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s)
+        sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
+        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
 
         print("L2 controller ready")
 

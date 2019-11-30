@@ -28,7 +28,7 @@ class CoordinatorService(rpyc.Service):
         heavy_hitter_set (list):    A list of flows which are heavy hitters
         reports (dict):             A dict of flows and their report count. Key is the flow hash
         elephant_threshold_R(int):  The thresholds on the report count for which we promote a mule to a heavy hitter
-        l_g_table (dict):           A dict storing the locality parameter l_g for a flow based on the group g 
+        l_g_table (dict):           A dict storing the locality parameter l_g for a flow based on the group g
                                     to which the flow belongs to. Key is a flow table, value is an int
         flow_to_switches (dict):    A dict storing which switches have seen a flow. Key is a flow tuple, value is an array
                                     of sw_names
@@ -93,7 +93,6 @@ class CoordinatorService(rpyc.Service):
                                     functions will be stored.
         '''
 
-        print(datetime.now())
         self.handle_hello(flow, sw_name, hello_callback)
 
     def handle_hello(self, flow, sw_name, hello_callback):
@@ -204,7 +203,7 @@ def parser():
     )
 
     parser.add_argument(
-        "--o", 
+        "--o",
         type=str,
         required=False,
         default='found_elephants.json',

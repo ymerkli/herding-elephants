@@ -7,6 +7,7 @@ def write_bash_skript(t, e, s, path):
     f = open("start_controllers.sh", "w+")
     f.write("cd controller\n")
     f.write("lxterminal -e 'python coordinator.py'\n")
+    f.write("sleep 5\n")
     switch_num = 0
     for p4switch in topo.get_p4switches():
         switch_num += 1
@@ -21,9 +22,7 @@ def write_bash_skript(t, e, s, path):
     dummy_text = "boop"
     f.write("cd ..\n")
     f.write("sleep 5\n")
-    ## TODO: switch to send.py
-    f.write("mx h1 python send_one_message.py 10.0.0.%s %s" % (switch_num, dummy_text))
-    # f.write("python send.py --p %s --i 10.0.0.%s" % (path, switch_num))
+    f.write("mx h1 python send.py --p %s --i 10.0.0.%s" % (path, switch_num))
     f.close()
 
 

@@ -286,7 +286,7 @@ control MyIngress(inout headers hdr,
                     sendError();
                 } else {
                     // check if we found an empty space, if so, try to sample
-                    if (meta.data.flow_count == 0) {
+                    if (meta.hash_data.value == 0) {
                         if (meta.flip_s == 1) {
                             count_start.read(meta.data.flow_count, 0);
                         }
