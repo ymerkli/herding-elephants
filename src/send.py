@@ -170,7 +170,7 @@ def write_json(real_elephants, pcap_file):
     pcap_file_name = re.match(r"^(.+/)*(.+)\.(.+)", pcap_file).group(2)
 
     flow_key  = "{0}_real_elephants".format(pcap_file_name)
-    count_key = "{0}_elephant_count".format(pcap_file_name) 
+    count_key = "{0}_elephant_count".format(pcap_file_name)
 
     json_decoded[flow_key]  = real_elephants
     json_decoded[count_key] = len(real_elephants)
