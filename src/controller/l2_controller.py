@@ -52,7 +52,7 @@ class L2Controller(object):
         self.p_sampling         = sampling_probability_s
         self.coordinator_c      = rpyc.connect('localhost', coordinator_port)
         self.custom_calcs       = self.controller.get_custom_crc_calcs()
-        self.seen_groups        = []
+        self.sent_hellos        = []
 
         self.init()
 
@@ -254,7 +254,7 @@ class L2Controller(object):
         r_g   = 1 / l_g
         srcGroup, dstGroup = self.extract_group(flow)
 
-        print("Adding table entry for flow: ({0},{1}) tau_g: {2}, r_g: {3}".format(srcGroup, dstGroup, tau_g, r_g))
+        print("Adding table entry for flow: ({0},{1}) r_g: {2}, tau_g: {3}".format(srcGroup, dstGroup, r_g, tau_g))
 
         # convert r_g to use in coinflips on the switch (no floating point)
         r_g = (2**32 - 1) * r_g

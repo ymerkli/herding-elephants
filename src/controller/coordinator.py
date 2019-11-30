@@ -93,7 +93,6 @@ class CoordinatorService(rpyc.Service):
                                     functions will be stored.
         '''
 
-        print(datetime.now())
         self.handle_hello(flow, sw_name, hello_callback)
 
     def handle_hello(self, flow, sw_name, hello_callback):
