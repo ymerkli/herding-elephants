@@ -68,7 +68,7 @@ class L2Controller(object):
         self.set_crc_custom_hashes()
 
         print("Writing sampling probability to switch")
-        self.write_p_sampling_to_switch(self.p_sampling)
+        self.write_p_sampling_to_switch()
         print("Written counter start:")
         print(self.controller.register_read("count_start"))
         print("Written probability:")
@@ -86,17 +86,14 @@ class L2Controller(object):
             i+=1
 
 
-    def write_p_sampling_to_switch(self, p_sampling):
+    def write_p_sampling_to_switch(self):
         '''
         Writes the registers needed to initialize counters in the switch.
-
-        Args:
-            p_sampling (float):         The probability to sample a flow (s) [0-1]
         '''
 
-        counter_startvalue = int(1/p_sampling)
+        counter_startvalue = int(1/self.p_sampling)
         # convert to uint32_probability
-        sampling_probability = (2**32 - 1)*p_sampling
+        sampling_probability = (2**32 - 1)*self.p_sampling
 
         # register names are defined in switch.p4
         self.controller.register_write("sampling_probability", 0, sampling_probability)
