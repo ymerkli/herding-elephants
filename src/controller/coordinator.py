@@ -78,8 +78,8 @@ class CoordinatorService(rpyc.Service):
             self.reports[flow] = 1
 
         # if the number of reports reaches the report threshold, we have a heavy hitter
-        if flow not in self.heavy_hitter_set and self.reports[flow] >= self.elephant_threshold_R:
-            self.heavy_hitter_set.append(flow)
+        if str(flow) not in self.heavy_hitter_set and self.reports[flow] >= self.elephant_threshold_R:
+            self.heavy_hitter_set.append(str(flow))
 
     def exposed_send_hello(self, flow, sw_name, hello_callback):
         '''
@@ -152,9 +152,10 @@ class CoordinatorService(rpyc.Service):
         }
 
         with open(self.output_file_path, 'a') as outfile:
-            json.dump(data, outfile)
+            json.dump(data, outfile, indent=4)
             outfile.close()
 
+        print("Detected {0} heavy hitter flows".format(len(self.heavy_hitter_set)))
         print("Wrote heavy hitter set to {0}".format(self.output_file_path))
 
 class CoordinatorServer(object):

@@ -27,12 +27,15 @@ def real_elephants(pcap_path, glob_thresh):
         '''
         flag = 0
         if IP in pkt:
-            src_ip = pkt[IP].src
-            dst_ip = pkt[IP].dst
-            protocol = pkt[IP].proto
-            src_port = pkt[IP].sport
-            dst_port = pkt[IP].dport
-            flag = 1
+            try:
+                src_ip = pkt[IP].src
+                dst_ip = pkt[IP].dst
+                protocol = pkt[IP].proto
+                src_port = pkt[IP].sport
+                dst_port = pkt[IP].dport
+                flag = 1
+            except:
+                continue
         '''
         elif IPv6 in pkt:
             src_ip = pkt[IPv6].src
@@ -78,7 +81,7 @@ def real_elephants(pcap_path, glob_thresh):
 
     print("Found {0} groups".format(len(groups)))
     print(groups)
-    print("Found {0} flows:\n".format(len(real_elephants)))
+    print("Found {0} heavy hitter flows:\n".format(len(real_elephants)))
     print(real_elephants)
 
     return real_elephants
