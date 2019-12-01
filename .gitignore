@@ -11,3 +11,4 @@ src/pcap
 src/p4src/switch.json
 src/p4src/switch.p4i
 src/topology.db
+src/start_controllers.sh
