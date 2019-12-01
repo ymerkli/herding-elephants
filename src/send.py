@@ -95,7 +95,7 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
 
     src_mac_table, dst_mac_table, interface_table, num_switches = get_tables()
     '''
-    Issue with P4Utils: if a host has multiple connections to switches, the MAC address 
+    Issue with P4Utils: if a host has multiple connections to switches, the MAC address
     of the interface on the host pointing to the first and last switch are equivalent.
     To prevent this, we add one more switch than necessary but never use it
     '''
