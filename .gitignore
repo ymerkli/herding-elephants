@@ -11,3 +11,8 @@ src/pcap
 src/p4src/switch.json
 src/p4src/switch.p4i
 src/topology.db
+
+# Ignore generated files
+src/real_elephants.json
+src/start_controllers.sh
+src/controller/found_elephants.json
