@@ -3,40 +3,6 @@ import random
 import argparse
 from scapy.all import *
 
-def parser():
-    parser = argparse.ArgumentParser(description = 'parse the keyword arguments')
-
-    parser.add_argument(
-        '--p', 
-        required = True, 
-        help = 'Path to .pcap file'
-    )
-
-    parser.add_argument(
-        '--t',
-        type = int,
-        required = True,
-        help = 'Global Threshold'
-    )
-
-    parser.add_argument(
-        '--c',
-        type = int,
-        required = True,
-        help = 'Communication budget'
-    )
-
-    parser.add_argument(
-        '--s',
-        type = int,
-        required = True,
-        help = 'switch memory'
-    )
-
-    args = parser.parse_args()
-
-    return args.p, args.t, args.c, args.s
-
 def pcap_to_list(pcap_path):
     '''
     Parses a pcap file and creates a list of five-tuples
@@ -70,7 +36,7 @@ def pcap_to_list(pcap_path):
 
 ##### Given #####
 # (T) glob_thresh_T -> Global threshold
-# (C) comm_budget -> Communication budget per switch
+# (C) comm_budget_c -> Communication budget per switch
 # (S) switch_mem -> Memory budget per switch (# counters)
 # (k) ingress_switches_k -> Total number of ingress switches
 # (l) observers_l -> Number of switches which observe a flow
@@ -101,7 +67,7 @@ def GetSampling(switch_mem, train_data, mole_tau):
     '''
 
     sampl_prob = 1/(mole_tau)
-    moles_M = CalculateMoles(train_data, sampl_prob)
+    moles_M    = CalculateMoles(train_data, sampl_prob)
 
     while len(moles_M) < switch_mem and mole_tau > 1:
         mole_tau -= 1
@@ -110,27 +76,23 @@ def GetSampling(switch_mem, train_data, mole_tau):
 
     return mole_tau
 
-def DeriveReporting(comm_budget, epsilon, observers_l, sampl_prob):
+def DeriveReporting(comm_budget_c, epsilon, observers_l, sampl_prob):
     '''
     configures reporting parameters based on the gives contraints
     '''
 
     mule_tau = epsilon * glob_thresh_T / observers_l
-    moles_M = CalculateMoles(train_data, sampl_prob)
-    mules_U = CalculateMules(moles_M, mule_tau)
-
-    print("Mules: ", len(mules_U))
-    print('report prob: ', comm_budget * mule_tau / (glob_thresh_T * len(mules_U)))
+    moles_M  = CalculateMoles(train_data, sampl_prob)
+    mules_U  = CalculateMules(moles_M, mule_tau)
 
     try:
-        report_prob = min(comm_budget * mule_tau / (glob_thresh_T * len(mules_U)), 1)
+        report_prob = min(comm_budget_c * mule_tau / (glob_thresh_T * len(mules_U)), 1)
 
     # if no mules found, always report
     except ZeroDivisionError:
-        print("Error: zero div")
         report_prob = 1
 
-    report_thresh_R = max(int(round(observers_l * report_prob / glob_thresh_T)),1)
+    report_thresh_R = max(int(round(observers_l * report_prob / glob_thresh_T)), 1)
 
     print("DeriveReporting: report_thresh_R = {0}, mules_U = {1}, report_prob = {2}, mule_tau = {3}".format(report_thresh_R, "x", report_prob, mule_tau))
 
@@ -152,7 +114,7 @@ def CalculateMoles(train_data, sampl_prob):
 
 def CalculateMules(moles_M, mule_tau):
     '''
-    iterate through moles and add moles with at least mule_tau traffic packets
+    Iterate through moles and add moles with at least mule_tau traffic packets
     '''
 
     mules_U = {}
@@ -162,9 +124,9 @@ def CalculateMules(moles_M, mule_tau):
 
     return mules_U
 
-def TuneAccuracy(glob_thresh_T, switch_mem, comm_budget, train_data, observers_l, ingress_switches_k):
+def TuneAccuracy(glob_thresh_T, switch_mem, comm_budget_c, train_data, observers_l, ingress_switches_k):
     '''
-    determine the accuracy of the System
+    Determine the accuracy of the System
     '''
 
     accuracy_max = 0
@@ -178,7 +140,7 @@ def TuneAccuracy(glob_thresh_T, switch_mem, comm_budget, train_data, observers_l
     epsilon = eps_max
 
     while (eps_min <= epsilon and epsilon <= eps_max):
-        report_thresh_R, mules_U, report_prob, mule_tau = DeriveReporting(comm_budget, epsilon, observers_l, sampl_prob)
+        report_thresh_R, mules_U, report_prob, mule_tau = DeriveReporting(comm_budget_c, epsilon, observers_l, sampl_prob)
 
         accuracy = GetAccuracy(train_data, report_thresh_R, glob_thresh_T, mules_U, report_prob, sampl_prob, mule_tau)
 
@@ -192,12 +154,15 @@ def TuneAccuracy(glob_thresh_T, switch_mem, comm_budget, train_data, observers_l
     # we use the last epsilon that still worked
     print("TuneAccuracy: epsilon = {0}".format(eps_max))
 
-    report_thresh_R, mules_U, report_prob, mule_tau = DeriveReporting(comm_budget, eps_max, observers_l, sampl_prob)
+    report_thresh_R, mules_U, report_prob, mule_tau = DeriveReporting(comm_budget_c, eps_max, observers_l, sampl_prob)
 
     return eps_max, mule_tau, report_prob 
 
-# determine the accuracy of the System using this parameter configuration
 def GetAccuracy(train_data, report_thresh_R, glob_thresh_T, mules_U, report_prob, sampl_prob, mule_tau):
+    '''
+    Determine the accuracy of the System using this parameter configuration
+    '''
+
     found_elephants = []
     real_elephants  = []
 
@@ -242,8 +207,22 @@ def GetAccuracy(train_data, report_thresh_R, glob_thresh_T, mules_U, report_prob
 
     return accuracy
 
-# calculate the TP, FP, (TN) and FN of 2 lists (TN can't be calculated, but it isn't needed anyway)
 def performance(found_elephants, real_elephants):
+    '''
+    Calculates true positives, false positives and false negatives based on the provided
+    flow sets.
+
+    Args:
+        found_elephant (list):  A list of flows (5-tuple) with the flows out algorithm classified
+                                as heavy hitters (elephants)
+        real_elephants (list):  A list of flows (5-tuples) with all heavy hitter flows
+
+    Returns:
+        tp (int):               True positives
+        fp (int):               False positives
+        fn (int):               False negatives
+    '''
+
     tp = 0
     fp = 0
     fn = 0
@@ -262,30 +241,59 @@ def performance(found_elephants, real_elephants):
 
     return tp, fp, fn
 
+def parser():
+    parser = argparse.ArgumentParser(description = 'parse the keyword arguments')
+
+    parser.add_argument(
+        '--p', 
+        required = True, 
+        help = 'Path to .pcap file'
+    )
+
+    parser.add_argument(
+        '--t',
+        type = int,
+        required = True,
+        help = 'Global Threshold'
+    )
+
+    parser.add_argument(
+        '--c',
+        type = int,
+        required = True,
+        help = 'Communication budget'
+    )
+
+    parser.add_argument(
+        '--s',
+        type = int,
+        required = True,
+        help = 'switch memory'
+    )
+
+    args = parser.parse_args()
+
+    return args.p, args.t, args.c, args.s
+
+
+
 # if tuningparameters.py gets run as script
 if __name__ == "__main__":
     print("running tuningparameters.py as a script")
 
-    # Generate a list with random entries. Used for debugging.
-    def randomlist(size):
-        lisst = []
-        for i in range(size):
-            lisst.append(random.randint(0,50))
-        return lisst
-
     # Get arguments from argparse.
-    parser = parser()
-    pcap_path = parser[0]
-    glob_thresh_T = parser[1]
-    comm_budget = parser[2]
-    switch_mem = parser[3]
+    pcap_path, glob_thresh_T, comm_budget_c, switch_mem = parser()
+
+    '''
+    How many ingress switches and how many ingress switches see a flow
+    '''
     ingress_switches_k = 10
-    observers_l = 2
+    observers_l        = 2
 
     train_data = pcap_to_list(pcap_path)
 
     # Calculate epsilon for the given parameters.
-    eps_max, mule_tau, report_prob = TuneAccuracy(glob_thresh_T, switch_mem, comm_budget, train_data, observers_l, ingress_switches_k)
+    eps_max, mule_tau, report_prob = TuneAccuracy(glob_thresh_T, switch_mem, comm_budget_c, train_data, observers_l, ingress_switches_k)
 
     # return epsilon, tau, report_prob
     print("epsilon = {0}, tau = {1}, report_prob = {2}".format(eps_max, mule_tau, report_prob))
