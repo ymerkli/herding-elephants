@@ -19,7 +19,6 @@ def write_bash_skript(t, e, s, path):
         f.write(start_controller)
 
     switch_num *= 2
-    dummy_text = "boop"
     f.write("cd ..\n")
     f.write("sleep 5\n")
     f.write("mx h1 python send.py --p %s --i 10.0.0.%s" % (path, switch_num))
@@ -35,5 +34,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     write_bash_skript(args.t, args.e, args.s, args.p)
-
+    ## give everyone permissions to execute the generated file
+    os.chmod("./start_controllers.sh", 0o777)
     os.system("./start_controllers.sh")

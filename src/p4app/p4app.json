@@ -24,26 +24,20 @@
     "object_name": "P4Mininet"
   },
   "topology": {
-    "assignment_strategy": "l2",
-    "links": [["h1", "s1"], ["h2", "s1"], ["h3", "s1"], ["h4","s1"], ["h5", "s1"]],
+    "assignment_strategy": "l3",
+    "links": [["h1", "s1"], ["h2", "s3"], ["s1", "s2"], ["s2", "s3"]],
     "hosts": {
       "h1": {
       },
       "h2": {
       }
-      ,
-      "h3": {
-      }
-      ,
-      "h4": {
-      }
-      ,
-      "h5": {
-
-      }
     },
     "switches": {
       "s1": {
+      },
+      "s2": {
+      },
+      "s3": {
       }
     }
   }

@@ -75,7 +75,7 @@ class L2Controller(object):
         print(self.controller.register_read("sampling_probability"))
 
         print("Filling routing tables")
-        self.route();
+        self.route()
 
 
     def set_crc_custom_hashes(self):
@@ -176,10 +176,10 @@ class L2Controller(object):
                 group = (srcGroup, dstGroup)
                 if flow_info['flow_count'] == 0:
                     # only send a hello if we havent sent a hello yet for this flow
-                    if group not in self.seen_groups:
+                    if group not in self.sent_hellos:
                         print("Sending a hello for: {0}".format(flow_info['flow']))
                         self.send_hello(flow_info['flow'])
-                        self.seen_groups.append(group)
+                        self.sent_hellos.append(group)
                 else:
                     print("Sending a report for: {0}".format(flow_info['flow']))
                     self.report_flow(flow_info['flow'])
@@ -320,12 +320,14 @@ class L2Controller(object):
             #if its ourselves we create direct connections
             if sw_name == sw_dst:
                 for host in self.topo.get_hosts_connected_to(sw_name):
+                    print host
                     sw_port = self.topo.node_to_node_port_num(sw_name, host)
                     host_ip = self.topo.get_host_ip(host) + "/32"
                     host_mac = self.topo.get_host_mac(host)
 
                     #add rule
-                    print "table_add at {}:".format(sw_name)
+                    print "table_add at {}: ipv4_lpm, set_nhop, self".format(sw_name)
+                    print( [str(host_ip)], [str(host_mac), str(sw_port)] )
                     self.controller.table_add("ipv4_lpm", "set_nhop", [str(host_ip)], [str(host_mac), str(sw_port)])
 
             #check if there are directly connected hosts
@@ -342,7 +344,8 @@ class L2Controller(object):
                             dst_sw_mac = self.topo.node_to_node_mac(next_hop, sw_name)
 
                             #add rule
-                            print "table_add at {}:".format(sw_name)
+                            print "table_add at {}: ipv4_lpm, set_nhop, host".format(sw_name)
+                            print( [str(host_ip)], [str(dst_sw_mac), str(sw_port)] )
                             self.controller.table_add("ipv4_lpm", "set_nhop", [str(host_ip)],
                                                                 [str(dst_sw_mac), str(sw_port)])
 
@@ -357,7 +360,8 @@ class L2Controller(object):
                             #ports used, thus we can use dst_macs_ports as key
                             if switch_ecmp_groups[sw_name].get(tuple(dst_macs_ports), None):
                                 ecmp_group_id = switch_ecmp_groups[sw_name].get(tuple(dst_macs_ports), None)
-                                print "table_add at {}:".format(sw_name)
+                                print "table_add at {}: ipv4_lpm, ecmp_group".format(sw_name)
+                                print( [str(host_ip)], [str(ecmp_group_id), str(dst_macs_ports)] )
                                 self.controller.table_add("ipv4_lpm", "ecmp_group", [str(host_ip)],
                                                                     [str(ecmp_group_id), str(len(dst_macs_ports))])
 

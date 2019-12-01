@@ -55,4 +55,16 @@ mx <host_name>
 python ~/02-herding/src/send.py
 ```
 
+### Start mininet and send traffic
+* Topology can be changed by editing the first cmd
+* Controllers are started by the restart_controllers.py skript with the given parameters
+* Pcap file is used later to generate traffic
+
+After startup of the mininet, coordinator and controllers, h1 executes send.py 
+which uses the given pcap file to simulate traffic.
+
+```bash
+bash start_topology.sh
+```
+
 Brief project description

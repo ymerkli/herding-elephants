@@ -27,6 +27,16 @@ class RoutingController(object):
             controller.table_set_default("ipv4_lpm", "drop", [])
             controller.table_set_default("ecmp_group_to_nhop", "drop", [])
 
+    def set_icmp_ingress_port_table(self):
+
+        for sw_name, controller in self.controllers.items():
+            for intf, node in self.topo.get_interfaces_to_node(sw_name).items():
+                ip = self.topo.node_to_node_interface_ip(sw_name, node).split("/")[0]
+                port_number = self.topo.interface_to_port(sw_name, intf)
+
+                print "table_add at {}:".format(sw_name)
+                self.controllers[sw_name].table_add("icmp_ingress_port", "set_src_icmp_ip", [str(port_number)], [str(ip)])
+
     def route(self):
 
         switch_ecmp_groups = {sw_name:{} for sw_name in self.topo.get_p4switches().keys()}
@@ -68,7 +78,6 @@ class RoutingController(object):
                                 dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name),
                                                    self.topo.node_to_node_port_num(sw_name, next_hop))
                                                   for next_hop in next_hops]
-                                import ipdb; ipdb.set_trace()
                                 host_ip = self.topo.get_host_ip(host) + "/24"
 
                                 #check if the ecmp group already exists. The ecmp group is defined by the number of next
@@ -96,7 +105,9 @@ class RoutingController(object):
                                     self.controllers[sw_name].table_add("ipv4_lpm", "ecmp_group", [str(host_ip)],
                                                                         [str(new_ecmp_group_id), str(len(dst_macs_ports))])
 
+
     def main(self):
+        self.set_icmp_ingress_port_table()
         self.route()
 
 

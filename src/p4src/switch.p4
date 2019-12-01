@@ -325,10 +325,13 @@ control MyIngress(inout headers hdr,
             } else {
                 sendHello();
             }
+        }
 
 
-        // Other packet processing stuff //
+                // Other packet processing stuff //
 
+
+        if (hdr.ipv4.isValid()){
             switch (ipv4_lpm.apply().action_run){
                 ecmp_group: {
                     ecmp_group_to_nhop.apply();
@@ -356,10 +359,10 @@ control MyEgress(inout headers hdr,
 
 control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
      apply {
-        update_checksum(
-            hdr.ipv4.isValid(),
+    	update_checksum(
+    	    hdr.ipv4.isValid(),
                 { hdr.ipv4.version,
-                  hdr.ipv4.ihl,
+    	          hdr.ipv4.ihl,
                   hdr.ipv4.dscp,
                   hdr.ipv4.ecn,
                   hdr.ipv4.totalLen,
@@ -381,9 +384,9 @@ control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
 
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.tcp);
-        packet.emit(hdr.ipv4);
         packet.emit(hdr.ethernet);
+        packet.emit(hdr.ipv4);
+        packet.emit(hdr.tcp);
     }
 }
 

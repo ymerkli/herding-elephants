@@ -88,5 +88,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     create_topo(args.n)
 
-    json.dump(topo_base, open("p4app_generated.json", "w+"), sort_keys=True, indent=2)
+    json.dump(topo_base, open("p4app_generated0.json", "w+"), sort_keys=True, indent=2)
     print("Finished")
