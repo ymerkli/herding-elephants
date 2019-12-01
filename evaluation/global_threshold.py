@@ -59,7 +59,7 @@ def get_percentile(real_count, percentile):
 
     return int(np.percentile(count_array, percentile))
 
-def write_json(global_threshold, pcap_file, pcap_file_name):
+def write_json(global_threshold, flow_count, pcap_file, pcap_file_name):
     '''
     Read existing json file or create it if not existing and write into json
 
@@ -74,9 +74,11 @@ def write_json(global_threshold, pcap_file, pcap_file_name):
             json_decoded = json.load(json_file)
             json_file.close()
 
-    key  = "{0}_global_threshold".format(pcap_file_name)
+    threshold_key  = "{0}_global_threshold".format(pcap_file_name)
+    flow_count_key = "{0}_flow_count".format(pcap_file_name)
 
-    json_decoded[key]  = global_threshold
+    json_decoded[threshold_key]  = global_threshold
+    json_decoded[flow_count_key] = flow_count 
 
     with open('global_thresholds.json', 'w+') as json_file:
         json.dump(json_decoded, json_file, indent=4)
@@ -96,6 +98,6 @@ if __name__ == '__main__':
     # get the 99.99th percentile of the flow counts
     global_threshold = get_percentile(real_count, 99.99)
 
-    print("{0} has global_threshold (99.99th percentile) = {1}".format(pcap_file_name, global_threshold))
+    print("{0} has {1} flows and global_threshold (99.99th percentile) = {2}".format(pcap_file_name, len(real_count), global_threshold))
 
-    write_json(global_threshold, pcap_path, pcap_file_name)
+    write_json(global_threshold, len(real_count), pcap_path, pcap_file_name)
