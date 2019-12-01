@@ -13,43 +13,47 @@ def parser():
     return args.p, args.t, args.c, args.s
 
 def pcap_to_list(pcap_path):
-    list = []
+    packets = []
 
     pkts = rdpcap(pcap_path)
 
     for pkt in pkts:
-        '''
-        flag signals whether to include IPv6 packets or not.
-        '''
-        flag = 0
-
-        if IP in pkt:
-            src_ip = pkt[IP].src
-            dst_ip = pkt[IP].dst
-            protocol = pkt[IP].proto
-            src_port = pkt[IP].sport
-            dst_port = pkt[IP].dport
-            flag = 1
-        '''
-        elif IPv6 in pkt:
-            src_ip = pkt[IPv6].src
-            dst_ip = pkt[IPv6].dst
-            # IPv6 doens't have protocol, but all packets seem to be TCP?
-            protocol = 6
-            src_port = pkt[IPv6].sport
-            dst_port = pkt[IPv6].dport
-            flag = 1
+        try:
             '''
+            flag signals whether to include IPv6 packets or not.
+            '''
+            flag = 0
 
-        '''
-        When we don't want the IPv6 packets, we can simply make the IPv6 part
-        (from 'elif IPv6 ...' to 'flag = 1') a comment.
-        '''
-        if flag == 1:
-            five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
-            list.append(five_tuple)
+            if IP in pkt:
+                src_ip = pkt[IP].src
+                dst_ip = pkt[IP].dst
+                protocol = pkt[IP].proto
+                src_port = pkt[IP].sport
+                dst_port = pkt[IP].dport
+                flag = 1
+            '''
+            elif IPv6 in pkt:
+                src_ip = pkt[IPv6].src
+                dst_ip = pkt[IPv6].dst
+                # IPv6 doens't have protocol, but all packets seem to be TCP?
+                protocol = 6
+                src_port = pkt[IPv6].sport
+                dst_port = pkt[IPv6].dport
+                flag = 1
+                '''
 
-    return(list)
+            '''
+            When we don't want the IPv6 packets, we can simply make the IPv6 part
+            (from 'elif IPv6 ...' to 'flag = 1') a comment.
+            '''
+            if flag == 1:
+                five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
+                packets.append(five_tuple)
+        except Exception as e:
+            print('Could not extract all 5-tuple fields: ', e)
+            continue
+
+    return packets
 
 
 ##### Given #####
