@@ -1,1 +1,5 @@
-pip3 install rpyc
+pip install rpyc
+pip install nnpy
+pip install pickle
+pip install scapy
+pip install numpy

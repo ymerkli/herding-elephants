@@ -22,11 +22,11 @@ const bit<16> ipv4_type = 0x800;
 
 // Hash table and group table properties
 #define HASH_TABLE_FIELD_WIDHT 64
-#define ENTRIES_HASH_TABLE_1 1000
-#define ENTRIES_HASH_TABLE_2 100
-#define ENTRIES_HASH_TABLE_3 10
+#define ENTRIES_HASH_TABLE_1 250000
+#define ENTRIES_HASH_TABLE_2 50000
+#define ENTRIES_HASH_TABLE_3 10000
 
-#define GROUP_TABLE_SIZE 1000
+#define GROUP_TABLE_SIZE 2<<16
 
 
 // Does the flow counter lookup for a given hash table.
@@ -360,6 +360,7 @@ control MyIngress(inout headers hdr,
 
                 // send error if no space and value found
                 if (meta.found_flag == 0) {
+                    meta.flip_r = 0;
                     error_code = 0x0;
                     sendError();
                 } else {
