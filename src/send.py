@@ -9,6 +9,7 @@ import time
 import json
 import os
 
+from p4utils.utils.topology import Topology
 from scapy.all import sendp, get_if_list, get_if_hwaddr, rdpcap
 from scapy.all import Ether, IP, UDP, TCP
 from subprocess import Popen, PIPE
@@ -33,7 +34,7 @@ def get_if():
         exit(1)
     return iface
 
-def get_dst_mac(ip):
+def get_dst_mac():
     '''
     Looks for the next hop mac for a given destination IP
 
@@ -44,6 +45,22 @@ def get_dst_mac(ip):
         mac (str): The next hop MAC address
     '''
 
+    # option 1: get mac over Topology TODO: better idea than hardcode
+    try:
+        topo  = Topology(db="topology.db")
+
+        dst_sw_mac = topo.node_to_node_mac("s2", "s1")
+
+        return dst_sw_mac
+
+    except:
+        return None
+
+    # option 2: broadcast
+    return 'ff:ff:ff:ff:ff:ff'
+
+    # Legacy code:
+    '''
     try:
         pid = Popen(["arp", "-n", ip], stdout=PIPE)
         s = pid.communicate()[0]
@@ -52,6 +69,9 @@ def get_dst_mac(ip):
         return macs.groups()[0]
     except:
         return None
+        '''
+
+
 
 def send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, manual_mode):
     '''
@@ -78,7 +98,7 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
     Args:
         pcap_path (str):             The file path to the pcap file to send
         internal_host_ip (str):      The IP of the host in the mininet where traffic should be sent to
-        global_threshold (int):      The threshold for a flow to be a heavy hitter. Only need when 
+        global_threshold (int):      The threshold for a flow to be a heavy hitter. Only need when
                                      count_real_elephants is set
         manual_mode (bool):          If true, you have to press enter to send every single packet
         count_real_elephants (bool): If true, we will count flows and keep track of heavy hitters
@@ -102,7 +122,7 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
     # we want to send all packets to a host inside the network
     # Since not all IPs in the pcap packets are mapped to the interal host, we use its real IP
     # to get the destination MAC
-    ether_dst = get_dst_mac(internal_host_ip)
+    ether_dst = get_dst_mac()
     if not ether_dst:
         raise ValueError("Mac address for %s was not found in the ARP table" % internal_host_ip)
 

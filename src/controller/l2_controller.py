@@ -320,7 +320,6 @@ class L2Controller(object):
             #if its ourselves we create direct connections
             if sw_name == sw_dst:
                 for host in self.topo.get_hosts_connected_to(sw_name):
-                    print host
                     sw_port = self.topo.node_to_node_port_num(sw_name, host)
                     host_ip = self.topo.get_host_ip(host) + "/32"
                     host_mac = self.topo.get_host_mac(host)

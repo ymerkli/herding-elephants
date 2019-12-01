@@ -18,10 +18,9 @@ def write_bash_skript(t, e, s, path):
         start_controller = "lxterminal -e 'sudo python l2_controller.py --n %s --t %s --e %s --s %s'\n" % (p4switch, t, e, s)
         f.write(start_controller)
 
-    switch_num *= 2
     f.write("cd ..\n")
     f.write("sleep 5\n")
-    f.write("mx h1 python send.py --p %s --i 10.0.0.%s" % (path, switch_num))
+    f.write("mx h1 python send.py --p %s --i 10.%s.2.2" % (path, switch_num))
     f.close()
 
 

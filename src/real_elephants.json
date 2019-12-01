@@ -1,4 +1,6 @@
 {
     "first50_real_elephants": [], 
-    "first50_elephant_count": 0
+    "first5_real_elephants": [], 
+    "first50_elephant_count": 0, 
+    "first5_elephant_count": 0
 }
