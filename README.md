@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-# Herding the Elephants
-=======
 # Hearding the Elephants: Detecting Network-Wide Heavy Hitters with Limited Resources
 
->>>>>>> master
 #### Authors
     * Yannick Merkli    (ymerkli@student.ethz.ch)
     * Felix Ruessli     (fruessli@student.ethz.ch)
