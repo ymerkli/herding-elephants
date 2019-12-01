@@ -102,10 +102,6 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
     if num_switches > 9:
         num_switches -= 1
 
-    print(src_mac_table)
-    print(dst_mac_table)
-    print(interface_table)
-
     # we want to send all packets to a host inside the network
     # Since not all IPs in the pcap packets are mapped to the interal host, we use its real IP
     # to get the destination MAC
