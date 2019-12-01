@@ -43,7 +43,7 @@ class L2Controller(object):
 
     def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
 
-        self.topo               = Topology(db="../topology.db")
+        self.topo               = Topology(db="topology.db")
         self.sw_name            = sw_name
         self.thrift_port        = self.topo.get_thrift_port(sw_name)
         self.controller         = SimpleSwitchAPI(self.thrift_port)
