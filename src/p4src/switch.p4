@@ -391,13 +391,13 @@ control MyIngress(inout headers hdr,
                     meta.hash_data.value =  meta.hash_data.value << 32;
                     meta.hash_data.value =  meta.hash_data.value + (bit<64>) meta.data.flow_count;
                     if (meta.found_flag == 1) {
-                    hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+                        hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
                     }
                     if (meta.found_flag == 2) {
-                    hash_table_2.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+                        hash_table_2.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
                     }
                     if (meta.found_flag == 3) {
-                    hash_table_3.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+                        hash_table_3.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
                     }
                 }
             // no group_values table hit -> send hello message to controller
