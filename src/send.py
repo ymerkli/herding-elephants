@@ -107,12 +107,10 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
     # we want to send all packets to a host inside the network
     # Since not all IPs in the pcap packets are mapped to the interal host, we use its real IP
     # to get the destination MAC
-<<<<<<< HEAD
+
     ether_dst = get_dst_mac()
     if not ether_dst:
         raise ValueError("Mac address for %s was not found in the ARP table" % internal_host_ip)
-=======
->>>>>>> 4d87f8032b6bef65e2a89a55b7ab4cd1f9038afb
 
     for pkt in pcap_packets:
         if IP in pkt:
