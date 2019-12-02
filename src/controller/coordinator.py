@@ -25,21 +25,21 @@ class CoordinatorService(rpyc.Service):
     Args:
 
     Attributes:
-        heavy_hitter_set (list):    A list of flows which are heavy hitters
-        reports (dict):             A dict of flows and their report count. Key is the flow hash
-        elephant_threshold_R(int):  The thresholds on the report count for which we promote a mule to a heavy hitter
-        l_g_table (dict):           A dict storing the locality parameter l_g for a flow based on the group g 
-                                    to which the flow belongs to. Key is a flow table, value is an int
-        flow_to_switches (dict):    A dict storing which switches have seen a flow. Key is a flow tuple, value is an array
-                                    of sw_names
-        callback_table (dict):      A dict storing the callbacks received from switches in hello messages.
-                                    Callbacks are used to send l_g back to switches. Key is a sw_name (str), value is a function.
+        heavy_hitter_set (list):     A list of flows which are heavy hitters
+        reports (dict):              A dict of flows and their report count. Key is the flow hash
+        reporting_threshold_R (int): The thresholds on the report count for which we promote a mule to a heavy hitter
+        l_g_table (dict):            A dict storing the locality parameter l_g for a flow based on the group g 
+                                     to which the flow belongs to. Key is a flow table, value is an int
+        flow_to_switches (dict):     A dict storing which switches have seen a flow. Key is a flow tuple, value is an array
+                                     of sw_names
+        callback_table (dict):       A dict storing the callbacks received from switches in hello messages.
+                                     Callbacks are used to send l_g back to switches. Key is a sw_name (str), value is a function.
     '''
 
-    def __init__(self, output_file_path):
+    def __init__(self, reporting_threshold_R, output_file_path):
         self.heavy_hitter_set       = []
         self.reports                = {}
-        self.elephant_threshold_R   = None
+        self.reporting_threshold_R  = reporting_threshold_R
         self.l_g_table              = {}
         self.flow_to_switches       = {}
         self.callback_table         = {}
@@ -78,7 +78,7 @@ class CoordinatorService(rpyc.Service):
             self.reports[flow] = 1
 
         # if the number of reports reaches the report threshold, we have a heavy hitter
-        if str(flow) not in self.heavy_hitter_set and self.reports[flow] >= self.elephant_threshold_R:
+        if str(flow) not in self.heavy_hitter_set and self.reports[flow] >= self.reporting_threshold_R:
             self.heavy_hitter_set.append(str(flow))
 
     def exposed_send_hello(self, flow, sw_name, hello_callback):
@@ -167,8 +167,8 @@ class CoordinatorServer(object):
         output_file_path (str): The file path where the heavy hitter set will be written to
     '''
 
-    def __init__(self, server_port, output_file_path):
-        self.coordinator_service = CoordinatorService(output_file_path)
+    def __init__(self, server_port, reporting_threshold_R, output_file_path):
+        self.coordinator_service = CoordinatorService(reporting_threshold_R, output_file_path)
         self.server              = ThreadedServer(self.coordinator_service, port=server_port)
 
     def start(self):
@@ -204,6 +204,13 @@ def parser():
     )
 
     parser.add_argument(
+        "--r",
+        type=int,
+        required=True,
+        help="The reporting threshold for which we promote a mule to a heavy hitter"
+    )
+
+    parser.add_argument(
         "--o",
         type=str,
         required=False,
@@ -213,13 +220,19 @@ def parser():
 
     args = parser.parse_args()
 
-    return args.p, args.o
+    return args.p, args.r, args.o
 
 if __name__ == '__main__':
 
-    coordinator_server_port, output_file_path = parser()
+    coordinator_server_port, reporting_threshold_R, output_file_path = parser()
 
-    coordinator = CoordinatorServer(coordinator_server_port, output_file_path)
+    # error checking
+    if reporting_threshold_R < 1:
+        raise ValueError("Error: invalid reporting threshold, must be >= 1: {0}".format(
+            reporting_threshold_R
+        ))
+
+    coordinator = CoordinatorServer(coordinator_server_port, reporting_threshold_R, output_file_path)
 
     # register signal handler to handle shutdowns
     signal.signal(signal.SIGINT, coordinator.signal_handler)

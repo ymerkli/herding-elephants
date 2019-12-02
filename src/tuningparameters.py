@@ -86,13 +86,13 @@ def DeriveReporting(comm_budget_c, epsilon, observers_l, sampl_prob):
     mules_U  = CalculateMules(moles_M, mule_tau)
 
     try:
-        report_prob = min(comm_budget_c * mule_tau / (glob_thresh_T * len(mules_U)), 1)
+        report_prob = min(comm_budget_c * mule_tau / (glob_thresh_T), 1)
 
     # if no mules found, always report
     except ZeroDivisionError:
         report_prob = 1
 
-    report_thresh_R = max(int(round(observers_l * report_prob / glob_thresh_T)), 1)
+    report_thresh_R = min(int(round(observers_l * report_prob / glob_thresh_T)), 1)
 
     print("DeriveReporting: report_thresh_R = {0}, mules_U = {1}, report_prob = {2}, mule_tau = {3}".format(report_thresh_R, "x", report_prob, mule_tau))
 
@@ -156,7 +156,7 @@ def TuneAccuracy(glob_thresh_T, switch_mem, comm_budget_c, train_data, observers
 
     report_thresh_R, mules_U, report_prob, mule_tau = DeriveReporting(comm_budget_c, eps_max, observers_l, sampl_prob)
 
-    return eps_max, mule_tau, report_prob 
+    return eps_max, mule_tau, report_prob, report_thresh_R 
 
 def GetAccuracy(train_data, report_thresh_R, glob_thresh_T, mules_U, report_prob, sampl_prob, mule_tau):
     '''
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     train_data = pcap_to_list(pcap_path)
 
     # Calculate epsilon for the given parameters.
-    eps_max, mule_tau, report_prob = TuneAccuracy(glob_thresh_T, switch_mem, comm_budget_c, train_data, observers_l, ingress_switches_k)
+    eps_max, mule_tau, report_prob, report_thresh_R = TuneAccuracy(glob_thresh_T, switch_mem, comm_budget_c, train_data, observers_l, ingress_switches_k)
 
     # return epsilon, tau, report_prob
-    print("epsilon = {0}, tau = {1}, report_prob = {2}".format(eps_max, mule_tau, report_prob))
+    print("epsilon = {0}, tau = {1}, report_prob = {2}, report_thresh_R = {3}".format(eps_max, mule_tau, report_prob, report_thresh_R))

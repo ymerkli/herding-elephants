@@ -2,10 +2,12 @@ import argparse
 import os
 from p4utils.utils.topology import Topology
 
-def write_bash_skript(t, e, s, path):
+def write_bash_skript(t, e, s, path, reporting_thresh_R):
     topo = Topology(db="topology.db")
     f = open("start_controllers.sh", "w+")
-    f.write("lxterminal -e bash -c 'sudo python controller/coordinator.py; bash'\n")
+    f.write("lxterminal -e bash -c 'sudo python controller/coordinator.py --r {0}; bash'\n".format(
+        reporting_thresh_R
+    ))
     f.write("sleep 5\n")
 
     switches   = topo.get_p4switches()
@@ -36,12 +38,13 @@ def write_bash_skript(t, e, s, path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--t', type=int, required=True)
-    parser.add_argument('--s', type=float, required=True)
-    parser.add_argument('--e', type=float, required=True)
-    parser.add_argument('--p', type=str, required=True)
+    parser.add_argument('--t', type=int, required=True, help="The global threshold T")
+    parser.add_argument('--s', type=float, required=True, help="The sampling probability s")
+    parser.add_argument('--e', type=float, required=True, help="Epsilon")
+    parser.add_argument('--p', type=str, required=True, help="The path to the pcap file")
+    parser.add_argument('--r', type=int, required=True, help="The reporting threshold R")
     args = parser.parse_args()
 
-    write_bash_skript(args.t, args.e, args.s, args.p)
+    write_bash_skript(args.t, args.e, args.s, args.p, args.r)
 
     os.system("sudo bash start_controllers.sh")
