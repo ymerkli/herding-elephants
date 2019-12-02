@@ -25,7 +25,7 @@ def write_bash_skript(t, e, s, path):
             continue
 
         # starting controllers in different shells
-        start_controller = "lxterminal -e bash -c 'sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s; bash'\n" % (p4switch_name, t, e, s)
+        start_controller = "lxterminal -e bash -c 'sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s'\n" % (p4switch_name, t, e, s)
         f.write(start_controller)
 
     switch_num *= 2
@@ -43,5 +43,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     write_bash_skript(args.t, args.e, args.s, args.p)
-    
+
     os.system("sudo bash start_controllers.sh")
