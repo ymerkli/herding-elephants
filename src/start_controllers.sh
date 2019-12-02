@@ -1,14 +1,7 @@
-lxterminal -e bash -c 'sudo python controller/coordinator.py; bash'
+lxterminal -e bash -c 'sudo python controller/coordinator.py --r 1; bash'
 sleep 5
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s9 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s8 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s3 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s2 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s1 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s10 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s7 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s6 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s5 --t 5 --e 1.0 --s 1.0'
-lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s4 --t 5 --e 1.0 --s 1.0'
-sleep 5
-mx h1 python send.py --p ./data/first5.pcap --i 10.0.0.22
+lxterminal -e bash -c 'sudo python controller/l2_controller.py --n lb1 --t 897 --e 0.2 --s 0.1'
+lxterminal -e bash -c 'sudo python controller/l2_controller.py --n s1 --t 897 --e 0.2 --s 0.1'
+lxterminal -e bash -c 'sudo python controller/l2_controller.py --n lb2 --t 897 --e 0.2 --s 0.1'
+sleep 10
+mx h1 python send.py --p ./data/dummmmy.pcap --i 10.0.0.6

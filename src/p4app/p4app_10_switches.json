@@ -6,7 +6,7 @@
   "switch_cli": "simple_switch_CLI",
   "cli": true,
   "pcap_dump": true,
-  "enable_log": true,
+  "enable_log": false,
   "topo_module": {
     "file_path": "",
     "module_name": "p4utils.mininetlib.apptopo",
