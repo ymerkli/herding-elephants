@@ -74,6 +74,7 @@ class L2Controller(object):
         print("Written probability:")
         print(self.controller.register_read("sampling_probability"))
 
+        self.fill_ipv4_lpm_table()
 
     def set_crc_custom_hashes(self):
         '''
@@ -116,6 +117,32 @@ class L2Controller(object):
         print("Received error message with error code: %s" % error_code)
         if (error_code == 0):
             self.reset_hash_tables()
+
+    def fill_ipv4_lpm_table(self):
+        '''
+        Writes the ipv4_lpm the table. This table should basially send ALL
+        IP traffic to the next agregating switch. We thus do longest prefix
+        match with prefix 0 (i.e. match all IPs)
+        '''
+
+        for sw_dst in self.topo.get_p4switches():
+            if re.match(r"ag\d+", sw_dst):
+                '''
+                ingress switches only have connections towards external load balancing
+                switches and internal agreagting switches.
+                Agregating switches (named ag<id>) forward traffic to internal hosts
+                '''
+
+                dst_switch_mac = self.topo.node_to_node_mac(sw_dst, self.sw_name)
+                sw_port        = self.topo.node_to_node_port_num(self.sw_name, sw_dst)
+                match_ip       = unicode("0.0.0.0/0")
+
+                print("Adding ipv4_lpm rule for {0} towards {1}".format(match_ip, sw_dst))
+                self.controller.table_add("ipv4_lpm", "set_nhop",\
+                    [str(match_ip)], [str(dst_switch_mac), str(sw_port)])
+
+                # we only add one single rule for the agregating switch
+                break
 
     def unpack_digest(self, msg, num_samples):
         '''

@@ -15,6 +15,7 @@ typedef bit<32> flow_id_t;
 
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+typedef bit<9>  egressSpec_t;
 
 // Constants //
 const uint32_probability INT32_MAX = 4294967295;
@@ -314,6 +315,38 @@ control MyIngress(inout headers hdr,
         }
     }
 
+    action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
+
+        //set the src mac address as the previous dst
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+
+       //set the destination mac address that we got from the match in the table
+        hdr.ethernet.dstAddr = dstAddr;
+
+        //set the output port that we also get from the table
+        standard_metadata.egress_spec = port;
+
+        //decrease ttl by 1
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    // ipv4 forwarding table
+    // ingress switches essentially just forward to the next aggregating switch
+    table ipv4_lpm {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            set_nhop;
+            drop;
+        }
+        size = 256;
+        default_action = drop;
+    }
 
     // group id MAT to retrieve the group parameters (local probability
     // and local threshold). a hit calls the getValues action which writes them
@@ -404,6 +437,8 @@ control MyIngress(inout headers hdr,
             } else {
                 sendHello();
             }
+
+            ipv4_lpm.apply();
         }
 
         // Other packet processing stuff //
