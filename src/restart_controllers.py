@@ -27,7 +27,7 @@ def write_bash_skript(t, e, s, path, reporting_thresh_R):
             continue
 
         # starting controllers in different shells
-        start_controller = "lxterminal -e bash -c 'sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s; bash'\n" % (p4switch_name, t, e, s)
+        start_controller = "lxterminal -e 'sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s'\n" % (p4switch_name, t, e, s)
         f.write(start_controller)
 
     switch_num *= 2
