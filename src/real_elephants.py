@@ -22,10 +22,6 @@ def real_elephants(pcap_path, glob_thresh):
     pkts = rdpcap(pcap_path)
 
     for pkt in pkts:
-        '''
-        flag signals whether to include IPv6 packets or not.
-        '''
-        flag = 0
         if IP in pkt:
             try:
                 src_ip = pkt[IP].src
@@ -36,22 +32,7 @@ def real_elephants(pcap_path, glob_thresh):
                 flag = 1
             except:
                 continue
-        '''
-        elif IPv6 in pkt:
-            src_ip = pkt[IPv6].src
-            dst_ip = pkt[IPv6].dst
-            # IPv6 doens't have protocol, but all packets seem to be TCP?
-            protocol = 6
-            src_port = pkt[IPv6].sport
-            dst_port = pkt[IPv6].dport
-            flag = 1
-            '''
 
-        '''
-        When we don't want the IPv6 packets, we can simply make the IPv6 part
-        (from 'elif IPv6 ...' to 'flag = 1') a comment.
-        '''
-        if flag == 1:
             five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
 
             srcIP_str = str(src_ip)
@@ -75,32 +56,50 @@ def real_elephants(pcap_path, glob_thresh):
     If we have seen a flow at least glob_thresh times it is an elephant and thus
     add it into our list of elephants.
     '''
-    for i in real_count:
-        if real_count[i] >= glob_thresh:
-            real_elephants.append(i)
+    for flow in real_count:
+        if real_count[flow] >= glob_thresh:
+            real_elephants.append(str(flow))
 
     print("Found {0} groups".format(len(groups)))
-    print(groups)
-    print("Found {0} heavy hitter flows:\n".format(len(real_elephants)))
-    print(real_elephants)
+    print("Found {0} heavy hitter flows".format(len(real_elephants)))
 
     return real_elephants
 
 '''
 Write the real_elephants into real_elephants.json.
 '''
-def write_json(real_elephants):
-    data = {
-        'real_elephants': real_elephants
-    }
-    with open('real_elephants.json', 'w') as outfile:
-        json.dump(data, outfile)
-        outfile.close()
+def write_json(real_elephants, pcap_path):
+    '''
+    Read existing json file or create it if not existing and write into json
 
+    Args:
+        real_elephants (array): Array of 5-tuples with all heavy hitter flows
+        pcap_file (str):        The file path to the pcap file
+    '''
+
+    json_decoded = {}
+    if os.path.exists('real_elephants.json'):
+        with open('real_elephants.json') as json_file:
+            json_decoded = json.load(json_file)
+            json_file.close()
+
+    pcap_file_name = re.match(r"^(.+/)*(.+)\.(.+)", pcap_path).group(2)
+
+    json_decoded[pcap_file_name] = real_elephants
+
+    with open('real_elephants.json', 'w+') as json_file:
+        json.dump(json_decoded, json_file, indent=4)
+        json_file.close()
+
+    print("Wrote heavy hitters to real_elephants.json")
 
 if __name__ == '__main__':
     parser = parser()
+
     pcap_path = parser[0]
     glob_thresh = parser[1]
+
+
     real_elephants = real_elephants(pcap_path, glob_thresh)
-    write_json(real_elephants)
+
+    write_json(real_elephants, pcap_path)
