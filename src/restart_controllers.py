@@ -29,7 +29,7 @@ def write_bash_skript(t, e, s, path):
         f.write(start_controller)
 
     switch_num *= 2
-    f.write("sleep 5\n")
+    f.write("sleep 10\n")
     f.write("mx h1 python send.py --p %s --i 10.0.0.%s" % (path, switch_num))
     f.close()
 
