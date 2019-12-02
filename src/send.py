@@ -8,70 +8,48 @@ import argparse
 import time
 import json
 import os
+import random
 
 from p4utils.utils.topology import Topology
 from scapy.all import sendp, get_if_list, get_if_hwaddr, rdpcap
 from scapy.all import Ether, IP, UDP, TCP
 from subprocess import Popen, PIPE
 from timeit import default_timer as timer
+from p4utils.utils.topology import Topology
 
-def get_if():
+def get_tables():
     '''
-    Returns the interface of the host we're currently on
+    Creates three dicts, mapping switch destinations to the MAC of the outgoing interface,
+    to the MAC of the destination interface on the switch and to the interface name on the host
 
     Returns:
-        iface (str): The interface name
+        src_mac_table (dict):   The src MAC table
+        dst_mac_table (dict):   The dst MAC table
+        interface_table (dict): The interface name table
     '''
 
-    ifs=get_if_list()
-    iface=None # "h1-eth0"
-    for i in get_if_list():
-        if "eth0" in i:
-            iface=i
-            break;
-    if not iface:
-        print "Cannot find eth0 interface"
-        exit(1)
-    return iface
+    topo = Topology(db="topology.db")
 
-def get_dst_mac():
-    '''
-    Looks for the next hop mac for a given destination IP
+    src_mac_table   = {}
+    dst_mac_table   = {}
+    interface_table = {}
+    num_switches    = 0
 
-    Args:
-        ip (str): The IP we want to send to
+    for sw_dst in topo.get_p4switches():
+        # extract switch ID
+        match = re.match(r"s(\d+)", sw_dst)
+        if match:
+            sw_dst_id = int(match.group(1))
+            host_if_mac = topo.node_to_node_mac('h1', sw_dst)
+            dst_sw_mac  = topo.node_to_node_mac(sw_dst, 'h1')
 
-    Returns:
-        mac (str): The next hop MAC address
-    '''
+            src_mac_table[sw_dst] = host_if_mac
+            dst_mac_table[sw_dst] = dst_sw_mac
+            interface_table[sw_dst] = "h1-eth{0}".format(sw_dst_id-1)
 
-    # option 1: get mac over Topology TODO: better idea than hardcode
-    try:
-        topo  = Topology(db="topology.db")
+            num_switches += 1
 
-        dst_sw_mac = topo.node_to_node_mac("s2", "s1")
-
-        return dst_sw_mac
-
-    except:
-        return None
-
-    # option 2: broadcast
-    return 'ff:ff:ff:ff:ff:ff'
-
-    # Legacy code:
-    '''
-    try:
-        pid = Popen(["arp", "-n", ip], stdout=PIPE)
-        s = pid.communicate()[0]
-        macs = re.search(r"(([a-f\d]{1,2}\:){5}[a-f\d]{1,2})", s)
-
-        return macs.groups()[0]
-    except:
-        return None
-        '''
-
-
+    return src_mac_table, dst_mac_table, interface_table, num_switches
 
 def send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, manual_mode):
     '''
@@ -108,8 +86,8 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
     real_count     = {}
     groups         = []
 
-
-    iface = get_if()
+    num_switches                 = None
+    secondary_switch_probability = 0.05
 
     # read the provide pcap file
     pcap_packets = rdpcap(pcap_path)
@@ -117,14 +95,24 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
     start_time     = timer()
     packet_counter = 0
 
-    ether_src = get_if_hwaddr(iface)
+    src_mac_table, dst_mac_table, interface_table, num_switches = get_tables()
+    '''
+    Issue with P4Utils: if a host has multiple connections to switches, the MAC address
+    of the interface on the host pointing to the first and last switch are equivalent.
+    To prevent this, we add one more switch than necessary but never use it
+    '''
+    if num_switches > 9:
+        num_switches -= 1
 
     # we want to send all packets to a host inside the network
     # Since not all IPs in the pcap packets are mapped to the interal host, we use its real IP
     # to get the destination MAC
+<<<<<<< HEAD
     ether_dst = get_dst_mac()
     if not ether_dst:
         raise ValueError("Mac address for %s was not found in the ARP table" % internal_host_ip)
+=======
+>>>>>>> 4d87f8032b6bef65e2a89a55b7ab4cd1f9038afb
 
     for pkt in pcap_packets:
         if IP in pkt:
@@ -134,6 +122,22 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
                 protocol = pkt[IP].proto
                 src_port = pkt[IP].sport
                 dst_port = pkt[IP].dport
+
+                '''
+                Packets from a given source IP are processed at a 'prefered' ingress switch with probability
+                p = 0.95 and probability (1-p) at the other ingress switch.
+                This main ingress switch (its ID) is selected based on the hash of the source IP.
+                The secondary ingress switch (its ID) is: <NUM_SWITCHES> - <MAIN_SWITCH_ID> + 1
+                '''
+                ingress_switch_id  = hash(src_ip) % num_switches + 1
+
+                if random.random() < secondary_switch_probability:
+                    ingress_switch_id = num_switches - ingress_switch_id + 1
+
+                ingress_switch = "s{0}".format(ingress_switch_id)
+                ether_src      = src_mac_table[ingress_switch]
+                ether_dst      = dst_mac_table[ingress_switch]
+                iface          = interface_table[ingress_switch]
 
                 if count_real_elephants:
                     five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
@@ -153,12 +157,12 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
                     else:
                         real_count[five_tuple] = 1
 
+                send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, manual_mode)
+                packet_counter += 1
+
             except Exception as e:
                 print('Could not extract all 5-tuple fields: ', e)
                 continue
-
-            send_packet(iface, ether_src, ether_dst, src_ip, dst_ip, src_port, dst_port, protocol, manual_mode)
-            packet_counter += 1
 
     end_time = timer()
 
@@ -168,10 +172,11 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
 
     print("Finished, this took {0} seconds".format(end_time - start_time))
     print("Sent {0} packets".format(packet_counter))
-    print("Found {0} groups".format(len(groups)))
-    print("Found {0} heavy hitters flows:\n".format(len(real_elephants)))
-    print(real_elephants)
-    write_json(real_elephants, pcap_path)
+    if count_real_elephants:
+        print("Found {0} groups".format(len(groups)))
+        print("Found {0} heavy hitters flows:\n".format(len(real_elephants)))
+        print(real_elephants)
+        write_json(real_elephants, pcap_path)
 
 def write_json(real_elephants, pcap_file):
     '''

@@ -43,7 +43,7 @@ class L2Controller(object):
 
     def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
 
-        self.topo               = Topology(db="../topology.db")
+        self.topo               = Topology(db="topology.db")
         self.sw_name            = sw_name
         self.thrift_port        = self.topo.get_thrift_port(sw_name)
         self.controller         = SimpleSwitchAPI(self.thrift_port)
@@ -243,7 +243,12 @@ class L2Controller(object):
     def add_group_values(self, flow, l_g):
         '''
         Calculates the group values tau_g and r_g from the stored l_g and then writes
-        these values into the group_values table
+        these values into the group_values table.
+        The use of these values are:
+            tau_g (int):    The mule threshold (i.e. report threshold) of group g. 
+                            If a mole count exceeds this threshold, the flow is reported to the coordinator.
+            r_g (int):      The report probability for group g. If we found a mule, 
+                            we report to the coordinator with probability r_g
 
         Args:
             flow (tuple):   The flow for which we want the group values

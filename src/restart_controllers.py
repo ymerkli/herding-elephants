@@ -5,22 +5,32 @@ from p4utils.utils.topology import Topology
 def write_bash_skript(t, e, s, path):
     topo = Topology(db="topology.db")
     f = open("start_controllers.sh", "w+")
-    f.write("cd controller\n")
-    f.write("lxterminal -e 'python coordinator.py'\n")
+    f.write("lxterminal -e bash -c 'sudo python controller/coordinator.py; bash'\n")
     f.write("sleep 5\n")
-    switch_num = 0
-    for p4switch in topo.get_p4switches():
-        switch_num += 1
-        # starting all controllers in the same shell
-        # start_controller = "sudo python l2_controller.py --n %s --t 1 --e 1 --s 1 &\n" % p4switch
+
+    switches   = topo.get_p4switches()
+    switch_num = len(switches)
+
+    '''
+    Issue with P4Utils: if a host has multiple connections to switches, the MAC address
+    of the interface on the host pointing to the first and last switch are equivalent.
+    To prevent this, we add one more switch than necessary but never use it
+    '''
+    ignore_switch = None
+    if switch_num > 9:
+        ignore_switch = "s{0}".format(switch_num)
+
+    for p4switch_name in switches.keys():
+        if ignore_switch and p4switch_name == ignore_switch:
+            continue
 
         # starting controllers in different shells
-        start_controller = "lxterminal -e 'sudo python l2_controller.py --n %s --t %s --e %s --s %s'\n" % (p4switch, t, e, s)
+        start_controller = "lxterminal -e bash -c 'sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s; bash'\n" % (p4switch_name, t, e, s)
         f.write(start_controller)
 
-    f.write("cd ..\n")
+    switch_num *= 2
     f.write("sleep 5\n")
-    f.write("mx h1 python send.py --p %s --i 10.%s.2.2" % (path, switch_num))
+    f.write("mx h1 python send.py --p %s --i 10.0.0.%s" % (path, switch_num))
     f.close()
 
 
@@ -33,6 +43,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     write_bash_skript(args.t, args.e, args.s, args.p)
-    ## give everyone permissions to execute the generated file
-    os.chmod("./start_controllers.sh", 0o777)
-    os.system("./start_controllers.sh")
+    
+    os.system("sudo bash start_controllers.sh")
