@@ -40,7 +40,7 @@
 
       },
       "ag": {
-        "program": "p4src/aggregate_switch.p4"
+        "program": "p4src/aggregating_switch.p4"
       }
     }
   }
