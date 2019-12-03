@@ -59,27 +59,13 @@ control MyIngress(inout headers hdr,
 
     bit<4> error_code;
 
-        action drop() {
+    action drop() {
         mark_to_drop(standard_metadata);
-    }
-
-    action ecmp_group(bit<14> ecmp_group_id, bit<16> num_nhops){
-        hash(meta.ecmp_hash,
-	    HashAlgorithm.crc16,
-	    (bit<1>)0,
-	    { hdr.ipv4.srcAddr,
-	      hdr.ipv4.dstAddr,
-          hdr.tcp.srcPort,
-          hdr.tcp.dstPort,
-          hdr.ipv4.protocol},
-	    num_nhops);
-
-	    meta.ecmp_group_id = ecmp_group_id;
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
 
-        //set the src mac address as the previous dst, this is not correct right?
+        //set the src mac address as the previous dst
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
 
        //set the destination mac address that we got from the match in the table
@@ -92,28 +78,15 @@ control MyIngress(inout headers hdr,
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
-    table ecmp_group_to_nhop {
-        key = {
-            meta.ecmp_group_id:    exact;
-            meta.ecmp_hash: exact;
-        }
-        actions = {
-            drop;
-            set_nhop;
-        }
-        size = 1024;
-    }
-
     table ipv4_lpm {
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
         actions = {
             set_nhop;
-            ecmp_group;
             drop;
         }
-        size = 1024;
+        size = 256;
         default_action = drop;
     }
 
@@ -235,39 +208,6 @@ control MyIngress(inout headers hdr,
         }
     }
 
-    action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
-
-        //set the src mac address as the previous dst
-        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-
-       //set the destination mac address that we got from the match in the table
-        hdr.ethernet.dstAddr = dstAddr;
-
-        //set the output port that we also get from the table
-        standard_metadata.egress_spec = port;
-
-        //decrease ttl by 1
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-    }
-
-    action drop() {
-        mark_to_drop(standard_metadata);
-    }
-
-    // ipv4 forwarding table
-    // ingress switches essentially just forward to the next aggregating switch
-    table ipv4_lpm {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            set_nhop;
-            drop;
-        }
-        size = 256;
-        default_action = drop;
-    }
-
     // group id MAT to retrieve the group parameters (local probability
     // and local threshold). a hit calls the getValues action which writes them
     // in the metadata
@@ -358,19 +298,9 @@ control MyIngress(inout headers hdr,
                 sendHello();
             }
 
+
+            // Other packet processing stuff //
             ipv4_lpm.apply();
-        }
-
-
-                // Other packet processing stuff //
-
-
-        if (hdr.ipv4.isValid()){
-            switch (ipv4_lpm.apply().action_run){
-                ecmp_group: {
-                    ecmp_group_to_nhop.apply();
-                }
-            }
         }
     }
 }

@@ -61,6 +61,7 @@
       "s10": {
       },
       "lb1": {
+        "program": "p4src/load_balancing.p4"
       },
       "ag1": {
         "program": "p4src/aggregating_switch.p4"
