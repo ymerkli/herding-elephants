@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import sys
 import socket
 import random
@@ -9,6 +10,7 @@ import json
 import os
 import random
 
+from p4utils.utils.topology import Topology
 from scapy.all import sendp, get_if_list, get_if_hwaddr, rdpcap
 from scapy.all import Ether, IP, UDP, TCP
 from subprocess import Popen, PIPE
@@ -74,7 +76,7 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
     Args:
         pcap_path (str):             The file path to the pcap file to send
         internal_host_ip (str):      The IP of the host in the mininet where traffic should be sent to
-        global_threshold (int):      The threshold for a flow to be a heavy hitter. Only need when 
+        global_threshold (int):      The threshold for a flow to be a heavy hitter. Only need when
                                      count_real_elephants is set
         manual_mode (bool):          If true, you have to press enter to send every single packet
         count_real_elephants (bool): If true, we will count flows and keep track of heavy hitters
@@ -106,6 +108,7 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
     # Since not all IPs in the pcap packets are mapped to the interal host, we use its real IP
     # to get the destination MAC
 
+
     for pkt in pcap_packets:
         if IP in pkt:
             try:
@@ -118,7 +121,7 @@ def send_pcap(pcap_path, internal_host_ip, global_threshold, manual_mode, count_
                 '''
                 Packets from a given source IP are processed at a 'prefered' ingress switch with probability
                 p = 0.95 and probability (1-p) at the other ingress switch.
-                This main ingress switch (its ID) is selected based on the hash of the source IP. 
+                This main ingress switch (its ID) is selected based on the hash of the source IP.
                 The secondary ingress switch (its ID) is: <NUM_SWITCHES> - <MAIN_SWITCH_ID> + 1
                 '''
                 ingress_switch_id  = hash(src_ip) % num_switches + 1

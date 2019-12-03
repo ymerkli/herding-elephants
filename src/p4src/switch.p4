@@ -2,24 +2,11 @@
 #include <core.p4>
 #include <v1model.p4>
 
+
+#include "headers_and_structs.p4"
+#include "parser.p4"
 //TODO (to replicate paper):
 // 3) Add support for ipv6 and udp
-
-// Typedefs //
-// Used for threshold variables
-typedef bit<32> tau_t;
-// Probabilities converted as: u_p = 2^32*p - 1, p in (0,1)
-typedef bit<32> uint32_probability;
-// Used for hashes of a flow five tuple
-typedef bit<32> flow_id_t;
-
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
-typedef bit<9>  egressSpec_t;
-
-// Constants //
-const uint32_probability INT32_MAX = 4294967295;
-const bit<16> ipv4_type = 0x800;
 
 // Hash table and group table properties
 #define HASH_TABLE_FIELD_WIDHT 64
@@ -50,143 +37,6 @@ const bit<16> ipv4_type = 0x800;
 
 
 /*************************************************************************
-*********************** S T R U C T S  ***********************************
-*************************************************************************/
-
-struct five_tuple_t {
-    ip4Addr_t srcAddr;
-    ip4Addr_t dstAddr;
-    bit<16>   srcPort;
-    bit<16>   dstPort;
-    bit<8>    protocol;
-}
-
-// Used by the digest commands to transport data to the local controller
-struct report_data_t {
-    five_tuple_t five_tuple;
-    bit<32> flow_count;
-}
-
-// Used by hash functions and the table lookup to store data
-struct hash_data_t {
-    flow_id_t hash_key;
-    flow_id_t read_key;
-    bit<32> hash_table_entry;
-    bit<64> value;
-}
-
-// Used for the group table lookup
-struct flow_group_t {
-    bit<8> srcGroup;
-    bit<8> dstGroup;
-}
-
-// We need fields for: 2 coinflips,
-//                     1 local threshold,
-//                     1 report_data struct for digest command
-//                     1 hash_data struct for counter lookup
-//                     1 found_flag to indicate which table we are operating on
-//                     1 flow_group struct for the group_values table lookup
-struct metadata {
-    uint32_probability flip_s;
-    uint32_probability flip_r;
-    tau_t tau;
-    report_data_t data;
-    hash_data_t hash_data;
-    bit<2> found_flag;
-    flow_group_t group;
-}
-
-
-/*************************************************************************
-*********************** H E A D E R S  ***********************************
-*************************************************************************/
-
-
-header ethernet_t {
-    macAddr_t dstAddr;
-    macAddr_t srcAddr;
-    bit<16>   etherType;
-}
-
-header ipv4_t {
-    bit<4>    version;
-    bit<4>    ihl;
-    bit<6>    dscp;
-    bit<2>    ecn;
-    bit<16>   totalLen;
-    bit<16>   identification;
-    bit<3>    flags;
-    bit<13>   fragOffset;
-    bit<8>    ttl;
-    bit<8>    protocol;
-    bit<16>   hdrChecksum;
-    ip4Addr_t srcAddr;
-    ip4Addr_t dstAddr;
-}
-
-header tcp_t{
-    bit<16> srcPort;
-    bit<16> dstPort;
-    bit<32> seqNo;
-    bit<32> ackNo;
-    bit<4>  dataOffset;
-    bit<4>  res;
-    bit<1>  cwr;
-    bit<1>  ece;
-    bit<1>  urg;
-    bit<1>  ack;
-    bit<1>  psh;
-    bit<1>  rst;
-    bit<1>  syn;
-    bit<1>  fin;
-    bit<16> window;
-    bit<16> checksum;
-    bit<16> urgentPtr;
-}
-
-struct headers {
-    ethernet_t ethernet;
-    ipv4_t ipv4;
-    tcp_t tcp;
-}
-
-/*************************************************************************
-*********************** P A R S E R  ***********************************
-*************************************************************************/
-
-parser MyParser(packet_in packet,
-                out headers hdr,
-                inout metadata meta,
-                inout standard_metadata_t standard_metadata) {
-
-    state start {
-        transition parse_ethernet;
-    }
-
-    state parse_ethernet {
-        packet.extract(hdr.ethernet);
-        transition select(hdr.ethernet.etherType){
-            ipv4_type: parse_ipv4;
-            default: accept;
-        }
-    }
-
-    state parse_ipv4 {
-        packet.extract(hdr.ipv4);
-        transition select(hdr.ipv4.protocol){
-            6 : parse_tcp;
-            default: accept;
-        }
-    }
-
-    state parse_tcp {
-        packet.extract(hdr.tcp);
-        transition accept;
-    }
-}
-
-/*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
 *************************************************************************/
 
@@ -206,7 +56,66 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     ///         GENERAL PACKET PROCESSING STUFF        ///
+
     bit<4> error_code;
+
+        action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    action ecmp_group(bit<14> ecmp_group_id, bit<16> num_nhops){
+        hash(meta.ecmp_hash,
+	    HashAlgorithm.crc16,
+	    (bit<1>)0,
+	    { hdr.ipv4.srcAddr,
+	      hdr.ipv4.dstAddr,
+          hdr.tcp.srcPort,
+          hdr.tcp.dstPort,
+          hdr.ipv4.protocol},
+	    num_nhops);
+
+	    meta.ecmp_group_id = ecmp_group_id;
+    }
+
+    action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
+
+        //set the src mac address as the previous dst, this is not correct right?
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+
+       //set the destination mac address that we got from the match in the table
+        hdr.ethernet.dstAddr = dstAddr;
+
+        //set the output port that we also get from the table
+        standard_metadata.egress_spec = port;
+
+        //decrease ttl by 1
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+
+    table ecmp_group_to_nhop {
+        key = {
+            meta.ecmp_group_id:    exact;
+            meta.ecmp_hash: exact;
+        }
+        actions = {
+            drop;
+            set_nhop;
+        }
+        size = 1024;
+    }
+
+    table ipv4_lpm {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            set_nhop;
+            ecmp_group;
+            drop;
+        }
+        size = 1024;
+        default_action = drop;
+    }
 
     // extracts the five tuple identifying a flow from the packet
     action extractFiveTuple() {
@@ -245,6 +154,9 @@ control MyIngress(inout headers hdr,
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_2) hash_table_2;
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_3) hash_table_3;
 
+    // used to introduce more randomness in the flip function
+    register<bit<32>>(2) last_coinflips;
+
     // sends a hello msg to the local controller with the 5tuple and a flow
     // counter of 0 to indicate the flow is new.
     action sendHello() {
@@ -282,9 +194,6 @@ control MyIngress(inout headers hdr,
         meta.flip_r = p_report;
     }
 
-
-    //TODO: introduce more randomness
-    //      IDEA: Hash with some RndVal safed in a register
     // Takes timestamps and ip dst/srcAddr and hashes them to a bit 32 value
     // which is compared against the saved probabilities.
     // REQ: meta.flip_r (report probability)
@@ -294,15 +203,26 @@ control MyIngress(inout headers hdr,
     action flip() {
         uint32_probability p_report = meta.flip_r;
         uint32_probability p_sample;
+        // load last coin flip values to use them as fields in the new coin flip
+        bit<32> last_flip_s;
+        bit<32> last_flip_r;
+        last_coinflips.read(last_flip_s, 0);
+        last_coinflips.read(last_flip_r, 1);
         sampling_probability.read(p_sample, 0);
+        // generate hashes
         hash(meta.flip_s, HashAlgorithm.crc32, (bit<1>)0,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
-                hdr.ipv4.dstAddr}, INT32_MAX);
+                hdr.ipv4.dstAddr, last_flip_r}, INT32_MAX);
         hash(meta.flip_r, HashAlgorithm.crc32, (bit<1>)0,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
-                hdr.ipv4.srcAddr}, INT32_MAX);
+                hdr.ipv4.srcAddr, last_flip_s}, INT32_MAX);
+        // safe hashes
+        last_coinflips.write(0, meta.flip_s);
+        last_coinflips.write(1, meta.flip_r);
+        // compare against the stored probabilities and set the flip fields
+        // accordingly.
         if (meta.flip_s < p_sample) {
             meta.flip_s = 1;
         } else {
@@ -398,7 +318,7 @@ control MyIngress(inout headers hdr,
                     sendError();
                 } else {
                     // check if we found an empty space, if so, try to sample
-                    if (meta.data.flow_count == 0) {
+                    if (meta.hash_data.value == 0) {
                         if (meta.flip_s == 1) {
                             count_start.read(meta.data.flow_count, 0);
                         }
@@ -441,9 +361,17 @@ control MyIngress(inout headers hdr,
             ipv4_lpm.apply();
         }
 
-        // Other packet processing stuff //
 
-                   /* empty */
+                // Other packet processing stuff //
+
+
+        if (hdr.ipv4.isValid()){
+            switch (ipv4_lpm.apply().action_run){
+                ecmp_group: {
+                    ecmp_group_to_nhop.apply();
+                }
+            }
+        }
     }
 }
 
@@ -464,20 +392,23 @@ control MyEgress(inout headers hdr,
 *************************************************************************/
 
 control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
-    apply {
-        // Packets aren’t changed (yet), nothing to do here
-     }
-}
-
-/*************************************************************************
-***********************  D E P A R S E R  *******************************
-*************************************************************************/
-
-control MyDeparser(packet_out packet, in headers hdr) {
-    apply {
-        packet.emit(hdr.tcp);
-        packet.emit(hdr.ipv4);
-        packet.emit(hdr.ethernet);
+     apply {
+    	update_checksum(
+    	    hdr.ipv4.isValid(),
+                { hdr.ipv4.version,
+    	          hdr.ipv4.ihl,
+                  hdr.ipv4.dscp,
+                  hdr.ipv4.ecn,
+                  hdr.ipv4.totalLen,
+                  hdr.ipv4.identification,
+                  hdr.ipv4.flags,
+                  hdr.ipv4.fragOffset,
+                  hdr.ipv4.ttl,
+                  hdr.ipv4.protocol,
+                  hdr.ipv4.srcAddr,
+                  hdr.ipv4.dstAddr },
+                  hdr.ipv4.hdrChecksum,
+                  HashAlgorithm.csum16);
     }
 }
 

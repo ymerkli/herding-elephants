@@ -201,10 +201,10 @@ def GetAccuracy(train_data, report_thresh_R, glob_thresh_T, mules_U, report_prob
         raise ValueError("Error: zero division while calculating precision")
 
     # we use the F1 score as accuracy
-    accuracy = (2 * tp) / (2*tp + fp + fn) 
+    accuracy = (2 * tp) / (2*tp + fp + fn)
 
     print("GetAccuracy: F1 score = {}".format(accuracy))
-
+    print("Sampling probability: %s" % sampl_prob)
     return accuracy
 
 def performance(found_elephants, real_elephants):
@@ -245,8 +245,8 @@ def parser():
     parser = argparse.ArgumentParser(description = 'parse the keyword arguments')
 
     parser.add_argument(
-        '--p', 
-        required = True, 
+        '--p',
+        required = True,
         help = 'Path to .pcap file'
     )
 

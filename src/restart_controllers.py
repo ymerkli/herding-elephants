@@ -1,4 +1,4 @@
-import argparse
+mport argparse
 import os
 from p4utils.utils.topology import Topology
 
@@ -27,11 +27,11 @@ def write_bash_skript(t, e, s, path, reporting_thresh_R):
             continue
 
         # starting controllers in different shells
-        start_controller = "lxterminal -e 'sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s'\n" % (p4switch_name, t, e, s)
+        start_controller = "lxterminal -e bash -c 'sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s'\n" % (p4switch_name, t, e, s)
         f.write(start_controller)
 
     switch_num *= 2
-    f.write("sleep 5\n")
+    f.write("sleep 10\n")
     f.write("mx h1 python send.py --p %s --i 10.0.0.%s" % (path, switch_num))
     f.close()
 

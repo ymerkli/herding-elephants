@@ -6,7 +6,7 @@
   "switch_cli": "simple_switch_CLI",
   "cli": true,
   "pcap_dump": true,
-  "enable_log": true,
+  "enable_log": false,
   "topo_module": {
     "file_path": "",
     "module_name": "p4utils.mininetlib.apptopo",
@@ -24,7 +24,7 @@
     "object_name": "P4Mininet"
   },
   "topology": {
-    "assignment_strategy": "l2",
+    "assignment_strategy": "l3",
     "links": [
       ["h1", "lb1"],
       ["lb1", "s1"], ["lb1", "s2"], ["lb1", "s3"], ["lb1", "s4"], ["lb1", "s5"],

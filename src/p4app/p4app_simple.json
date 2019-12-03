@@ -25,7 +25,7 @@
   },
   "topology": {
     "assignment_strategy": "l2",
-    "links": [["h1", "s1"], ["h2", "s1"]],
+    "links": [["h1", "lb"], ["h2", "ag"], ["lb", "s1"], ["s1", "ag"]],
     "hosts": {
       "h1": {
       },
@@ -33,7 +33,14 @@
       }
     },
     "switches": {
+      "lb": {
+        "program": "p4src/load_balancing.p4"
+      },
       "s1": {
+
+      },
+      "ag": {
+        "program": "p4src/aggregate_switch.p4"
       }
     }
   }
