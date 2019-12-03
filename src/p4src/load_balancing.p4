@@ -66,7 +66,6 @@ control MyIngress(inout headers hdr,
     }
 
 
-
     table get_port {
         key = {
             meta.tau: exact;
@@ -91,7 +90,7 @@ control MyIngress(inout headers hdr,
                 meta.tau = 9 - meta.flip_r;
             }
             // translate virtual to real ports
-            meta.tau = meta.tau + 1 + port_h;
+            meta.tau = meta.tau + 1 + (bit<32>) port_h;
             get_port.apply();
         } else {
             drop();
