@@ -85,6 +85,7 @@ control MyIngress(inout headers hdr,
         if(hdr.ipv4.isValid() && standard_metadata.ingress_port == port_h) {
             hashFlow();
             if (meta.flip_s  < UINT32_95) {
+                meta.flip_s = 1;
             } else {
                 meta.tau = 9 - meta.tau;
             }
