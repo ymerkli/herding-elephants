@@ -79,10 +79,8 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
-        bit<9> port_h;
-        host_port.read(port_h, 0);
         // packet comes from host
-        if(hdr.ipv4.isValid() && standard_metadata.ingress_port == port_h) {
+        if(hdr.ipv4.isValid()) {
             hashFlow();
             if (meta.flip_s  < UINT32_95) {
                 meta.flip_s = 1;
@@ -90,7 +88,7 @@ control MyIngress(inout headers hdr,
                 meta.tau = 9 - meta.tau;
             }
             // translate virtual to real ports
-            meta.tau = meta.tau + 1 + (bit<32>) port_h;
+            meta.tau = meta.tau + 2;
             get_port.apply();
         } else {
             drop();
