@@ -156,7 +156,7 @@ def TuneAccuracy(glob_thresh_T, switch_mem, comm_budget_c, train_data, observers
 
     report_thresh_R, mules_U, report_prob, mule_tau = DeriveReporting(comm_budget_c, eps_max, observers_l, sampl_prob)
 
-    return eps_max, mule_tau, report_prob, report_thresh_R, sampl_prob 
+    return eps_max, mule_tau, report_prob, report_thresh_R, sampl_prob
 
 def GetAccuracy(train_data, report_thresh_R, glob_thresh_T, mules_U, report_prob, sampl_prob, mule_tau):
     '''
