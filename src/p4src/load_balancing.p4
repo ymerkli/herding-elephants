@@ -41,11 +41,7 @@ control MyIngress(inout headers hdr,
 
     // hash the flow to a virtual port from 0 to 9
         hash(meta.tau, HashAlgorithm.crc16, (bit<1>)0,
-            {hdr.ipv4.srcAddr,
-             hdr.ipv4.dstAddr,
-             hdr.tcp.srcPort,
-             hdr.tcp.dstPort,
-             hdr.ipv4.protocol}, (bit<32>)10);
+            {hdr.ipv4.srcAddr}, (bit<32>)10);
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
@@ -86,7 +82,7 @@ control MyIngress(inout headers hdr,
                 meta.tau = 9 - meta.tau;
             }
             // translate virtual to real ports
-            meta.tau = meta.tau + 2;
+            meta.tau = meta.tau + 1;
             get_port.apply();
         } else {
             drop();

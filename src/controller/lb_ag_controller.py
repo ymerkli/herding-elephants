@@ -14,7 +14,9 @@ class LBController(object):
         self.topo          = Topology(db="topology.db")
         self.controller_lb = {}
         self.lb_name       = None
+
         self.init()
+        self.get_mac()
 
     def init(self):
         self.connect_to_load_balancer()
@@ -35,6 +37,14 @@ class LBController(object):
                 self.controller_lb = SimpleSwitchAPI(thrift_port)
                 self.lb_name       = p4switch
 
+    def get_mac(self):
+        host = self.topo.get_hosts_connected_to(self.lb_name)[0]
+
+        host2lb_mac = self.topo.node_to_node_mac(host, self.lb_name)
+        lb2host_mac = self.topo.node_to_node_mac(self.lb_name, host)
+
+        print("host2lb: {0}, lb2host: {1}".format(host2lb_mac, lb2host_mac))
+
     def route(self):
         '''
         Write routing rules into get_port table for all connected switches
@@ -50,11 +60,6 @@ class LBController(object):
 
                 print "table_add at {0}:".format(self.lb_name)
                 self.controller_lb.table_add("get_port", "set_nhop", [str(switch_id)], [str(dst_sw_mac), str(dst_port)])
-
-        host      = self.topo.get_hosts_connected_to(self.lb_name)[0]
-        host_port = self.topo.node_to_node_port_num(self.lb_name, host)
-
-        self.controller_lb.register_write("host_port", 0, host_port)
 
     def main(self):
         self.route()
@@ -98,13 +103,13 @@ class AGController(object):
         '''
 
         host      = self.topo.get_hosts_connected_to(self.ag_name)[0]
-        host_port = self.topo.node_to_node_port_num(self.ag_name, host)
+        ag_port   = self.topo.node_to_node_port_num(self.ag_name, host)
         host_mac  = self.topo.get_host_mac(host)
         match_ip  = unicode("0.0.0.0/0")
 
         print("table add at {0}:".format(self.ag_name))
         self.controller_ag.table_add("ipv4_lpm", "set_nhop",\
-            [str(match_ip)], [str(host_mac), str(host_port)])
+            [str(match_ip)], [str(host_mac), str(ag_port)])
 
     def main(self):
         self.route()
