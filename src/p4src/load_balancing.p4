@@ -42,16 +42,12 @@ control MyIngress(inout headers hdr,
                 hdr.ipv4.dstAddr}, INT32_MAX);
 
         hash(meta.tau, HashAlgorithm.crc16, (bit<1>)0,
-            {hdr.ipv4.srcAddr,
-             hdr.ipv4.dstAddr,
-             hdr.tcp.srcPort,
-             hdr.tcp.dstPort,
-             hdr.ipv4.protocol}, (bit<32>)9);
+            {hdr.ipv4.srcAddr}, (bit<32>)9);
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
 
-        //set the src mac address as the previous dst, this is not correct right?
+        //set the src mac address as the previous dst
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
 
        //set the destination mac address that we got from the match in the table
@@ -80,13 +76,15 @@ control MyIngress(inout headers hdr,
     apply {
         bit<9> port_h;
         host_port.read(port_h, 0);
+
         // packet comes from host
         if(hdr.ipv4.isValid() && standard_metadata.ingress_port == port_h) {
             hashFlow();
-            if (meta.tau  < UINT32_95) {
-                meta.tau = meta.flip_r;
+            if (meta.flip_s < UINT32_95) {
+                // do nothing, choose the primary switch;
             } else {
-                meta.tau = 9 - meta.flip_r;
+                // use the secondary switch
+                meta.tau = 9 - meta.tau;
             }
             meta.tau = meta.tau + 1;
             get_port.apply();
@@ -96,12 +94,6 @@ control MyIngress(inout headers hdr,
 
      }
 }
-
-
-
-
-
-
 
 /*************************************************************************
 ****************  E G R E S S   P R O C E S S I N G   *******************

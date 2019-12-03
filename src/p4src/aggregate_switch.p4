@@ -49,12 +49,6 @@ control MyIngress(inout headers hdr,
      }
 }
 
-
-
-
-
-
-
 /*************************************************************************
 ****************  E G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
@@ -72,11 +66,11 @@ control MyEgress(inout headers hdr,
 *************************************************************************/
 
 control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
-     apply {
-    	update_checksum(
-    	    hdr.ipv4.isValid(),
+    apply {
+        update_checksum(
+    	      hdr.ipv4.isValid(),
                 { hdr.ipv4.version,
-    	          hdr.ipv4.ihl,
+    	            hdr.ipv4.ihl,
                   hdr.ipv4.dscp,
                   hdr.ipv4.ecn,
                   hdr.ipv4.totalLen,

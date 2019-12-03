@@ -120,7 +120,7 @@ class L2Controller(object):
 
     def fill_ipv4_lpm_table(self):
         '''
-        Writes the ipv4_lpm the table. This table should basically send ALL
+        Writes the ipv4_lpm table. This table should basically send ALL
         IP traffic to the next aggregating switch. We thus do longest prefix
         match with prefix 0 (i.e. match all IPs)
         '''

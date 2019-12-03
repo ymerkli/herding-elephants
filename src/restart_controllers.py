@@ -1,38 +1,28 @@
-mport argparse
+import argparse
 import os
+
 from p4utils.utils.topology import Topology
 
 def write_bash_skript(t, e, s, path, reporting_thresh_R):
     topo = Topology(db="topology.db")
-    f = open("start_controllers.sh", "w+")
+    f    = open("start_controllers.sh", "w+")
+
     f.write("lxterminal -e bash -c 'sudo python controller/coordinator.py --r {0}; bash'\n".format(
         reporting_thresh_R
     ))
     f.write("sleep 5\n")
 
-    switches   = topo.get_p4switches()
-    switch_num = len(switches)
-
-    '''
-    Issue with P4Utils: if a host has multiple connections to switches, the MAC address
-    of the interface on the host pointing to the first and last switch are equivalent.
-    To prevent this, we add one more switch than necessary but never use it
-    '''
-    ignore_switch = None
-    if switch_num > 9:
-        ignore_switch = "s{0}".format(switch_num)
-
-    for p4switch_name in switches.keys():
-        if ignore_switch and p4switch_name == ignore_switch:
-            continue
-
+    for p4switch_name in topo.get_p4switches():
         # starting controllers in different shells
         start_controller = "lxterminal -e bash -c 'sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s'\n" % (p4switch_name, t, e, s)
         f.write(start_controller)
 
-    switch_num *= 2
+    # run the load balancer and aggregating switch controller
+    start_controller = "lxterminal -e bash -c 'sudo python controller/lb_ag_controller.py'\n"
+    f.write(start_controller)
+
     f.write("sleep 10\n")
-    f.write("mx h1 python send.py --p %s --i 10.0.0.%s" % (path, switch_num))
+    f.write("mx h1 sudo tcpreplay -i h1-eth0 {0}".format(path))
     f.close()
 
 
