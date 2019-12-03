@@ -43,18 +43,13 @@ class LBController(object):
 
         for sw_dst in self.topo.get_p4switches():
             match = re.match(r"s(\d+)", sw_dst)
-            if match: 
+            if match:
                 dst_port   = self.topo.node_to_node_port_num(self.lb_name, sw_dst)
                 dst_sw_mac = self.topo.node_to_node_mac(sw_dst, self.lb_name)
                 switch_id  = match.group(1)
 
-                print "table_add at {0}:".format(self.lb_name)
                 self.controller_lb.table_add("get_port", "set_nhop", [str(switch_id)], [str(dst_sw_mac), str(dst_port)])
 
-        host      = self.topo.get_hosts_connected_to(self.lb_name)[0]
-        host_port = self.topo.node_to_node_port_num(self.lb_name, host)
-
-        self.controller_lb.register_write("host_port", 0, host_port)
 
     def main(self):
         self.route()
@@ -102,7 +97,6 @@ class AGController(object):
         host_mac  = self.topo.get_host_mac(host)
         match_ip  = unicode("0.0.0.0/0")
 
-        print("table add at {0}:".format(self.ag_name))
         self.controller_ag.table_add("ipv4_lpm", "set_nhop",\
             [str(match_ip)], [str(host_mac), str(host_port)])
 
@@ -111,4 +105,6 @@ class AGController(object):
 
 if __name__ == "__main__":
     controller = LBController().main()
+    print("lb_switch ready")
     controller = AGController().main()
+    print("ag_switch ready")

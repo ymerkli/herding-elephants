@@ -27,8 +27,6 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register<bit<9>>(1) host_port;
-
     action drop() {
         mark_to_drop(standard_metadata);
     }
@@ -88,7 +86,7 @@ control MyIngress(inout headers hdr,
                 meta.tau = 9 - meta.tau;
             }
             // translate virtual to real ports
-            meta.tau = meta.tau + 2;
+            meta.tau = meta.tau + 1;
             get_port.apply();
         } else {
             drop();
