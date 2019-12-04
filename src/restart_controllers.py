@@ -18,6 +18,7 @@ def write_bash_skript(t, e, s, path, reporting_thresh_R):
         f.write(start_controller)
 
     # run the load balancer and aggregating switch controller
+    f.write("sleep 5\n")
     start_controller = "lxterminal -e bash -c 'sudo python controller/lb_ag_controller.py'\n"
     f.write(start_controller)
 

@@ -222,6 +222,8 @@ class L2Controller(object):
         sub.connect(notifications_socket)
         sub.setsockopt(nnpy.SUB, nnpy.SUB_SUBSCRIBE, '')
 
+        print("Switch {0}: starting digest loop".format(self.sw_name))
+
         while True:
             msg = sub.recv()
             self.recv_msg_digest(msg)
@@ -396,8 +398,6 @@ if __name__ == '__main__':
     try:
         sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
         l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
-
-        print("L2 controller ready")
 
         l2_controller.run_digest_loop()
 
