@@ -35,48 +35,60 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     print(pids_to_kill)
     return pids_to_kill
 
-'''
-def write_bash_skript(t, e, s, path, reporting_thresh_R):
-    topo = Topology(db="topology.db")
-    f    = open("start_controllers.sh", "w+")
-
-    f.write("sudo python controller/coordinator.py --r {0} &\n".format(reporting_thresh_R))
-    f.write("sleep 5\n")
-
-    for p4switch_name in topo.get_p4switches():
-        f.write("sudo python controller/l2_controller.py --n %s --t %s --e %s --s %s &\n" % (p4switch_name, t, e, s))
-
-    # run the load balancer and aggregating switch controller
-    f.write("sudo python controller/lb_ag_controller.py &\n")
-
-
-    f.write("sleep 10\n")
-    f.write("mx h1 sudo tcpreplay -i h1-eth0 {0}".format(path))
+def kill_processes(pid_list):
+    f = open("kill_skript.sh", "w+")
+    for pid in pid_list:
+        print(pid)
+        f.write("sudo kill %s\n" % pid)
     f.close()
-'''
 
-if __name__ == '__main__':
-    '''
+class InputValueError(Exception):
+    pass
+
+
+def parser():
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--t', type=int, required=True, help="The global threshold T")
     parser.add_argument('--s', type=float, required=True, help="The sampling probability s")
     parser.add_argument('--e', type=float, required=True, help="Epsilon")
     parser.add_argument('--r', type=int, required=True, help="The reporting threshold R")
-    args = parser.parse_args()
-    write_bash_skript(args.t, args.e, args.s, args.p, args.r)
-    os.system("sudo bash start_controllers.sh")
-    '''
-    parser = argparse.ArgumentParser()
     parser.add_argument('--p', type=str, required=True, help="The path to the pcap file")
+    parser.add_argument('--n', type=int, required=False, help="The number of evaluation rounds", default=1)
     args = parser.parse_args()
 
-    kill_list = startup(1, 1, 1, 1)
-    print("Startup finished, waiting for controllers to be ready")
-    time.sleep(10)
+    args = parser.parse_args()
 
-    send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', args.p])
-    time.sleep(5)
-    print("Sending finished, killing processes")
-    for i in range (0,10):
-        for pid in kill_list:
-            os.system('sudo kill %s' % pid)
+    if (args.s < 0 or 1 < args.s):
+        raise InputValueError
+
+    if (args.e <= 0 or 1 < args.e):
+        raise InputValueError
+
+    return args.t, args.r, args.e, args.s, args.p, args.n
+
+
+if __name__ == '__main__':
+    try:
+        t, r, e, s, path, rounds = parser()
+    except InputValueError:
+        print("The sampling probability and epsilon should be between 0 and 1")
+
+    for i in range(0, rounds):
+
+        pid_list = startup(t, r, e, s)
+        print(pid_list)
+        print("Startup finished, waiting for controllers to be ready")
+        time.sleep(10)
+
+        send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % path])
+
+        print("Sending finished, killing processes")
+        time.sleep(5)
+        kill_processes(pid_list)
+
+        os.system("lxterminal -e bash -c 'sudo bash kill_skript.sh'")
+
+        ## TODO: evaluate results
+
+    print("All rounds finished")
