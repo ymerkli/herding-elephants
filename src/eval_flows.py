@@ -11,7 +11,7 @@ class FlowEvaluator(object):
 
     def __init__(self):
 
-    def read_flow_json(self, filepath):
+    def read_flow_json(self, filepath, key):
         json_decoded = {}
         if os.path.exists(filepath):
             with open(filepath) as json_file:
@@ -20,12 +20,14 @@ class FlowEvaluator(object):
         else:
             raise ValueError("Error: file {0} does not exist":format(filepath))
 
-        return json_decoded['flow'] 
+        if key not in json_decoded:
+            raise ValueError("Error: key {0} not found in {1}".format(
+                key, filepath
+            ))
 
+        return json_decoded[key] 
 
-        pcap_file_name = re.match(r"^(.+/)*(.+)\.(.+)", file).group(2)
-
-    def performance(self, found_elephants, real_elephants):
+    def performance(self, real_elephants, found_elephants):
         '''
         Calculates true positives, false positives and false negatives based on the provided
         flow sets.
@@ -34,9 +36,9 @@ class FlowEvaluator(object):
         readability when using indentation.
     
         Args:
+            real_elephants (list):  A list of flows (strings) with all heavy hitter flows
             found_elephants (list): A list of flows (strings) with the flows out algorithm classified
                                     as heavy hitters (elephants)
-            real_elephants (list):  A list of flows (strings) with all heavy hitter flows
     
         Returns:
             tp (int):               True positives
@@ -84,8 +86,8 @@ class FlowEvaluator(object):
             f1_score (float):           The F1Score for the two flow sets
         '''
 
-        real_elephants  = self.read_flow_json(real_elephants_fp)
-        found_elephants = self.read_flow_json(found_elephants_fp)
+        real_elephants  = self.read_flow_json(real_elephants_fp, 'real_elephants')
+        found_elephants = self.read_flow_json(found_elephants_fp, 'found_elephants')
 
         tp, fp, fn = self.performance(real_elephants, found_elephants)
 
@@ -98,6 +100,7 @@ def parser():
         '--r',
         type=str,
         required=True,
+        default='../evaluation/data/real_elephants.json'
         help='The filepath to the real elephants JSON'
     )
 
@@ -105,6 +108,7 @@ def parser():
         '--f',
         type=str,
         required=True,
+        default='../evaluation/data/found_elephants.json'
         help='The filepath to the found elephants JSON'
     )
 

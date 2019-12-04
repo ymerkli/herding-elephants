@@ -146,9 +146,9 @@ class CoordinatorService(rpyc.Service):
         Args:
             output_file_path (str): The file path where the JSON will be written to
         '''
-        key = "{0}_found_elephants".format(time.ctime())
+
         data = {
-            key: self.heavy_hitter_set
+            'found_elephants': self.heavy_hitter_set
         }
 
         with open(self.output_file_path, 'a') as outfile:
@@ -156,7 +156,7 @@ class CoordinatorService(rpyc.Service):
             outfile.close()
 
         print("Detected {0} heavy hitter flows".format(len(self.heavy_hitter_set)))
-        print("Wrote heavy hitter set to {0}".format(self.output_file_path))
+        print("Wrote found heavy hitter to {0}".format(self.output_file_path))
 
 class CoordinatorServer(object):
     '''
@@ -214,7 +214,7 @@ def parser():
         "--o",
         type=str,
         required=False,
-        default='found_elephants.json',
+        default='../../evaluation/data/found_elephants.json',
         help="The output path for the heavy hitter set"
     )
 

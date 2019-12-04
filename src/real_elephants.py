@@ -78,20 +78,22 @@ def write_json(real_elephants, pcap_path):
     '''
 
     json_decoded = {}
-    if os.path.exists('real_elephants.json'):
-        with open('real_elephants.json') as json_file:
+    real_elephants_path = '../evaluation/data/real_elephants.json'
+
+    if os.path.exists(real_elephants_path):
+        with open(real_elephants_path) as json_file:
             json_decoded = json.load(json_file)
             json_file.close()
 
     pcap_file_name = re.match(r"^(.+/)*(.+)\.(.+)", pcap_path).group(2)
 
-    json_decoded[pcap_file_name] = real_elephants
+    json_decoded['real_elephants'] = real_elephants
 
-    with open('real_elephants.json', 'w+') as json_file:
+    with open(real_elephants_path, 'w+') as json_file:
         json.dump(json_decoded, json_file, indent=4)
         json_file.close()
 
-    print("Wrote heavy hitters to real_elephants.json")
+    print("Wrote real heavy hitters to ", real_elephants_path)
 
 if __name__ == '__main__':
     parser = parser()
