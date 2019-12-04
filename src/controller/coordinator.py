@@ -175,6 +175,7 @@ class CoordinatorServer(object):
         '''
         Starts the Coordinator server
         '''
+        print("Starting Coordinator")
         self.server.start()
 
     def stop(self):
