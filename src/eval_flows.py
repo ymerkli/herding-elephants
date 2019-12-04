@@ -25,7 +25,7 @@ class FlowEvaluator(object):
                 key, filepath
             ))
 
-        return json_decoded[key] 
+        return json_decoded[key]
 
     def performance(self, real_elephants, found_elephants):
         '''
@@ -34,22 +34,22 @@ class FlowEvaluator(object):
 
         NOTE: flows are added as strings in the JSON files. This improves
         readability when using indentation.
-    
+
         Args:
             real_elephants (list):  A list of flows (strings) with all heavy hitter flows
             found_elephants (list): A list of flows (strings) with the flows out algorithm classified
                                     as heavy hitters (elephants)
-    
+
         Returns:
             tp (int):               True positives
             fp (int):               False positives
             fn (int):               False negatives
         '''
-    
+
         tp = 0
         fp = 0
         fn = 0
-    
+
         for flow in real_elephants:
             if flow in found_elephants:
                 tp = tp+1
@@ -62,7 +62,7 @@ class FlowEvaluator(object):
         fp = len(found_elephants)
 
         print("performance: tp = {0}, fp = {1}, fn = {2}".format(tp, fp, fn))
-    
+
         return tp, fp, fn
 
     def f1_score(self, tp, fp, fn):
