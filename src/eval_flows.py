@@ -9,6 +9,8 @@ class FlowEvaluator(object):
     The other JSON represents all found flows by the detection algorithm
     '''
 
+    def __init__(self):
+
     def read_flow_json(self, filepath):
         json_decoded = {}
         if os.path.exists(filepath):
@@ -68,22 +70,22 @@ class FlowEvaluator(object):
 
         return (2 * tp) / (2 * tp + fp + fn)
 
-    def get_accuracy(self, real_elephants_fn, found_elephants_fn):
+    def get_accuracy(self, real_elephants_fp, found_elephants_fp):
         '''
         Gets the accuracy (F1 score) for two provided file paths to JSONs
 
         Args:
-            real_elephants_fn (str):    File path to the JSON with the real
+            real_elephants_fp (str):    File path to the JSON with the real
                                         elephant flows
-            found_elephants_fn (str):   File path to the JSON with the found
+            found_elephants_fp (str):   File path to the JSON with the found
                                         elephant flows
 
         Returns:
             f1_score (float):           The F1Score for the two flow sets
         '''
 
-        real_elephants  = self.read_flow_json(real_elephants_fn)
-        found_elephants = self.read_flow_json(found_elephants_fn)
+        real_elephants  = self.read_flow_json(real_elephants_fp)
+        found_elephants = self.read_flow_json(found_elephants_fp)
 
         tp, fp, fn = self.performance(real_elephants, found_elephants)
 
@@ -94,3 +96,26 @@ def parser():
 
     parser.add_argument(
         '--r',
+        type=str,
+        required=True,
+        help='The filepath to the real elephants JSON'
+    )
+
+    parser.add_argument(
+        '--f',
+        type=str,
+        required=True,
+        help='The filepath to the found elephants JSON'
+    )
+
+    args = parser.parse_args()
+
+    return args.r, args.f
+
+def main():
+    real_elephants, found_elephants = parser()
+
+    evaluator = FlowEvaluator()
+
+    f1_score = evaluator.get_accuracy(real_elephants, found_elephants)
+
