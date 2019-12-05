@@ -14,12 +14,12 @@ class FlowEvaluator(object):
 
     Args:
         csv_file_path (str):        The path to the csv file in which we want to write to
-        eval_parameter_value (str): The name of the parameter over which we evaluate (e.g. epsilon)
+        eval_parameter_name (str): The name of the parameter over which we evaluate (e.g. epsilon)
     '''
 
-    def __init__(self, csv_file_path, eval_parameter_value):
+    def __init__(self, csv_file_path, eval_parameter_name):
         self.csv_file_path        = csv_file_path
-        self.eval_parameter_value = eval_parameter_value
+        self.eval_parameter_name = eval_parameter_name
 
     def read_flow_json(self, filepath, key):
         '''
@@ -132,7 +132,7 @@ class FlowEvaluator(object):
 
         return f1_score, precision, recall 
 
-    def write_accuracies_to_csv(self, f1_score, precision, recall):
+    def write_accuracies_to_csv(self, f1_score, precision, recall, eval_parameter_value):
         '''
         Writes the accuracy measures to the given csv file, on the line indicated
         by the eval_parameter_value
@@ -154,7 +154,7 @@ class FlowEvaluator(object):
                     for the row corresponding to the eval_parameter_value, we write the 
                     accuracy measures f1_score, precision, recall
                     '''
-                    if row[0] == str(self.eval_parameter_value):
+                    if row[0] == str(eval_parameter_value):
                         row = [row[0]]
                         row.append(f1_score)
                         row.append(precision)
@@ -169,6 +169,6 @@ class FlowEvaluator(object):
 
                 writer.writerows(new_csv)
 
-                print("Wrote accuracies for {0} to {1}".format(self.eval_parameter_value, self.csv_file_path))
+                print("Wrote accuracies for {0} to {1}".format(eval_parameter_value, self.csv_file_path))
         else:
             raise ValueError("Error: csv file {0} does not exit".format(self.csv_file_path))

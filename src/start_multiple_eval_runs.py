@@ -8,13 +8,14 @@ import time
 import csv
 import json
 import string
+import re
 
 from p4utils.utils.topology import Topology
 from flow_evaluator import FlowEvaluator
 
 #Get the full path to the src folder
 path_to_src = os.path.realpath(__file__)
-path_to_src = re.match(r"^(.+/)*(.+)\.(.+)", path).group(1) #remove the filename from the path
+path_to_src = re.match(r"^(.+/)*(.+)\.(.+)", path_to_src).group(1) #remove the filename from the path
 
 real_elephants_path  = "{0}../evaluation/data/real_elephants.json".format(path_to_src)
 found_elephants_path = "{0}../evaluation/data/found_elephants.json".format(path_to_src)
@@ -25,31 +26,40 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     topo = Topology(db="topology.db")
 
     # start controllers and coordinator here
-
     coordinator = subprocess.Popen(['sudo', 'python', 'controller/coordinator.py', '--r', '%s' % report_threshold])
     pids_to_kill.append(coordinator.pid)
 
-    print(pids_to_kill)
-
+    print("Coordinator PID: ", coordinator.pid)
     time.sleep(5)
 
     for p4switch_name in topo.get_p4switches():
-        controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller.py', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
-        pids_to_kill.append(controller.pid)
+        # only start L2controller for ingress switches
+        if re.match(r"s\d+", p4switch_name):
+            controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller.py', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
+
+            '''
+            Prepend L2Controller PIDs
+            This way socket.recv errors are avoid since we dont kill the coordinator first
+            '''
+            pids_to_kill.insert(0, controller.pid)
 
     print(pids_to_kill)
 
+    # we need to sleep for a bit before running the lb ag controllers
+    time.sleep(5)
+    # start lb and ag controllers
     lb_ag_controller = subprocess.Popen(['sudo', 'python', 'controller/lb_ag_controller.py'])
     pids_to_kill.append(lb_ag_controller.pid)
 
     print(pids_to_kill)
+
     return pids_to_kill
 
 def kill_processes(pid_list):
     f = open("kill_skript.sh", "w+")
     for pid in pid_list:
         print(pid)
-        f.write("sudo kill %s\n" % pid)
+        f.write("sudo kill -2 %s\n" % pid)
     f.close()
 
 def read_rounds(csv_file_path):
@@ -70,7 +80,7 @@ def read_rounds(csv_file_path):
     '''
 
     if os.path.exists(csv_file_path):
-        with open(self.csv_file_path) as csv_file:
+        with open(csv_file_path) as csv_file:
             reader = csv.reader(csv_file)
 
             row_counter      = 0
@@ -81,6 +91,7 @@ def read_rounds(csv_file_path):
                     parameter_name = row[0]
                 else:
                     parameter_rounds.append(row[0])
+                row_counter += 1
 
         return parameter_rounds, parameter_name
     else:
@@ -122,7 +133,7 @@ def main():
 
     parameter_name = string.lower(parameter_name)
 
-    evalautor = FlowEvaluator(csv_file_path, parameter_name) 
+    evaluator = FlowEvaluator(csv_file_path, parameter_name) 
 
     if parameter_name == 'epsilon': 
         for epsilon in parameter_rounds:
@@ -134,18 +145,21 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % path])
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % pcap_file_path])
 
+            time.sleep(10)
             print("Sending finished, killing processes")
-            time.sleep(5)
             kill_processes(pid_list)
 
             os.system("lxterminal -e bash -c 'sudo bash kill_skript.sh'")
 
+            # wait for everything to finish (especially the coordinator to write out found_elephants.json)
+            time.sleep(5)
+
             # Start the evaluation of the current round
-            f1_score, precision, recall = evaluator.get_accuracy(real_elephants, found_elephants)
+            f1_score, precision, recall = evaluator.get_accuracy(real_elephants_path, found_elephants_path)
             # Write the found measures to the csv file
-            evaluator.write_accuracies_to_csv(f1_score, precision, recall)
+            evaluator.write_accuracies_to_csv(f1_score, precision, recall, epsilon)
 
     elif parameter_name == 'sampling_probability':
         for sampling_prob in parameter_rounds:
@@ -157,18 +171,21 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % path])
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % pcap_file_path])
 
+            time.sleep(10)
             print("Sending finished, killing processes")
-            time.sleep(5)
             kill_processes(pid_list)
 
-            os.system("lxterminal -e bash -c 'sudo bash kill_skript.sh'")
+            os.system("lxterminal -e bash -c 'sudo bash kill_skript.sh; bash'")
+
+            # wait for everything to finish (especially the coordinator to write out found_elephants.json)
+            time.sleep(5)
 
             # Start the evaluation of the current round
-            f1_score, precision, recall = evaluator.get_accuracy(real_elephants, found_elephants)
+            f1_score, precision, recall = evaluator.get_accuracy(real_elephants_path, found_elephants_path)
             # Write the found measures to the csv file
-            evaluator.write_accuracies_to_csv(f1_score, precision, recall)
+            evaluator.write_accuracies_to_csv(f1_score, precision, recall, sampling_prob)
     else:
         raise ValueError("Error: unknown parameter name {0}".format(parameter_name))
 

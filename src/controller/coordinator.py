@@ -151,7 +151,7 @@ class CoordinatorService(rpyc.Service):
             'found_elephants': self.heavy_hitter_set
         }
 
-        with open(self.output_file_path, 'a') as outfile:
+        with open(self.output_file_path, 'w+') as outfile:
             json.dump(data, outfile, indent=4)
             outfile.close()
 
@@ -215,7 +215,7 @@ def parser():
         "--o",
         type=str,
         required=False,
-        default='../../evaluation/data/found_elephants.json',
+        default='../evaluation/data/found_elephants.json',
         help="The output path for the heavy hitter set"
     )
 
