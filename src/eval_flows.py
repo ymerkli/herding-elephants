@@ -1,5 +1,9 @@
+from __future__ import division
+
 import json
 import argparse
+import os
+import csv
 
 class FlowEvaluator(object):
     '''
@@ -9,7 +13,9 @@ class FlowEvaluator(object):
     The other JSON represents all found flows by the detection algorithm
     '''
 
-    def __init__(self):
+    def __init__(self, csv_file_path, evaluation_parameter):
+        self.csv_file_path          = csv_file_path
+        self.evaluation_parameter   = evaluation_parameter
 
     def read_flow_json(self, filepath, key):
         json_decoded = {}
@@ -18,7 +24,7 @@ class FlowEvaluator(object):
                 json_decoded = json.load(json_file)
                 json_file.close()
         else:
-            raise ValueError("Error: file {0} does not exist":format(filepath))
+            raise ValueError("Error: file {0} does not exist".format(filepath))
 
         if key not in json_decoded:
             raise ValueError("Error: key {0} not found in {1}".format(
@@ -53,11 +59,9 @@ class FlowEvaluator(object):
         for flow in real_elephants:
             if flow in found_elephants:
                 tp = tp+1
-                real_elephants.remove(flow)
                 found_elephants.remove(flow)
             else:
                 fn = fn+1
-                real_elephants.remove(flow)
 
         fp = len(found_elephants)
 
@@ -72,9 +76,23 @@ class FlowEvaluator(object):
 
         return (2 * tp) / (2 * tp + fp + fn)
 
+    def precision(self, tp, fp, fn):
+        '''
+        Calculate the precision
+        '''
+
+        return tp / (tp + fp)
+
+    def recall(self, tp, fp, fn):
+        '''
+        Calculate the recall
+        '''
+
+        return tp / (tp + fn)
+
     def get_accuracy(self, real_elephants_fp, found_elephants_fp):
         '''
-        Gets the accuracy (F1 score) for two provided file paths to JSONs
+        Gets the F1score, precision, recall for two provided file paths to JSONs
 
         Args:
             real_elephants_fp (str):    File path to the JSON with the real
@@ -84,6 +102,8 @@ class FlowEvaluator(object):
 
         Returns:
             f1_score (float):           The F1Score for the two flow sets
+            precision (float):          The precision for the two flow sets  
+            recall (float):             The recall for the two flow sets  
         '''
 
         real_elephants  = self.read_flow_json(real_elephants_fp, 'real_elephants')
@@ -91,7 +111,56 @@ class FlowEvaluator(object):
 
         tp, fp, fn = self.performance(real_elephants, found_elephants)
 
-        return self.f1_score(tp, fp, fn)
+        f1_score    = self.f1_score(tp, fp, fn)
+        precision   = self.precision(tp, fp, fn)
+        recall      = self.recall(tp, fp, fn)
+
+        print("F1 = {0}, precision = {1}, recall = {2}".format(f1_score, precision, recall))
+
+        return f1_score, precision, recall 
+
+    def write_accuracies_to_csv(self, f1_score, precision, recall):
+        '''
+        Writes the accuracy measures to the given csv file, on the line indicated
+        by the evaluation_parameter
+
+        Args:
+            f1_score (float):   The F1 score
+            precision (float):  The precision
+            recall (float):     The recall
+        '''
+
+        if os.path.exists(self.csv_file_path):
+            new_csv = []
+            with open(self.csv_file_path) as csv_file:
+                reader = csv.reader(csv_file)
+                
+                for row in reader:
+                    '''
+                    Append all rows to the new_csv list (which will later be written back)
+                    for the row corresponding to the evaluation_parameter, we write the 
+                    accuracy measures f1_score, precision, recall
+                    '''
+
+                    if row[0] == str(self.evaluation_parameter):
+                        row = [row[0]]
+                        row.append(f1_score)
+                        row.append(precision)
+                        row.append(recall)
+
+
+                    new_csv.append(row)
+
+                csv_file.close()
+
+            with open(self.csv_file_path, 'w') as csv_file:
+                writer = csv.writer(csv_file, lineterminator='\n')
+
+                writer.writerows(new_csv)
+
+                print("Wrote accuracies for {0} to {1}".format(self.evaluation_parameter, self.csv_file_path))
+        else:
+            raise ValueError("Error: csv file {0} does not exit".format(self.csv_file_path))
 
 def parser():
     parser = argparse.ArgumentParser(description= 'parse the keyword arguments')
@@ -100,7 +169,7 @@ def parser():
         '--r',
         type=str,
         required=True,
-        default='../evaluation/data/real_elephants.json'
+        default='../evaluation/data/real_elephants.json',
         help='The filepath to the real elephants JSON'
     )
 
@@ -108,18 +177,36 @@ def parser():
         '--f',
         type=str,
         required=True,
-        default='../evaluation/data/found_elephants.json'
+        default='../evaluation/data/found_elephants.json',
         help='The filepath to the found elephants JSON'
+    )
+
+    parser.add_argument(
+        '--c',
+        type=str,
+        required=True,
+        help='The filepath to the csv file where accuracies should be written to'
+    )
+
+    parser.add_argument(
+        '--p',
+        type=float,
+        required=True,
+        help='The parameter for which the current evaluation was done (e.g. which epsilon)'
     )
 
     args = parser.parse_args()
 
-    return args.r, args.f
+    return args.r, args.f, args.c, args.p
 
 def main():
-    real_elephants, found_elephants = parser()
+    real_elephants, found_elephants, csv_file_path, evaluation_parameter = parser()
 
-    evaluator = FlowEvaluator()
+    evaluator = FlowEvaluator(csv_file_path, evaluation_parameter)
 
-    f1_score = evaluator.get_accuracy(real_elephants, found_elephants)
+    f1_score, precision, recall = evaluator.get_accuracy(real_elephants, found_elephants)
 
+    evaluator.write_accuracies_to_csv(f1_score, precision, recall)
+
+if __name__ == '__main__':
+    main()
