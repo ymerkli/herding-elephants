@@ -10,9 +10,23 @@ from scapy.all import Ether, IP, UDP, TCP
 
 def parser():
     parser = argparse.ArgumentParser(description = 'parse the keyword arguments')
-    parser.add_argument('--p', required = True, help = 'Path to .pcap file')
+    parser.add_argument(
+        '--p',
+        type=str,
+        required = True,
+        help = 'Path to .pcap file'
+    )
+    parser.add_argument(
+        '--perc',
+        type=float,
+        required = False,
+        default=99.9,
+        help = 'The percentile on the flow count to get the global threshold'
+    )
+
     args = parser.parse_args()
-    return args.p
+
+    return args.p, args.perc
 
 '''
 Read the specified .pcap file and count how many packets for each flow 
@@ -30,7 +44,6 @@ def flow_counter(pcap_path):
                 protocol = pkt[IP].proto
                 src_port = pkt[IP].sport
                 dst_port = pkt[IP].dport
-                flag = 1
             except:
                 continue
 
@@ -59,7 +72,7 @@ def get_percentile(real_count, percentile):
 
     return int(np.percentile(count_array, percentile))
 
-def write_json(global_threshold, flow_count, pcap_file, pcap_file_name):
+def write_json(global_threshold, flow_count, pcap_file, pcap_file_name, percentile):
     '''
     Read existing json file or create it if not existing and write into json
 
@@ -74,7 +87,7 @@ def write_json(global_threshold, flow_count, pcap_file, pcap_file_name):
             json_decoded = json.load(json_file)
             json_file.close()
 
-    threshold_key  = "{0}_global_threshold".format(pcap_file_name)
+    threshold_key  = "{0}_global_threshold_{1}".format(pcap_file_name, percentile)
     flow_count_key = "{0}_flow_count".format(pcap_file_name)
 
     json_decoded[threshold_key]  = global_threshold
@@ -88,16 +101,16 @@ def write_json(global_threshold, flow_count, pcap_file, pcap_file_name):
 
 
 if __name__ == '__main__':
-    pcap_path = parser()
+    pcap_path, percentile = parser()
 
     # extract the filename of the pcap file (without the filepath)
     pcap_file_name = re.match(r"^(.+/)*(.+)\.(.+)", pcap_path).group(2)
 
     real_count = flow_counter(pcap_path)
 
-    # get the 99.99th percentile of the flow counts
-    global_threshold = get_percentile(real_count, 99.99)
+    # get the percentile of the flow counts
+    global_threshold = get_percentile(real_count, percentile)
 
-    print("{0} has {1} flows and global_threshold (99.99th percentile) = {2}".format(pcap_file_name, len(real_count), global_threshold))
+    print("{0} has {1} flows and global_threshold ({2}) = {3}".format(pcap_file_name, len(real_count), percentile, global_threshold))
 
-    write_json(global_threshold, len(real_count), pcap_path, pcap_file_name)
+    write_json(global_threshold, len(real_count), pcap_path, pcap_file_name, percentile)
