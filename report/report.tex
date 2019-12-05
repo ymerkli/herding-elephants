@@ -41,21 +41,21 @@
     \vspace*{10.0mm} \\
     \Large\bf\sf Group Project Report \vspace*{30.0mm}\\
     %
-    \Huge\bf\sf Title
+    \Huge\bf\sf Hearding the Elephants: Detecting Network-Wide Heavy Hitters with Limited Resources
     %
     \vspace*{30.0mm} \\
     \normalsize
     %
     \sf Authors:\\[5pt]
-    \sf Firstname1 Lastname 1 \\ [5pt]
-    \sf Firstname2 Lastname 2 \\ [5pt]
-    \sf Firstname3 Lastname 3 \vspace*{5mm}\\
+    \sf Yannick Merkli\\ [5pt]
+    \sf Tim Bohren\\ [5pt]
+    \sf Felix Rüssli \vspace*{5mm}\\
     %
-    \sf  Advisor:  (name of the assistant) \vspace*{5mm}\\
+    \sf  Advisor: Albert Gran Alcoz \vspace*{5mm}\\
     %
     \sf  Supervisor:  Prof. Dr. Laurent Vanbever \vspace*{20.0mm}\\
     %
-    \sf Submitted: Dec XXX, 2018\\ [5pt]
+    \sf Submitted: Dec XXX, 2019\\ [5pt]
     \sf \pageref{lastpage} Pages
 }
 \date{}
@@ -85,19 +85,101 @@
 
 \section{Introduction}
 \hint{Introduction to the problem that was solved in this project.} \\
+
+To effectively protect networks from attacks network operators need to detect heavy-hitters quickly.
+Since the operators only have limited resources, especially when it comes to memory and processing power, they have to choose
+between good accuracy and small delay.
+
+Further heavy-hitters don't necessarily need to come to a single ingress switch. They can also come in form of smaller flows
+over multiple ingress switches, which add up to a heavy-hitter.\\\\ %(DDoS?)
+
 \lipsum[1-2]
 
 \section{Background and related work}
 \hint{Briefly describe background information and related papers (if any). You do not need to describe topics that were coverd in the lecture, only other topics that are relevant for your project.} \\
+Sample-and-Hold Algorithm: (10) in the paper\\
+
+Incoming packets first get checked whether their flow is being kept track off. If it is, we increase a counter value associated with it.
+If the according flow is not being monitored, e.g. since it is the first packet of that flow, the switch starts keeping a record of it with
+a probability $s$.\\\\
+
 \lipsum[1-2]
 Sample citation: \cite{bosshart2014p4}
+\cite{estan2011}
 
 \section{Implementation}
 \hint{Describe how you solved the problem and how your implementation works. Do not paste source code here.} \\
+
+Herd uses local ingress switches and a central coordinator with a global view. Further Herd categories the flows of packets into four different types: mice, moles, mules and elephants.\\\\
+
+All flows start as mice. Mice are most numerous but also the smallest flow type. When a packet arrives Herd uses the sample-and-hold algorithm descibed above to remember some of the flows. The ingress switches use the sample-and-hold algorithm instead of keeping book of all flows since the switches only have limited. With an increasing number of packets of a flow arriving on the switch the more likely the algorithm memorizes that flow.
+
+Once a flow is captured by an ingress switch it advances to the next higher tier: the mole. A mole simply a flow on which a local switch keeps track of the number of packets it observers.
+
+Each time a mole flow is observed $\tau$ times by the local ingress switch it tries to report this flow to the global coordinator switch with the probability $r$. Flows are only announced to the coordinator once they are seen enough times for two reasons. First the global coordinator should also not waste it precious memory on every mouse flow that happens to be caught by the switch. If it is ensured that the flow is used more than a few times the flow has the potential that it could grow to a heavy hitter, especially when combined with the reports of other ingress switches. The other is that the netword does not have infinite bandwith, so the switch has to be careful to not use up all bandwith for reports to the coordinator. For that reason the switch also does not send a report each time is has seen $\tau$ packets but only with the probability $r$. The flows that arrive at the coordinator are now mules.
+
+The coordinator has a global view of all the mules that arrive at it thanks to all the ingress switches which have Herd running on them. This is in contrast to the ingress switches which only have a local view since they do not know what the other switches observe. The coordinator starts counting how many reports of a flow get sent to it, independent from which ingress switch it arrives from. As soon as the coordinator has seen at least $R$ reports of a flow is classifies that flow as elephant, which is how heavy hitters are called in our small animal kingdom.\\\\
+
+So far it was assumed that all ingress switches have the same probability to observe a flow. However in real networks flows often have a locality. So different switches are more likely to observe different flows. This observation has an effect on the size of $\tau$, which we use to promote the local moles to global mules. The fewer ingress switches see a flow the higher $\tau$ can be since it is less likely that another switch also comes across the flow. Out of this follows that ingress switches are less likely to promote a mole to a mule which is not even a global elephant.
+
+Herd tracks the locality $l_f$ of a flow $f$ dynamically. If the ingress switch encounters a unexpected flow $f$ it sends a message to the coordinator. The coordinator then updates internally which switches see the flow $f$ and reports back to the switch with $l_f$. Of course the coordinator also has to inform the other switches which observe $f$, but it only does that once the number of observing switching has doubled to save on bandwidth.
+
+Now, storing an $l_f$, $\tau_f$ and $r_f$ for every five tuple $(srcIP, dstIP, srcPort, dstPort, protocol)$ on the switches is a bit much. Thus, Herd keeps track of the locality based on groups. These groupes are only depending on the two tuple $(srcIP, dstIP)$.\\\\
+
+Until now it was assumed that the parameters $\tau$, $s$, $r$ and $R$ were given. Now we try to find those paramaters in order to maximize the detection accuracy of Herd under communication and switch memory constraints. With accuracy is the F1-score meant. 
+
+First, we try to configure the sampling probability $s$ of the sample-and-hold algorithm. With unlimited switch memory $S$ the sampling probability could simply be set to $s=1$ and the switches would memorize all flows going through them. Let $M$ be the set of observed moles on the switch. Thus the switch has to store $|M|$ different flows. From this we conclude that we need $|M| \leq S$ in order to be able to store all the observed flows. To be sure that the real $M$ has enough space in $S$ we even want $|M| < S$. In order to have this in expectation $s$ is set to $1/\tau$. For that an estimation of $\tau$ is needed. At the beginning $\tau$ is set to the global threshold $T$. $T$ is the size a flow needs to have in order to be recognized as a heavy hitter. Then we look in our training data $D$ how many moles are found and check whether the found moles $M$ use up all the memory $S$. Afterwards $\tau$ is made smaller to increase the chance to categorize a flow as mole. This is done iteratively as long as there is still space in $S$. 
+
+If unlimited bandwidth was available $r$ could be set to 1, since there would be more than enough bandwidth to send all the mule reports to the global coordinator. Further, the coordinator would need at least $R = T/\tau$ reports to classify a flow as elephant. However, under the communication budget $C$ the parameters $r$, aswell as $\tau$ and $R$ need to be adjusted. This is done with the help of the approximation factor $\epsilon$. We approximate global threshold with $\epsilon$ and expect to see at least $\tau$ packets of that flow on every local switch with that flow, so in $l$ switches. This brings us to the equality $\tau l = \epsilon T$, from which we get $\tau =$ $\epsilon T\over l$. Now that we have again a $\tau$. We calculate now first the set of moles $M$ from our training data, and then from that the set of mules $U$ since the necessary $\tau$ is now available for that. The total number of sent reports can be bound with $T|U|r\over \tau$ which leads to $r =$ $T|U|C\over \tau$. The coordinator needs to see at least $R =$ $lr\over T$ reports. We can now finally adjust $\epsilon$ in steps of $\sigma =$ $l\over T$ since $\tau$ is an integer. Everytime we change the value of $\tau$ we calculate $\tau$, $r$ and $R$ anew aswell. This is done until the accuracy decreases.\\\\
+
+
+Switch:
+
+Herd uses randomness for sampling packets and reporting to the global coordinator. Of course p4 doens't have a random library. Therefore hashes are used to 'flip' coins and simulate randomness. Further the switch can't process floating point numbers. For this reason the coordinator converts the probabilities into 32-bit numbers. In the flip action this numbers are then compared to hashes. Depending on the comparison a flip-flag, which represents a True or False, is either set or reset.
+
+A packet arrives at the switch. The switch extracts the first 8 bits to look up the group value of the packet. For unknown groups the switch sends a hello message to the coordinator, which reports back to the controller with a locality parameter for the group. For known groups the switch uses the sample-and-hold algorithm to either make a new entry in one of the three hash tables or increase the value associated with the flow. If the local thresh $\tau$ was reached flip again a coin. If the flip was successful tell local controller to report to coordinator and reset the counting value. \\
+
+Controller:
+
+When writing controller in this section the control plane of the ingress switches are meant. 
+
+The controller starts by cleaning all the hash tables. Then it fills in the forwarding table. In our testing setup the switches with Herd on them only have two neighbors, a switch for load balancing between the ten Herd switches and an aggregating switch which sends traffic to the end hosts.
+
+Further, the controller runs a digest loop in order to handle the communication between the data and the control plane of the programmable switch. The controller unpacks the received digest message. For each flow the controller checks whether it has seen that flow before. If the flow was not seen before the controller sends a hello to the coordinator, but only if this wasn't already done for the group of the flow. The group is simply a two-tuple consisting of the source- and the destination-IP. When sending a hello the controller expects a callback from the coordinator, telling it the according locality parameter. The coordinator can then calculate the according group parameters $\tau_g$ and $r_g$. If it is a known flow the controller sends a report. \\
+
+Coordinator:
+
+The global coordinator handles all the messages sent to it and reports back with new locality parameters to the individual switches if necessary. 
+
+When a hello arrives from a switch the coordinator checks whether the coordinator has already seen the switch or the flow before. If not it saves them. Now the coordinator uses the HandleHello function from the original paper. First it checks whether it had already got a hello from that switch with that flow. If not if saves it in the dictionary $S_f$ and finally sends notices all switches in updated $S_f$, but only if the size of $S_f$ doubled in order not to overwhelm the links with update messages. If $S_f$ didn't double in size, the coordinator only sends a notification to the new switch in $S_f$ about the current size of $S_f$.
+
+Handling the reports is quite simpler. The coordinator simply counts the number of reports arriving at it for each flow. And after enough reports arrived the flow get put into a list with all the other heavy-hitters. Finally upon shutdown it writes found elephants into a $.json$ file for further processing.\\
+
+Special stuff:
+
+If all three hash tables storing the counter values to the flows on a switch were to be full this switch couldn't handle new flows anymore. Therefore in that case the switch informs the controller with a error message. The controller subsequently resets the hash tables. 
+\\\\
+
 \lipsum[1-5]
 
 \section{Evaluation}
 \hint{Describe how you tested your implementation and summarize the results.} \\
+Topolgy:
+
+As topology we use two host, $h1$ sends the traffic and $h2$ receives it. $h1$ sends to programmable switch $lb1$ which is there for load balancing. $lb1$ fowards the packets to the switches $s1 - 10$, which run the Herd protocol. The ingress switches $s1 - 10$ are an aggregating switch $ag1$ which is finally linked to the receiving host $h2$.\\
+
+Since the load balancing and the aggregating switch work differently from the ingress switch they get both their own controller and switch logic.
+
+The load-balancing switch chooses for each flow two random ingress switches and forwards the packets of that flow randomly to one of those two switches.
+The corresponding controller forwards traffic to the ingress switches according to their switch ID.
+
+The aggregating switch simply fowards every received to the end host.
+Its controller receives the traffic from all ingress switches with Herd and forwards everything to the endhost.\\
+
+To generate a sizeable amount of traffic on the sending host $h1$ we use CAIDA's anonymized Internet traces from 2016, like the original paper did. Using the $send.py$ script on $h1$ parses the packets stored in a $.pcap$ file and $h1$ forwards them through the testing topology. Further the script counts how often a packet was sent for each flow and writes flows that were seen more than $T$ times in $real\_elephants.json$ for later comparison with heavy-hitters found with Herd.
+
+Configuring the parameters $\tau$, $r$ and $R$ in isolation might actually impact the accuracy of Herd negatively. Thus $tuningparameters.py$ simulates the whole protocol with given training data in order to reach the best possible accuracy for the running protocol.\\
+
 \lipsum[1-2]
 
 \section{Conclusion}
@@ -117,13 +199,13 @@ Sample citation: \cite{bosshart2014p4}
 \section{Group organization}
 \hint{Briefly describe what each team member was contributing to the project}
 
-\paragraph{Firstname1 Lastname1}
+\paragraph{Yannick Merkli}
 \lipsum[2]
 
-\paragraph{Firstname2 Lastname2}
+\paragraph{Tim Bohren}
 \lipsum[3]
 
-\paragraph{Firstname3 Lastname3}
+\paragraph{Felix Rüssli}
 \lipsum[4]
 
 \end{document}
