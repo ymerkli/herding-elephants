@@ -7,8 +7,11 @@ def parser():
     parser = argparse.ArgumentParser(description = 'parse the keyword arguments')
     parser.add_argument('--p', required = True, help = 'Path to .pcap file')
     parser.add_argument('--t', type = int, required = True, help = 'Global Threshold')
+    parser.add_argument('--perc', type = float, required = True, help = 'The percentile which was used for the global threshold')
+
     args = parser.parse_args()
-    return args.p, args.t
+
+    return args.p, args.t, args.perc
 
 '''
 Read the specified .pcap file and write out all the elephants (flows that are
@@ -68,7 +71,7 @@ def real_elephants(pcap_path, glob_thresh):
 '''
 Write the real_elephants into real_elephants.json.
 '''
-def write_json(real_elephants, pcap_path):
+def write_json(real_elephants, pcap_path, percentile):
     '''
     Read existing json file or create it if not existing and write into json
 
@@ -78,7 +81,7 @@ def write_json(real_elephants, pcap_path):
     '''
 
     json_decoded = {}
-    real_elephants_path = '../evaluation/data/real_elephants.json'
+    real_elephants_path = "real_elephants_{0}.json".format(percentile)
 
     if os.path.exists(real_elephants_path):
         with open(real_elephants_path) as json_file:
@@ -96,12 +99,8 @@ def write_json(real_elephants, pcap_path):
     print("Wrote real heavy hitters to ", real_elephants_path)
 
 if __name__ == '__main__':
-    parser = parser()
-
-    pcap_path = parser[0]
-    glob_thresh = parser[1]
-
+    pcap_path, glob_thresh, percentile = parser()
 
     real_elephants = real_elephants(pcap_path, glob_thresh)
 
-    write_json(real_elephants, pcap_path)
+    write_json(real_elephants, pcap_path, percentile)
