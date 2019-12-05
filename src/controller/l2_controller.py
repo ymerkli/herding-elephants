@@ -64,15 +64,9 @@ class L2Controller(object):
 
         self.controller.reset_state()
 
-        print("Setting crc polynomials")
         self.set_crc_custom_hashes()
 
-        print("Writing sampling probability to switch")
         self.write_p_sampling_to_switch()
-        print("Written counter start:")
-        print(self.controller.register_read("count_start"))
-        print("Written probability:")
-        print(self.controller.register_read("sampling_probability"))
 
         self.fill_ipv4_lpm_table()
 
@@ -137,7 +131,6 @@ class L2Controller(object):
                 sw_port        = self.topo.node_to_node_port_num(self.sw_name, sw_dst)
                 match_ip       = unicode("0.0.0.0/0")
 
-                print("Adding ipv4_lpm rule for {0} towards {1}".format(match_ip, sw_dst))
                 self.controller.table_add("ipv4_lpm", "set_nhop",\
                     [str(match_ip)], [str(dst_switch_mac), str(sw_port)])
 
@@ -201,11 +194,9 @@ class L2Controller(object):
                 if flow_info['flow_count'] == 0:
                     # only send a hello if we havent sent a hello yet for this flow
                     if group not in self.sent_hellos:
-                        print("Sending a hello for: {0}".format(flow_info['flow']))
                         self.send_hello(flow_info['flow'])
                         self.sent_hellos.append(group)
                 else:
-                    print("Sending a report for: {0}".format(flow_info['flow']))
                     self.report_flow(flow_info['flow'])
 
         #Acknowledge digest
@@ -263,7 +254,6 @@ class L2Controller(object):
             l_g (int):      The locality parameter l_g for the group to which flow belongs
         '''
 
-        print('hello callback: flow=', flow, ', l_g=', l_g)
         self.add_group_values(flow, l_g)
 
     def add_group_values(self, flow, l_g):
@@ -271,9 +261,9 @@ class L2Controller(object):
         Calculates the group values tau_g and r_g from the stored l_g and then writes
         these values into the group_values table.
         The use of these values are:
-            tau_g (int):    The mule threshold (i.e. report threshold) of group g. 
+            tau_g (int):    The mule threshold (i.e. report threshold) of group g.
                             If a mole count exceeds this threshold, the flow is reported to the coordinator.
-            r_g (int):      The report probability for group g. If we found a mule, 
+            r_g (int):      The report probability for group g. If we found a mule,
                             we report to the coordinator with probability r_g
 
         Args:
@@ -285,7 +275,6 @@ class L2Controller(object):
         r_g   = 1 / l_g
         srcGroup, dstGroup = self.extract_group(flow)
 
-        print("Adding table entry for flow: ({0},{1}) r_g: {2}, tau_g: {3}".format(srcGroup, dstGroup, r_g, tau_g))
 
         # convert r_g to use in coinflips on the switch (no floating point)
         r_g = (2**32 - 1) * r_g
@@ -398,6 +387,8 @@ if __name__ == '__main__':
     try:
         sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
         l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
+
+        print("L2 controller of switch %s ready" % l2_controller.sw_name)
 
         l2_controller.run_digest_loop()
 
