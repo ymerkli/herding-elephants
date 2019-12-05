@@ -1,13 +1,23 @@
+from __future__ import division
+
 import argparse
 import os
 import subprocess
 import signal
 import time
+import csv
+import json
+import string
 
 from p4utils.utils.topology import Topology
+from flow_evaluator import FlowEvaluator
 
-path = '~/adv-comm-net-18/02-herding/src/'
+#Get the full path to the src folder
+path_to_src = os.path.realpath(__file__)
+path_to_src = re.match(r"^(.+/)*(.+)\.(.+)", path).group(1) #remove the filename from the path
 
+real_elephants_path  = "{0}../evaluation/data/real_elephants.json".format(path_to_src)
+found_elephants_path = "{0}../evaluation/data/found_elephants.json".format(path_to_src)
 
 def startup(global_threshold, report_threshold, epsilon, sampling_probability):
 
@@ -42,6 +52,40 @@ def kill_processes(pid_list):
         f.write("sudo kill %s\n" % pid)
     f.close()
 
+def read_rounds(csv_file_path):
+    '''
+    Reads the csv file and gets the parameters for each round
+    The first row, first element of the csv is the parameter to be swept over
+    The first element of the following rows are the parameters for each round
+    The csv file will also be used to write back the results of the evaluation
+    (i.e. the f1score, precision, recall)
+
+    example csv file layout:
+        <parameter_name>,f1score,precision,recall
+        1,
+        2,
+
+    Args:
+        csv_file_path (str): The file path to the csv file
+    '''
+
+    if os.path.exists(csv_file_path):
+        with open(self.csv_file_path) as csv_file:
+            reader = csv.reader(csv_file)
+
+            row_counter      = 0
+            parameter_name   = None
+            parameter_rounds = []
+            for row in reader:
+                if row_counter == 0:
+                    parameter_name = row[0]
+                else:
+                    parameter_rounds.append(row[0])
+
+        return parameter_rounds, parameter_name
+    else:
+        raise ValueError("Error: csv file {0} does not exit".format(csv_file_path))
+
 class InputValueError(Exception):
     pass
 
@@ -54,7 +98,7 @@ def parser():
     parser.add_argument('--e', type=float, required=True, help="Epsilon")
     parser.add_argument('--r', type=int, required=True, help="The reporting threshold R")
     parser.add_argument('--p', type=str, required=True, help="The path to the pcap file")
-    parser.add_argument('--n', type=int, required=False, help="The number of evaluation rounds", default=1)
+    parser.add_argument('--c', type=str, required=True, help="The path to the csv file")
     args = parser.parse_args()
 
     args = parser.parse_args()
@@ -65,30 +109,70 @@ def parser():
     if (args.e <= 0 or 1 < args.e):
         raise InputValueError
 
-    return args.t, args.r, args.e, args.s, args.p, args.n
+    return args.t, args.r, args.e, args.s, args.p, args.c
 
 
-if __name__ == '__main__':
+def main():
     try:
-        t, r, e, s, path, rounds = parser()
+        t, r, e, s, pcap_file_path, csv_file_path= parser()
     except InputValueError:
         print("The sampling probability and epsilon should be between 0 and 1")
 
-    for i in range(0, rounds):
+    parameter_rounds, parameter_name = read_rounds(csv_file_path)
 
-        pid_list = startup(t, r, e, s)
-        print(pid_list)
-        print("Startup finished, waiting for controllers to be ready")
-        time.sleep(10)
+    parameter_name = string.lower(parameter_name)
 
-        send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % path])
+    evalautor = FlowEvaluator(csv_file_path, parameter_name) 
 
-        print("Sending finished, killing processes")
-        time.sleep(5)
-        kill_processes(pid_list)
+    if parameter_name == 'epsilon': 
+        for epsilon in parameter_rounds:
 
-        os.system("lxterminal -e bash -c 'sudo bash kill_skript.sh'")
+            print("Evaluating for epsilon = {0}".format(epsilon))
+            pid_list = startup(t, r, epsilon, s)
+            print(pid_list)
+            print("Startup finished, waiting for controllers to be ready")
+            time.sleep(10)
 
-        ## TODO: evaluate results
+            # send traffic from host
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % path])
+
+            print("Sending finished, killing processes")
+            time.sleep(5)
+            kill_processes(pid_list)
+
+            os.system("lxterminal -e bash -c 'sudo bash kill_skript.sh'")
+
+            # Start the evaluation of the current round
+            f1_score, precision, recall = evaluator.get_accuracy(real_elephants, found_elephants)
+            # Write the found measures to the csv file
+            evaluator.write_accuracies_to_csv(f1_score, precision, recall)
+
+    elif parameter_name == 'sampling_probability':
+        for sampling_prob in parameter_rounds:
+
+            print("Evaluating for sampling probability = {0}".format(sampling_prob))
+            pid_list = startup(t, r, e, sampling_prob)
+            print(pid_list)
+            print("Startup finished, waiting for controllers to be ready")
+            time.sleep(10)
+
+            # send traffic from host
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % path])
+
+            print("Sending finished, killing processes")
+            time.sleep(5)
+            kill_processes(pid_list)
+
+            os.system("lxterminal -e bash -c 'sudo bash kill_skript.sh'")
+
+            # Start the evaluation of the current round
+            f1_score, precision, recall = evaluator.get_accuracy(real_elephants, found_elephants)
+            # Write the found measures to the csv file
+            evaluator.write_accuracies_to_csv(f1_score, precision, recall)
+    else:
+        raise ValueError("Error: unknown parameter name {0}".format(parameter_name))
 
     print("All rounds finished")
+
+if __name__ == '__main__':
+    main()
