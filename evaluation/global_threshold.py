@@ -34,7 +34,7 @@ def flow_counter(pcap_path):
             except:
                 continue
 
-            five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
+            five_tuple = str((src_ip, dst_ip, src_port, dst_port, protocol))
 
             '''
             If this five_tuple was never seen before add it into the dictionary

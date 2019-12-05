@@ -1,6 +1,8 @@
 {
-    "first500_global_threshold": 37, 
-    "first500_flow_count": 240, 
-    "first100k_global_threshold": 897, 
+    "eval5m_global_threshold": 3496,
+    "first500_global_threshold": 37,
+    "first100k_global_threshold": 897,
+    "eval5m_flow_count": 118423,
+    "first500_flow_count": 240,
     "first100k_flow_count": 22968
 }
