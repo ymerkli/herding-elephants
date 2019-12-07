@@ -1,6 +1,7 @@
 from __future__ import division
 import random
 import argparse
+import dpkt
 from scapy.all import *
 
 def pcap_to_list(pcap_path):
@@ -16,21 +17,27 @@ def pcap_to_list(pcap_path):
 
     packets = []
 
-    pkts = rdpcap(pcap_path)
+    pcap_file = open(pcap_path)
+    pkts = dpkt.pcap.Reader(pcap_file)
 
-    for pkt in pkts:
-        try:
-            if IP in pkt:
-                src_ip = pkt[IP].src
-                dst_ip = pkt[IP].dst
-                protocol = pkt[IP].proto
-                src_port = pkt[IP].sport
-                dst_port = pkt[IP].dport
+    pkt_counter = 0
+    for ts, buf in pkts:
+
+        eth = dpkt.ethernet.Ethernet(buf)
+        if isinstance(eth.data, dpkt.ip.IP):
+            ip = eth.data
+            tcp = ip.data
+            try:
+                src_ip   = inet_to_str(ip.src)
+                dst_ip   = inet_to_str(ip.dst)
+                protocol = ip.p
+                src_port = tcp.sport
+                dst_port = tcp.dport
 
                 five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
                 packets.append(five_tuple)
-        except Exception as e:
-            continue
+            except:
+                continue
 
     return packets
 
