@@ -7,6 +7,7 @@ import nnpy
 import argparse
 import ipaddress
 import re
+import math
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
@@ -26,7 +27,7 @@ class L2Controller(object):
 
     Args:
         sw_name (str):                  The name of the switch where the controller is running on
-        epsilon (int):                  The approximation factor
+        epsilon (float):                The approximation factor
         global_threshold_T (int):       The global threshold
         sampling_probability_s (float): The probability to sample a flow (s) [0-1]
         coordinator_port (int):         The port on which the coordinator server is running on
@@ -38,7 +39,7 @@ class L2Controller(object):
         controller (p4utils SimpleSwitchAPI):   The controller of the switch
         coordinator_c (rpyc connection):        An rpyc connection to the Coordinator
         epsilon (int):                          The approximation factor
-        global_threshold_T (int):               The global threshold
+        global_threshold_T (float):             The global threshold (float to prevent integer division)
     '''
 
     def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
@@ -47,15 +48,14 @@ class L2Controller(object):
         self.sw_name            = sw_name
         self.thrift_port        = self.topo.get_thrift_port(sw_name)
         self.controller         = SimpleSwitchAPI(self.thrift_port)
-        self.epsilon            = epsilon
-        self.global_threshold_T = global_threshold_T
+        self.epsilon            = float(epsilon)
+        self.global_threshold_T = float(global_threshold_T)
         self.p_sampling         = sampling_probability_s
         self.coordinator_c      = rpyc.connect('localhost', coordinator_port)
         self.custom_calcs       = self.controller.get_custom_crc_calcs()
-        self.sent_hellos        = []
+        self.sent_hellos        = {}
 
         self.init()
-
 
     def init(self):
         '''
@@ -184,20 +184,22 @@ class L2Controller(object):
 
         for flow_info in digest:
             # if the 5-tuple is all zero, we got an error message
-            if flow_info['flow'] == (ipaddress.IPv4Address(0),ipaddress.IPv4Address(0),0,0,0):
-                self.handle_Error(flow_info['flow_count'])
+            flow        = flow_info['flow']
+            flow_count  = flow_info['flow_count']
+            if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
+                self.handle_Error(flow_count)
             else:
                 # if the flow count is zero, the digest is just a hello message
                 # otherwise, it's a report
-                srcGroup, dstGroup = self.extract_group(flow_info['flow'])
+                srcGroup, dstGroup = self.extract_group(flow)
                 group = (srcGroup, dstGroup)
-                if flow_info['flow_count'] == 0:
+                if flow_count == 0:
                     # only send a hello if we havent sent a hello yet for this flow
-                    if group not in self.sent_hellos:
-                        self.send_hello(flow_info['flow'])
-                        self.sent_hellos.append(group)
+                    if flow not in self.sent_hellos:
+                        self.send_hello(flow)
+                        self.sent_hellos[flow] = 1
                 else:
-                    self.report_flow(flow_info['flow'])
+                    self.report_flow(flow)
 
         #Acknowledge digest
         self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
@@ -271,14 +273,16 @@ class L2Controller(object):
             l_g (int):      The locality parameter l_g for the group to which flow belongs
         '''
 
-        tau_g = int(self.epsilon * self.global_threshold_T / l_g)
-        r_g   = 1 / l_g
-        srcGroup, dstGroup = self.extract_group(flow)
+        tau_g = math.ceil(self.epsilon * self.global_threshold_T / float(l_g))
+        tau_g = int(tau_g)
 
+        r_g   = 1 / float(l_g)
+
+        srcGroup, dstGroup = self.extract_group(flow)
 
         # convert r_g to use in coinflips on the switch (no floating point)
         r_g = (2**32 - 1) * r_g
-
+        r_g = int(r_g) # convert back to int
 
         '''
         Add an entry to the group_values table. In case the group already has
