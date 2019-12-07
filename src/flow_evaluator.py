@@ -87,21 +87,39 @@ class FlowEvaluator(object):
         Calculates the F1 score
         '''
 
-        return (2 * tp) / (2 * tp + fp + fn)
+        f1_score = 0
+        try:
+            f1_score = (2 * tp) / (2 * tp + fp + fn)
+        except ZeroDivisionError:
+            print("Error: zero division in f1 score calculation")
+
+        return f1_score 
 
     def precision(self, tp, fp, fn):
         '''
         Calculate the precision
         '''
 
-        return tp / (tp + fp)
+        precision = 0
+        try:
+            precision = tp / (tp + fp) 
+        except ZeroDivisionError:
+            print("Error: zero division in precision calculation")
+
+        return precision
 
     def recall(self, tp, fp, fn):
         '''
         Calculate the recall
         '''
 
-        return tp / (tp + fn)
+        recall = 0
+        try:
+            recall = tp / (tp + fn)
+        except ZeroDivisionError:
+            print("Error: zero division in recall calculation")
+
+        return recall
 
     def get_accuracy(self, real_elephants_fp, found_elephants_fp):
         '''
