@@ -1,7 +1,7 @@
 {
-    "eval5m_global_threshold_99.9": 949, 
-    "eval5m_global_threshold_99.0": 145, 
-    "eval5m_flow_count": 118423, 
-    "eval5m_global_threshold_99.99": 3496
+    "eval5m_global_threshold_99.9": 1728, 
+    "eval5m_global_threshold_99.0": 239, 
+    "eval5m_flow_count": 273918, 
+    "eval5m_global_threshold_99.99": 5577, 
+    "eval5m_group_count": 7811
 }
-

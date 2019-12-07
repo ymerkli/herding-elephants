@@ -4,7 +4,7 @@ import re
 import dpkt
 import socket
 
-from dpkt.compat import compat_or
+from dpkt.compat import compat_ord
 from scapy.all import *
 
 def parser():
@@ -38,7 +38,6 @@ at least glob_thresh times received) in it.
 def real_elephants(pcap_path, glob_thresh):
     real_elephants = []
     real_count = {}
-    groups = []
 
     pcap_file = open(pcap_path)
     pkts = dpkt.pcap.Reader(pcap_file)
@@ -62,13 +61,6 @@ def real_elephants(pcap_path, glob_thresh):
             five_tuple = str((src_ip, dst_ip, src_port, dst_port, protocol))
             print(pkt_counter, five_tuple)
 
-            srcIP_str = str(src_ip)
-            dstIP_str = str(dst_ip)
-            srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b',srcIP_str).group(1)
-            dstGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b',dstIP_str).group(1)
-            group = (srcGroup, dstGroup)
-            if group not in groups:
-                groups.append(group)
             '''
             If this five_tuple was never seen before add it into the dictionary
             real_count with a value of 1, if it was already seen simply increase
@@ -89,15 +81,14 @@ def real_elephants(pcap_path, glob_thresh):
         if real_count[flow] >= glob_thresh:
             real_elephants.append(str(flow))
 
-    print("Found {0} groups".format(len(groups)))
     print("Found {0} heavy hitter flows".format(len(real_elephants)))
 
-    return real_elephants, len(groups)
+    return real_elephants
 
 '''
 Write the real_elephants into real_elephants.json.
 '''
-def write_json(real_elephants, num_groups, pcap_path, percentile):
+def write_json(real_elephants, pcap_path, percentile):
     '''
     Read existing json file or create it if not existing and write into json
 
@@ -117,7 +108,6 @@ def write_json(real_elephants, num_groups, pcap_path, percentile):
     pcap_file_name = re.match(r"^(.+/)*(.+)\.(.+)", pcap_path).group(2)
 
     json_decoded['real_elephants'] = real_elephants
-    json_decoded['num_groups']     = num_groups
 
     with open(real_elephants_path, 'w+') as json_file:
         json.dump(json_decoded, json_file, indent=4)
@@ -128,6 +118,6 @@ def write_json(real_elephants, num_groups, pcap_path, percentile):
 if __name__ == '__main__':
     pcap_path, glob_thresh, percentile = parser()
 
-    real_elephants, num_groups = real_elephants(pcap_path, glob_thresh)
+    real_elephants = real_elephants(pcap_path, glob_thresh)
 
-    write_json(real_elephants, num_groups, pcap_path, percentile)
+    write_json(real_elephants, pcap_path, percentile)
