@@ -1,7 +1,11 @@
 import argparse
-from scapy.all import *
 import json
 import re
+import dpkt
+import socket
+
+from dpkt.compat import compat_or
+from scapy.all import *
 
 def parser():
     parser = argparse.ArgumentParser(description = 'parse the keyword arguments')
@@ -13,6 +17,20 @@ def parser():
 
     return args.p, args.t, args.perc
 
+def inet_to_str(inet):
+    """Convert inet object to a string
+
+        Args:
+            inet (inet struct): inet network address
+        Returns:
+            str: Printable/readable IP address
+    """
+    # First try ipv4 and then ipv6
+    try:
+        return socket.inet_ntop(socket.AF_INET, inet)
+    except ValueError:
+        return socket.inet_ntop(socket.AF_INET6, inet)
+
 '''
 Read the specified .pcap file and write out all the elephants (flows that are
 at least glob_thresh times received) in it.
@@ -22,21 +40,27 @@ def real_elephants(pcap_path, glob_thresh):
     real_count = {}
     groups = []
 
-    pkts = rdpcap(pcap_path)
+    pcap_file = open(pcap_path)
+    pkts = dpkt.pcap.Reader(pcap_file)
 
-    for pkt in pkts:
-        if IP in pkt:
+    pkt_counter = 0
+    for ts, buf in pkts:
+
+        eth = dpkt.ethernet.Ethernet(buf)
+        if isinstance(eth.data, dpkt.ip.IP):
+            ip = eth.data
+            tcp = ip.data
             try:
-                src_ip = pkt[IP].src
-                dst_ip = pkt[IP].dst
-                protocol = pkt[IP].proto
-                src_port = pkt[IP].sport
-                dst_port = pkt[IP].dport
-                flag = 1
+                src_ip   = inet_to_str(ip.src)
+                dst_ip   = inet_to_str(ip.dst)
+                protocol = ip.p
+                src_port = tcp.sport
+                dst_port = tcp.dport
             except:
                 continue
 
-            five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
+            five_tuple = str((src_ip, dst_ip, src_port, dst_port, protocol))
+            print(pkt_counter, five_tuple)
 
             srcIP_str = str(src_ip)
             dstIP_str = str(dst_ip)
@@ -54,6 +78,8 @@ def real_elephants(pcap_path, glob_thresh):
                 real_count[five_tuple] = real_count[five_tuple]+1
             else:
                 real_count[five_tuple] = 1
+        
+        pkt_counter += 1
 
     '''
     If we have seen a flow at least glob_thresh times it is an elephant and thus
@@ -66,12 +92,12 @@ def real_elephants(pcap_path, glob_thresh):
     print("Found {0} groups".format(len(groups)))
     print("Found {0} heavy hitter flows".format(len(real_elephants)))
 
-    return real_elephants
+    return real_elephants, len(groups)
 
 '''
 Write the real_elephants into real_elephants.json.
 '''
-def write_json(real_elephants, pcap_path, percentile):
+def write_json(real_elephants, num_groups, pcap_path, percentile):
     '''
     Read existing json file or create it if not existing and write into json
 
@@ -91,6 +117,7 @@ def write_json(real_elephants, pcap_path, percentile):
     pcap_file_name = re.match(r"^(.+/)*(.+)\.(.+)", pcap_path).group(2)
 
     json_decoded['real_elephants'] = real_elephants
+    json_decoded['num_groups']     = num_groups
 
     with open(real_elephants_path, 'w+') as json_file:
         json.dump(json_decoded, json_file, indent=4)
@@ -101,6 +128,6 @@ def write_json(real_elephants, pcap_path, percentile):
 if __name__ == '__main__':
     pcap_path, glob_thresh, percentile = parser()
 
-    real_elephants = real_elephants(pcap_path, glob_thresh)
+    real_elephants, num_groups = real_elephants(pcap_path, glob_thresh)
 
-    write_json(real_elephants, pcap_path, percentile)
+    write_json(real_elephants, num_groups, pcap_path, percentile)
