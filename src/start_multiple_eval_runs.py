@@ -115,7 +115,6 @@ def parser():
     parser.add_argument('--r', type=int, required=True, help="The reporting threshold R")
     parser.add_argument('--p', type=str, required=True, help="The path to the pcap file")
     parser.add_argument('--c', type=str, required=True, help="The path to the csv file")
-    args = parser.parse_args()
 
     args = parser.parse_args()
 
