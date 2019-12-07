@@ -17,8 +17,13 @@ from flow_evaluator import FlowEvaluator
 path_to_src = os.path.realpath(__file__)
 path_to_src = re.match(r"^(.+/)*(.+)\.(.+)", path_to_src).group(1) #remove the filename from the path
 
-real_elephants_path  = "{0}../evaluation/data/real_elephants.json".format(path_to_src)
 found_elephants_path = "{0}../evaluation/data/found_elephants.json".format(path_to_src)
+
+global_thresh_to_percentile = {
+    239: '99',
+    1728: '99_9',
+    5577: '99_99'
+}
 
 def startup(global_threshold, report_threshold, epsilon, sampling_probability):
 
@@ -129,6 +134,12 @@ def main():
     except InputValueError:
         print("The sampling probability and epsilon should be between 0 and 1")
 
+    # select the real elephants depending on the global threshold
+    real_elephants_path  = "{0}../evaluation/data/real_elephants_{1}.json".format(
+        path_to_src, global_thresh_to_percentile[t]
+    )
+    print("Real elephants path: ", real_elephants_path)
+
     parameter_rounds, parameter_name = read_rounds(csv_file_path)
 
     parameter_name = string.lower(parameter_name)
@@ -145,9 +156,9 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % pcap_file_path])
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '100000', '%s' % pcap_file_path])
 
-            time.sleep(10)
+            time.sleep(60)
             print("Sending finished, killing processes")
             kill_processes(pid_list)
 
@@ -171,9 +182,9 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '%s' % pcap_file_path])
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '100000', '%s' % pcap_file_path])
 
-            time.sleep(10)
+            time.sleep(60)
             print("Sending finished, killing processes")
             kill_processes(pid_list)
 
