@@ -9,6 +9,7 @@ import csv
 import json
 import string
 import re
+import sys
 
 from p4utils.utils.topology import Topology
 from flow_evaluator import FlowEvaluator
@@ -19,10 +20,16 @@ path_to_src = re.match(r"^(.+/)*(.+)\.(.+)", path_to_src).group(1) #remove the f
 
 found_elephants_path = "{0}../evaluation/data/found_elephants.json".format(path_to_src)
 
-global_thresh_to_percentile = {
+global_thresh_to_percentile_5m = {
     239: '99',
     1728: '99_9',
     5577: '99_99'
+}
+
+global_thresh_to_percentile = {
+    127: '99',
+    850: '99_9',
+    2670: '99_99'
 }
 
 def startup(global_threshold, report_threshold, epsilon, sampling_probability):
@@ -155,9 +162,10 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '100000', '%s' % pcap_file_path])
+            print("Starting to send: ", time.ctime())
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '10000', '%s' % pcap_file_path])
 
-            time.sleep(60)
+            time.sleep(10)
             print("Sending finished, killing processes")
             kill_processes(pid_list)
 
@@ -181,9 +189,9 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '100000', '%s' % pcap_file_path])
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '10000', '%s' % pcap_file_path])
 
-            time.sleep(60)
+            time.sleep(10)
             print("Sending finished, killing processes")
             kill_processes(pid_list)
 
@@ -202,4 +210,5 @@ def main():
     print("All rounds finished")
 
 if __name__ == '__main__':
+    sys.tracebacklimit = 0
     main()
