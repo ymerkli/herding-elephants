@@ -44,6 +44,7 @@ class CoordinatorService(rpyc.Service):
         self.flow_to_switches       = {}
         self.callback_table         = {}
         self.output_file_path       = output_file_path
+        self.number_hellos          = 0
 
     def exposed_send_report(self, flow, sw_name):
         '''
@@ -93,6 +94,7 @@ class CoordinatorService(rpyc.Service):
                                     functions will be stored.
         '''
 
+        self.number_hellos += 1
         self.handle_hello(flow, sw_name, hello_callback)
 
     def handle_hello(self, flow, sw_name, hello_callback):
@@ -157,6 +159,7 @@ class CoordinatorService(rpyc.Service):
 
         print("Detected {0} heavy hitter flows".format(len(self.heavy_hitter_set)))
         print("Wrote found heavy hitter to {0}".format(self.output_file_path))
+        print("Coordinator saw {0} hellos".format(self.number_hellos))
 
 class CoordinatorServer(object):
     '''

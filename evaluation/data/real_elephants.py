@@ -83,12 +83,12 @@ def real_elephants(pcap_path, glob_thresh):
 
     print("Found {0} heavy hitter flows".format(len(real_elephants)))
 
-    return real_elephants
+    return real_elephants, real_count
 
 '''
 Write the real_elephants into real_elephants.json.
 '''
-def write_json(real_elephants, pcap_path, percentile):
+def write_real_elephants_to_json(real_elephants, pcap_path, percentile):
     '''
     Read existing json file or create it if not existing and write into json
 
@@ -115,9 +115,27 @@ def write_json(real_elephants, pcap_path, percentile):
 
     print("Wrote real heavy hitters to ", real_elephants_path)
 
+def write_real_count_to_json(real_count):
+    '''
+    Read existing json file or create it and write for each
+    flow how many packets are seen for that flow
+
+    Args:
+        real_count (dict): A dict with flows as keys and counts (int) as values
+    '''
+
+    real_count_path = "real_count.json"
+
+    with open(real_count_path, 'w+') as json_file:
+        json.dump(real_count, json_file, indent=4)
+        json_file.close()
+
+    print("Wrote real count to ", real_count_path)
+
 if __name__ == '__main__':
     pcap_path, glob_thresh, percentile = parser()
 
-    real_elephants = real_elephants(pcap_path, glob_thresh)
+    real_elephants, real_count = real_elephants(pcap_path, glob_thresh)
 
-    write_json(real_elephants, pcap_path, percentile)
+    write_real_elephants_to_json(real_elephants, pcap_path, percentile)
+    write_real_count_to_json(real_count)
