@@ -244,7 +244,6 @@ def TuneAccuracy(glob_thresh_T, switch_mem, comm_budget_c, real_count, real_elep
 
     eps_min = max(ingress_switches_k / glob_thresh_T, 0) # Theorem 1?
     eps_max = min(observers_l / ingress_switches_k, 1) # Theorem 2?
-    eps_max = 2 * eps_max
 
     sigma   = observers_l / float(glob_thresh_T) # Theorem 4
     epsilon = eps_max
