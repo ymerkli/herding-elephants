@@ -9,6 +9,7 @@ import signal
 import argparse
 import sys
 import time
+import gc; gc.disable()
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
@@ -30,7 +31,7 @@ class CoordinatorService(rpyc.Service):
         reporting_threshold_R (int): The thresholds on the report count for which we promote a mule to a heavy hitter
         l_g_table (dict):            A dict storing the locality parameter l_g for a flow based on the group g
                                      to which the flow belongs to. Key is a flow table, value is an int
-        flow_to_switches (dict):     A dict storing which switches have seen a flow. Key is a flow tuple, value is an array
+        group_to_switches (dict):    A dict storing which switches have seen a flow. Key is a flow tuple, value is an array
                                      of sw_names
         callback_table (dict):       A dict storing the callbacks received from switches in hello messages.
                                      Callbacks are used to send l_g back to switches. Key is a sw_name (str), value is a function.
@@ -41,10 +42,11 @@ class CoordinatorService(rpyc.Service):
         self.reports                = {}
         self.reporting_threshold_R  = reporting_threshold_R
         self.l_g_table              = {}
-        self.flow_to_switches       = {}
+        self.group_to_switches      = {}
         self.callback_table         = {}
         self.output_file_path       = output_file_path
-        self.number_hellos          = 0
+        self.received_hellos        = 0
+        self.received_reports       = 0
 
     def exposed_send_report(self, flow, sw_name):
         '''
@@ -56,6 +58,7 @@ class CoordinatorService(rpyc.Service):
             sw_name (str):  The name of the switch that sent the report
         '''
 
+        self.received_reports += 1
         self.handle_report(flow, sw_name)
 
 
@@ -70,7 +73,7 @@ class CoordinatorService(rpyc.Service):
             sw_name (str):  The name of the switch that sent the report
         '''
 
-        print("Received report from {0} for {1}".format(sw_name, flow))
+        #print("Received report from {0} for {1}".format(sw_name, flow))
         # if the flow has been reported before, increase its count
         # otherwise, start counting
         if flow in self.reports:
@@ -94,7 +97,7 @@ class CoordinatorService(rpyc.Service):
                                     functions will be stored.
         '''
 
-        self.number_hellos += 1
+        self.received_hellos += 1
         self.handle_hello(flow, sw_name, hello_callback)
 
     def handle_hello(self, flow, sw_name, hello_callback):
@@ -111,35 +114,70 @@ class CoordinatorService(rpyc.Service):
                                     callback(flow, l_g) (see L2Controller class)
         '''
 
-        print("Received hello from {0} for {1}".format(sw_name, flow))
+        #print("Received hello from {0} for {1}".format(sw_name, flow))
         # store the callback function since we need it several times
         if sw_name not in self.callback_table:
             self.callback_table[sw_name] = hello_callback
 
+        srcGroup, dstGroup = self.extract_group(flow)
+        group = (srcGroup, dstGroup)
+
         # lookup the group based locality parameter l_g
-        # initialize l_g to 1 if no switch has seen the flow yet
-        if flow not in self.l_g_table:
-            self.l_g_table[flow] = 1
-        l_g = self.l_g_table[flow]
+        # initialize l_g to 1 if no switch has seen the group yet
+        if group not in self.l_g_table:
+            self.l_g_table[group] = 1
+        l_g = self.l_g_table[group]
 
-        # initialize flow_to_switch array if no switch has seen the flow yet
-        if flow not in self.flow_to_switches:
-            self.flow_to_switches[flow] = []
+        # initialize grouo_to_switch array if no switch has seen the group yet
+        if group not in self.group_to_switches:
+            self.group_to_switches[group] = []
 
-        # check if the switch has already sent a hello for this flow
-        if sw_name not in self.flow_to_switches[flow]:
-            # remember that switch sw_name has seen flow
-            self.flow_to_switches[flow].append(sw_name)
-            if len(self.flow_to_switches[flow]) >= 2*l_g:
+        # check if the switch has already sent a hello for this group
+        if sw_name not in self.group_to_switches[group]:
+            # remember that switch sw_name has seen group
+            self.group_to_switches[group].append(sw_name)
+            if len(self.group_to_switches[group]) >= 2*l_g:
                 # localitiy parameter has changed significantly
-                l_g = len(self.flow_to_switches[flow])
-                self.l_g_table[flow] = l_g
-                # send it to all switches that have seen flow
-                for switch in self.flow_to_switches[flow]:
+                l_g = len(self.group_to_switches[group])
+                self.l_g_table[group] = l_g
+                # send it to all switches that have seen group
+                for switch in self.group_to_switches[group]:
                     self.callback_table[switch](flow, l_g)
             else:
                 # only send locality parameter to sw_name
                 self.callback_table[sw_name](flow, l_g)
+
+    def extract_group(self, flow):
+        '''
+        Extracts the group of the given IP (i.e. the first 8 bits of
+        the srcIP and first 8 bits of the dstIP
+
+        Args:
+            flow (tuple):   The flow for which we want the group values
+
+        Returns:
+            group (tuple): 2-tuple with srcGroup and dstGroup
+        '''
+        # stringify digest IPs
+        srcIP_str = str(flow[0])
+        dstIP_str = str(flow[1])
+
+        # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
+        # raises an error if the digest IPs have invalid format
+        #TODO: IPv6?
+        srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
+        if srcGroup is None:
+            raise ValueError("Error: invalid srcIP format: {0}".format(srcIP_str))
+        else:
+            srcGroup = srcGroup.group(1)
+
+        dstGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', dstIP_str)
+        if dstGroup is None:
+            raise ValueError("Error: invalid srcIP format: {0}".format(dstIP_str))
+        else:
+            dstGroup = dstGroup.group(1)
+
+        return srcGroup, dstGroup
 
     def heavy_hitter_to_json(self):
         '''
@@ -159,7 +197,7 @@ class CoordinatorService(rpyc.Service):
 
         print("Detected {0} heavy hitter flows".format(len(self.heavy_hitter_set)))
         print("Wrote found heavy hitter to {0}".format(self.output_file_path))
-        print("Coordinator saw {0} hellos".format(self.number_hellos))
+        print("Coordinator received {0} hellos, {1} reports".format(self.received_hellos, self.received_reports))
 
 class CoordinatorServer(object):
     '''
@@ -241,5 +279,10 @@ if __name__ == '__main__':
     # register signal handler to handle shutdowns
     signal.signal(signal.SIGINT, coordinator.signal_handler)
 
+    #sys.tracebacklimit = 0
+
     # start the coordinator
-    coordinator.start()
+    try:
+        coordinator.start()
+    except AssertionError:
+        pass
