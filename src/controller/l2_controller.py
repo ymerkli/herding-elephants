@@ -2,12 +2,16 @@ import socket
 import struct
 import pickle
 import os
+import sys
 import rpyc
 import nnpy
 import argparse
 import ipaddress
 import re
 import math
+import time
+import signal
+import gc; gc.disable()
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
@@ -19,6 +23,13 @@ from scapy.all import Ether, sniff, Packet, BitField
 crc32_polinomials = [0x04C11DB7, 0xEDB88320, 0xDB710641, 0x82608EDB, 0x741B8CD7, 0xEB31D82E,
                      0xD663B05, 0xBA0DC66B, 0x32583499, 0x992C1A4C, 0x32583499, 0x992C1A4C]
 
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
 
 class L2Controller(object):
     '''
@@ -51,9 +62,13 @@ class L2Controller(object):
         self.epsilon            = float(epsilon)
         self.global_threshold_T = float(global_threshold_T)
         self.p_sampling         = sampling_probability_s
-        self.coordinator_c      = rpyc.connect('localhost', coordinator_port)
+        self.coordinator_c      = rpyc.connect('localhost', coordinator_port, keepalive=True)
         self.custom_calcs       = self.controller.get_custom_crc_calcs()
-        self.sent_hellos        = {}
+        self.seen_flows         = {}
+        self.sent_hellos        = 0
+        self.sent_reports       = 0
+        self.hello_timeouts     = 0
+        self.report_timeouts    = 0
 
         self.init()
 
@@ -61,6 +76,9 @@ class L2Controller(object):
         '''
         Initialize controller
         '''
+
+        self.coordinator_c._config['async_request_timeout'] = None
+        self.coordinator_c._config['sync_request_timeout'] = None
 
         self.controller.reset_state()
 
@@ -195,11 +213,13 @@ class L2Controller(object):
                 group = (srcGroup, dstGroup)
                 if flow_count == 0:
                     # only send a hello if we havent sent a hello yet for this flow
-                    if flow not in self.sent_hellos:
+                    if flow not in self.seen_flows:
                         self.send_hello(flow)
-                        self.sent_hellos[flow] = 1
+                        self.seen_flows[flow] = 1
+                        self.sent_hellos += 1
                 else:
                     self.report_flow(flow)
+                    self.sent_reports += 1
 
         #Acknowledge digest
         self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
@@ -230,7 +250,11 @@ class L2Controller(object):
             flow (tuple):   The flow 5-tuple to be reported
         '''
 
-        self.coordinator_c.root.send_report(flow, self.sw_name)
+        try:
+            self.coordinator_c.root.send_report(flow, self.sw_name)
+        except:
+            print("Error: {0} couldnt send report for {1}".format(self.sw_name, flow))
+            self.report_timeouts += 1
 
     def send_hello(self, flow):
         '''
@@ -243,7 +267,11 @@ class L2Controller(object):
             flow (): The new flow 5-tuple we want to let the Coordinator know about
         '''
 
-        self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
+        try:
+            self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
+        except:
+            print("Error: {0} couldnt send hello for {1}".format(self.sw_name, flow))
+            self.hello_timeouts += 1
 
     def hello_callback(self, flow, l_g):
         '''
@@ -288,6 +316,7 @@ class L2Controller(object):
         Add an entry to the group_values table. In case the group already has
         an entry, this wont do anything and return a value
         '''
+        blockPrint()
         self.controller.table_add('group_values', 'getValues',\
             [srcGroup, dstGroup], [str(r_g), str(tau_g)])
 
@@ -302,6 +331,8 @@ class L2Controller(object):
 
         self.controller.table_modify('group_values', 'getValues',\
             entry_handle, [str(r_g), str(tau_g)])
+
+        enablePrint()
 
     def extract_group(self, flow):
         '''
@@ -334,6 +365,14 @@ class L2Controller(object):
             dstGroup = dstGroup.group(1)
 
         return srcGroup, dstGroup
+
+    def signal_handler(self, sig, frame):
+        '''
+        Shutdown handling
+        '''
+        print("{0} L2Controller sent {1} hellos, {2} reports".format(self.sw_name, self.sent_hellos, self.sent_reports))
+        print("{0} L2Controller had {1} hello timeouts and {2} report timeouts".format(self.sw_name, self.hello_timeouts, self.report_timeouts))
+
 
 class InputValueError(Exception):
     pass
@@ -388,11 +427,14 @@ def parser():
     return args.n, args.e, args.t, args.s, args.p
 
 if __name__ == '__main__':
+    #sys.tracebacklimit = 0
     try:
         sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
         l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
 
         print("L2 controller of switch %s ready" % l2_controller.sw_name)
+
+        signal.signal(signal.SIGINT, l2_controller.signal_handler)
 
         l2_controller.run_digest_loop()
 
