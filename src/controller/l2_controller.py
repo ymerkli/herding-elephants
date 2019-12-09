@@ -267,10 +267,10 @@ class L2Controller(object):
         packet = Ether(str(pkt))
 
         if packet.type == 0x1234:
-            cpu_header = Cpu_Header(packet.payload)
-            flow        = [str(ipaddress.IPv4Address(cpu_header.srcAddr)), str(ipaddress.IPv4Address(cpu_header.dstAddr)), cpu_header.srcPort, cpu_header.dstPort, cpu_header.protocol]
+            cpu_header  = Cpu_Header(packet.payload)
+            flow        = (str(ipaddress.IPv4Address(cpu_header.srcAddr)), str(ipaddress.IPv4Address(cpu_header.dstAddr)), cpu_header.srcPort, cpu_header.dstPort, cpu_header.protocol)
             flow_count  = cpu_header.flow_count
-            if flow == [str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0]:
+            if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
                 self.handle_Error(flow_count)
             else:
                 print(flow)

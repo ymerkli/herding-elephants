@@ -78,6 +78,8 @@ header ethernet_t {
     bit<16>   etherType;
 }
 
+const bit<32> ETHERNET_HEADER_BYTE_LENGTH = 14;
+
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
@@ -124,6 +126,8 @@ header cpu_t {
     bit<32> flow_count;
 
 }
+
+const bit<32> CPU_HEADER_BYTE_LENGTH = 17;
 
 struct headers {
     ethernet_t ethernet;

@@ -142,7 +142,7 @@ control MyIngress(inout headers hdr,
         count_hellos.read(count_hello, 0);
         count_hello = count_hello +1;
         count_hellos.write(0, count_hello);
-        clone3(CloneType.I2E, 100, meta.data);
+        clone3(CloneType.I2E, 100, meta);
 
     }
 
@@ -154,7 +154,7 @@ control MyIngress(inout headers hdr,
         count_report = count_report +1;
         count_reports.write(0, count_report);
         extractFiveTuple();
-        clone3(CloneType.I2E, 100, meta.data);
+        clone3(CloneType.I2E, 100, meta);
     }
 
     // sends an error message, indicated by an all zero 5-tuple to the
@@ -166,7 +166,7 @@ control MyIngress(inout headers hdr,
         meta.data.five_tuple.dstPort = 0;
         meta.data.five_tuple.protocol = 0;
         meta.data.flow_count = (bit<32>) error_code;
-        clone3(CloneType.I2E, 100, meta.data);
+        clone3(CloneType.I2E, 100, meta);
     }
 
     // called by a table hit in group_table
@@ -334,8 +334,9 @@ control MyEgress(inout headers hdr,
             hdr.cpu.dstPort = meta.data.five_tuple.dstPort;
             hdr.cpu.protocol = meta.data.five_tuple.protocol;
             hdr.cpu.flow_count = meta.data.flow_count;
-
             hdr.ethernet.etherType = CLONE_ETHER_TYPE;
+            bit<32> new_length = CPU_HEADER_BYTE_LENGTH + ETHERNET_HEADER_BYTE_LENGTH;
+            truncate(new_length);
         }
      }
 }
