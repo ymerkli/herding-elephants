@@ -13,7 +13,7 @@ typedef bit<9> egressSpec_t;
 // Constants //
 const uint32_probability INT32_MAX = 4294967295;
 const bit<16> ipv4_type = 0x800;
-
+const bit<16> CLONE_ETHER_TYPE = 0x1234;
 
 /*************************************************************************
 *********************** S T R U C T S  ***********************************
@@ -114,8 +114,20 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
+
+header cpu_t {
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+    bit<16>   srcPort;
+    bit<16>   dstPort;
+    bit<8>    protocol;
+    bit<32> flow_count;
+
+}
+
 struct headers {
     ethernet_t ethernet;
     ipv4_t ipv4;
     tcp_t tcp;
+    cpu_t cpu;
 }

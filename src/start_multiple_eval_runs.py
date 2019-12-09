@@ -143,9 +143,9 @@ def main():
 
     parameter_name = string.lower(parameter_name)
 
-    evaluator = FlowEvaluator(csv_file_path, parameter_name) 
+    evaluator = FlowEvaluator(csv_file_path, parameter_name)
 
-    if parameter_name == 'epsilon': 
+    if parameter_name == 'epsilon':
         for epsilon in parameter_rounds:
 
             print("Evaluating for epsilon = {0}".format(epsilon))
@@ -181,7 +181,7 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '100000', '%s' % pcap_file_path])
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '10000', '%s' % pcap_file_path])
 
             time.sleep(60)
             print("Sending finished, killing processes")

@@ -122,6 +122,9 @@ control MyIngress(inout headers hdr,
     register<bit<32>>(1) sampling_probability;
     register<bit<32>>(1) count_start; // equals 1/sampling_probability
 
+    register<bit<32>>(1) count_hellos;
+    register<bit<32>>(1) count_reports;
+
     // hash tables to store counters
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_1) hash_table_1;
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_2) hash_table_2;
@@ -135,14 +138,23 @@ control MyIngress(inout headers hdr,
     action sendHello() {
         extractFiveTuple();
         meta.data.flow_count = 0;
-        digest(1, meta.data);
+        bit<32> count_hello;
+        count_hellos.read(count_hello, 0);
+        count_hello = count_hello +1;
+        count_hellos.write(0, count_hello);
+        clone3(CloneType.I2E, 100, meta.data);
+
     }
 
     // sends a report msg to the local controller with the 5tuple and the current
     // flow counter.
     action sendReport() {
+        bit<32> count_report;
+        count_reports.read(count_report, 0);
+        count_report = count_report +1;
+        count_reports.write(0, count_report);
         extractFiveTuple();
-        digest(1, meta.data);
+        clone3(CloneType.I2E, 100, meta.data);
     }
 
     // sends an error message, indicated by an all zero 5-tuple to the
@@ -154,7 +166,7 @@ control MyIngress(inout headers hdr,
         meta.data.five_tuple.dstPort = 0;
         meta.data.five_tuple.protocol = 0;
         meta.data.flow_count = (bit<32>) error_code;
-        digest(1, meta.data);
+        clone3(CloneType.I2E, 100, meta.data);
     }
 
     // called by a table hit in group_table
@@ -313,7 +325,18 @@ control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
     apply {
+        if (standard_metadata.instance_type == 1){
+            hdr.cpu.setValid();
 
+            hdr.cpu.srcAddr = meta.data.five_tuple.srcAddr;
+            hdr.cpu.dstAddr = meta.data.five_tuple.dstAddr;
+            hdr.cpu.srcPort = meta.data.five_tuple.srcPort;
+            hdr.cpu.dstPort = meta.data.five_tuple.dstPort;
+            hdr.cpu.protocol = meta.data.five_tuple.protocol;
+            hdr.cpu.flow_count = meta.data.flow_count;
+
+            hdr.ethernet.etherType = CLONE_ETHER_TYPE;
+        }
      }
 }
 

@@ -38,7 +38,7 @@
       }
     },
     "switches": {
-      "s1": {
+      "s1": {"cpu_port": true
       },
       "lb1": {
         "program": "p4src/load_balancing.p4"
