@@ -1,12 +1,12 @@
 {
-    "eval5m_global_threshold_99.9": 1728,
-    "eval5m_global_threshold_99.0": 239,
-    "eval5m_global_threshold_99.99": 5577,
-    "eval5m_flow_count": 273918,
-    "eval5m_group_count": 7811,
-    "eval1m_global_threshold_99.9": 850,
-    "eval1m_global_threshold_99.99": 2670,
-    "eval1m_global_threshold_99.0": 127,
-    "eval1m_flow_count": 96694,
-    "eval1m_group_count": 5419
+    "eval5m_global_threshold_99.9": 1728, 
+    "eval5m_global_threshold_99.0": 239, 
+    "eval1m_group_count": 4373, 
+    "eval5m_global_threshold_99.99": 5577, 
+    "eval5m_flow_count": 273918, 
+    "eval1m_global_threshold_99.9": 901, 
+    "eval5m_group_count": 7811, 
+    "eval1m_global_threshold_99.99": 3180, 
+    "eval1m_global_threshold_99.0": 134, 
+    "eval1m_flow_count": 91101
 }
