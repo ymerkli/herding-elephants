@@ -268,16 +268,14 @@ class L2Controller(object):
 
         if packet.type == 0x1234:
             cpu_header = Cpu_Header(packet.payload)
-
-            flow        = [cpu_header.srcAddr, cpu_header.dstAddr, cpu_header.srcPort, cpu_header.dstPort, cpu_header.protocol]
+            flow        = [str(ipaddress.IPv4Address(cpu_header.srcAddr)), str(ipaddress.IPv4Address(cpu_header.dstAddr)), cpu_header.srcPort, cpu_header.dstPort, cpu_header.protocol]
             flow_count  = cpu_header.flow_count
-            if flow == [0,0,0,0,0]:
+            if flow == [str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0]:
                 self.handle_Error(flow_count)
             else:
                 print(flow)
                 print("\n")
                 print(flow_count)
-                print("ADASGFDSAGDSAGFDSYGADSFGDSAFDSGFDSAFG")
 
         # TODO: Implement this:
         '''
@@ -304,7 +302,7 @@ class L2Controller(object):
         The blocking function that will be running on the controller.
         Waits for new cloned packets and passes them on to the recv function.
         '''
-                cpu_port_intf = str(self.topo.get_cpu_port_intf(self.sw_name).replace("eth0", "eth1"))
+        cpu_port_intf = str(self.topo.get_cpu_port_intf(self.sw_name).replace("eth0", "eth1"))
         sniff(iface=cpu_port_intf, prn=self.recv_msg_cpu)
 
 
@@ -426,7 +424,7 @@ class L2Controller(object):
 
     def signal_handler(self, sig, frame):
         '''
-        reads counts from switch and writes them to a file when the terminate 
+        reads counts from switch and writes them to a file when the terminate
         signal is sent.
         '''
         count_hello_switch = self.controller.register_read("count_hellos")
