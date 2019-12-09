@@ -28,12 +28,13 @@ the cpu header of switch.p4
 
 class Cpu_Header(Packet):
     name = 'CpuPacket'
-    fields_desc = [BitField('srcAddr',0,32),
-                    BitField('dstAddr', 0, 32),
-                    BitField('srcPort', 0, 16),
-                    BitField('dstPort', 0, 16),
-                    BitField('protocol', 0, 8),
-                    BitField('flow_count', 0, 32)]
+    fields_desc = [ BitField('headers', 0, 96),
+                    BitField('srcAddrCPU',0,32),
+                    BitField('dstAddrCPU', 0, 32),
+                    BitField('srcPortCPU', 0, 16),
+                    BitField('dstPortCPU', 0, 16),
+                    BitField('protocolCPU', 0, 8),
+                    BitField('flow_countCPU', 0, 32)]
 
 class L2Controller(object):
     '''
@@ -268,14 +269,17 @@ class L2Controller(object):
 
         if packet.type == 0x1234:
             cpu_header  = Cpu_Header(packet.payload)
-            flow        = (str(ipaddress.IPv4Address(cpu_header.srcAddr)), str(ipaddress.IPv4Address(cpu_header.dstAddr)), cpu_header.srcPort, cpu_header.dstPort, cpu_header.protocol)
-            flow_count  = cpu_header.flow_count
+            flow        = ( str(ipaddress.IPv4Address(cpu_header.srcAddrCPU)),\
+                            str(ipaddress.IPv4Address(cpu_header.dstAddrCPU)),\
+                            cpu_header.srcPortCPU,\
+                            cpu_header.dstPortCPU,\
+                            cpu_header.protocolCPU\
+            )
+            flow_count  = cpu_header.flow_countCPU
             if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
                 self.handle_Error(flow_count)
             else:
                 print(flow)
-                print("\n")
-                print(flow_count)
 
         # TODO: Implement this:
         '''

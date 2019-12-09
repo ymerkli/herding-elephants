@@ -328,14 +328,15 @@ control MyEgress(inout headers hdr,
         if (standard_metadata.instance_type == 1){
             hdr.cpu.setValid();
 
-            hdr.cpu.srcAddr = meta.data.five_tuple.srcAddr;
-            hdr.cpu.dstAddr = meta.data.five_tuple.dstAddr;
-            hdr.cpu.srcPort = meta.data.five_tuple.srcPort;
-            hdr.cpu.dstPort = meta.data.five_tuple.dstPort;
-            hdr.cpu.protocol = meta.data.five_tuple.protocol;
-            hdr.cpu.flow_count = meta.data.flow_count;
+            hdr.cpu.srcAddrCPU = meta.data.five_tuple.srcAddr;
+            hdr.cpu.dstAddrCPU = meta.data.five_tuple.dstAddr;
+            hdr.cpu.srcPortCPU = meta.data.five_tuple.srcPort;
+            hdr.cpu.dstPortCPU = meta.data.five_tuple.dstPort;
+            hdr.cpu.protocolCPU = (bit<16>)meta.data.five_tuple.protocol;
+            hdr.cpu.flow_countCPU = meta.data.flow_count;
             hdr.ethernet.etherType = CLONE_ETHER_TYPE;
-            bit<32> new_length = CPU_HEADER_BYTE_LENGTH + ETHERNET_HEADER_BYTE_LENGTH;
+            //bit<32> new_length = ETHERNET_HEADER_BYTE_LENGTH + IPv4_HEADER_BYTE_LENGTH + TCP_HEADER_BYTE_LENGTH + CPU_HEADER_BYTE_LENGTH;
+            bit<32> new_length = ETHERNET_HEADER_BYTE_LENGTH + CPU_HEADER_BYTE_LENGTH + 12;
             truncate(new_length);
         }
      }
