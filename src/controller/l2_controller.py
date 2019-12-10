@@ -170,56 +170,23 @@ class L2Controller(object):
                 # we only add one single rule for the agregating switch
                 break
 
-    def unpack_digest(self, msg, num_samples):
+    def recv_msg_cpu(self, pkt):
         '''
-        Unpacks a digest received from the data plane
-
-        Args:
-            msg ():             The received message
-            num_samples (int):  Number of samples
-
-        Returns:
-            digest (list):      An array of flow_info's (dicts), where we store the flow 5-tuple (key 'flow')
-                                and the flow_count (int) (key flow_count)
-        '''
-
-        digest = []
-        starting_index = 32
-        for sample in range(num_samples):
-            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBL", msg[starting_index:starting_index + 17])
-
-            # convert int IPs to str
-            srcIP = str(ipaddress.IPv4Address(srcIP))
-            dstIP = str(ipaddress.IPv4Address(dstIP))
-
-            # construct flow tuple
-            flow = (srcIP, dstIP, srcPort, dstPort, protocol)
-            flow_info = {
-                'flow': flow,
-                'flow_count': flow_count
-            }
-            digest.append(flow_info)
-
-        return digest
-
-    def recv_msg_digest(self, msg):
-        '''
-        Handles a received digest message. Unpacks the digest using self.unpack_digest() and then
-        send a hello or a report to the Coordinator
+        Handles a received cloned packet. Unpacks the packet using the
+        Cpu_Header class and does either send a Hello, Report or does error
+        handling.
 
         Args:
             msg (): The received digest message
         '''
 
-        topic, device_id, ctx_id, list_id, buffer_id, num = struct.unpack("<iQiiQi", msg[:32])
+        packet = Ether(str(pkt))
 
-        digest = self.unpack_digest(msg, num)
+        if packet.type == 0x1234:
+            cpu_header  = Cpu_Header(packet.payload)
+            flow        = (str(ipaddress.IPv4Address(cpu_header.srcAddr)), str(ipaddress.IPv4Address(cpu_header.dstAddr)), cpu_header.srcPort, cpu_header.dstPort, cpu_header.protocol)
+            flow_count  = int(cpu_header.flow_count)
 
-        for flow_info in digest:
-            # if the 5-tuple is all zero, we got an error message
-            flow        = flow_info['flow']
-            print(flow)
-            flow_count  = flow_info['flow_count']
             if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
                 self.handle_Error(flow_count)
             else:
@@ -231,75 +198,11 @@ class L2Controller(object):
                     # only send a hello if we havent sent a hello yet for this flow
                     if flow not in self.sent_hellos:
                         self.send_hello(flow)
-                        self.sent_hellos[flow] = 1
                         self.hellos = self.hellos + 1
+                        self.sent_hellos[flow] = 1
                 else:
                     self.reports = self.reports + 1
                     self.report_flow(flow)
-
-        #Acknowledge digest
-        self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
-
-    def run_digest_loop(self):
-        '''
-        The blocking function that will be running on the controller.
-        Waits for new digests and passes them on
-        '''
-
-        sub = nnpy.Socket(nnpy.AF_SP, nnpy.SUB)
-        notifications_socket = self.controller.client.bm_mgmt_get_info().notifications_socket
-        sub.connect(notifications_socket)
-        sub.setsockopt(nnpy.SUB, nnpy.SUB_SUBSCRIBE, '')
-
-        print("Switch {0}: starting digest loop".format(self.sw_name))
-
-        while True:
-            msg = sub.recv()
-            self.recv_msg_digest(msg)
-
-
-    def recv_msg_cpu(self, pkt):
-        '''
-        Handles a received cloned packet. Unpacks the packet using the
-        Cpu_Header class and does either send a Hello, Report or does error
-        handling.
-
-        Args:
-            msg (): The received digest message
-        '''
-        pkt[0].show()
-        hexdump(pkt)
-        packet = Ether(str(pkt))
-
-        if packet.type == 0x1234:
-            cpu_header  = Cpu_Header(packet.payload)
-            flow        = (str(ipaddress.IPv4Address(cpu_header.srcAddr)), str(ipaddress.IPv4Address(cpu_header.dstAddr)), cpu_header.srcPort, cpu_header.dstPort, cpu_header.protocol)
-            flow_count  = cpu_header.flow_count
-            # if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
-            #    self.handle_Error(flow_count)
-            # else:
-            print("\n")
-            print(flow)
-            print(flow_count)
-
-        # TODO: Implement this:
-        '''
-
-
-                # if the flow count is zero, the digest is just a hello message
-                # otherwise, it's a report
-                srcGroup, dstGroup = self.extract_group(flow)
-                group = (srcGroup, dstGroup)
-                if flow_count == 0:
-                    # only send a hello if we havent sent a hello yet for this flow
-                    if flow not in self.sent_hellos:
-                        self.send_hello(flow)
-                        self.sent_hellos[flow] = 1
-                        self.hellos = self.hellos + 1
-                else:
-                    self.reports = self.reports + 1
-                    self.report_flow(flow)
-        '''
 
 
     def run_cpu_port_loop(self):
@@ -436,9 +339,9 @@ class L2Controller(object):
 
         count_report_switch = self.controller.register_read("count_reports")
         f = open("counts.txt", "a")
-        f.write('Received hellos: %s, Sent hellos: %s \nReceived reports: %s, Sent reports: %s\n' % (self.hellos, count_hello_switch, self.reports, count_report_switch ))
+        f.write('Switch %s:\nReceived hellos: %s, Sent hellos: %s \nReceived reports: %s, Sent reports: %s\n' % (self.sw_name, self.hellos, count_hello_switch, self.reports, count_report_switch ))
         f.close()
-        print('Received hellos: %s, Sent hellos: %s \nReceived reports: %s, Sent reports: %s\n' % (self.hellos, count_hello_switch, self.reports, count_report_switch ))
+        print('Switch %s:\nReceived hellos: %s, Sent hellos: %s \nReceived reports: %s, Sent reports: %s\n' % (self.sw_name, self.hellos, count_hello_switch, self.reports, count_report_switch ))
         sys.exit(0)
 
 class InputValueError(Exception):

@@ -27,11 +27,6 @@ struct five_tuple_t {
     bit<8>    protocol;
 }
 
-// Used by the digest commands to transport data to the local controller
-struct report_data_t {
-    five_tuple_t five_tuple;
-    bit<32> flow_count;
-}
 
 // Used by hash functions and the table lookup to store data
 struct hash_data_t {
@@ -57,13 +52,11 @@ struct metadata {
     uint32_probability flip_s;
     uint32_probability flip_r;
     tau_t tau;
-    report_data_t data;
+    bit<32> flow_count;
+    bit<32> send_count;
     hash_data_t hash_data;
     bit<2> found_flag;
     flow_group_t group;
-
-    bit<14> ecmp_hash;
-    bit<14> ecmp_group_id;
 }
 
 
