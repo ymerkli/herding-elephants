@@ -27,12 +27,6 @@ struct five_tuple_t {
     bit<8>    protocol;
 }
 
-// Used by the digest commands to transport data to the local controller
-struct report_data_t {
-    five_tuple_t five_tuple;
-    bit<32> flow_count;
-}
-
 // Used by hash functions and the table lookup to store data
 struct hash_data_t {
     flow_id_t hash_key;
@@ -57,7 +51,8 @@ struct metadata {
     uint32_probability flip_s;
     uint32_probability flip_r;
     tau_t tau;
-    report_data_t data;
+    bit<32> flow_count;
+    bit<32> send_count;
     hash_data_t hash_data;
     bit<2> found_flag;
     flow_group_t group;
@@ -93,8 +88,6 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
-const bit<32> IPv4_HEADER_BYTE_LENGTH = 20;
-
 header tcp_t{
     bit<16> srcPort;
     bit<16> dstPort;
@@ -115,18 +108,16 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
-const bit<32> TCP_HEADER_BYTE_LENGTH = 20;
-
 header cpu_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
     bit<16>   srcPort;
     bit<16>   dstPort;
-    bit<16>   protocol;
+    bit<8>   protocol;
     bit<32>   flow_count;
 }
 
-const bit<32> CPU_HEADER_BYTE_LENGTH = 18;
+const bit<32> CPU_HEADER_BYTE_LENGTH = 17;
 
 struct headers {
     ethernet_t ethernet;

@@ -1,11 +1,12 @@
-# Ignore the src/log folder
+# Ignore the following folders
 src/log
-
-# Ignore the src/pcap folder
 src/pcap
-
-# Ignore all swap files
+data/
+#
+# Ignore the following file types
 *.swp
+*.pyc
+*.p4i
 
 # Ignore these files
 src/p4src/switch.json
@@ -22,3 +23,4 @@ src/found_elephants.json
 src/start_controllers.sh
 src/controller/found_elephants.json
 src/start_controllers.sh
+src/kill_script.sh

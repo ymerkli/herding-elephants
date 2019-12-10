@@ -18,7 +18,7 @@ from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
 ## from crc import Crc
 from rpyc.utils.server import ThreadedServer
-from scapy.all import Ether, sniff, Packet, BitField
+from scapy.all import Ether, sniff, Packet, BitField, hexdump
 
 # Copied from the excercises (taken from wikipedia probably), not all are needed
 crc32_polinomials = [0x04C11DB7, 0xEDB88320, 0xDB710641, 0x82608EDB, 0x741B8CD7, 0xEB31D82E,
@@ -35,15 +35,17 @@ def enablePrint():
 '''
 Used for clone method of receiving packets. Defines the same fields as
 the cpu header of switch.p4
+
+
+
 '''
 class Cpu_Header(Packet):
     name = 'CpuPacket'
-    fields_desc = [ BitField('headers', 0, 320),
-                    BitField('srcAddr',0,32),
+    fields_desc = [ BitField('srcAddr', 0, 32),
                     BitField('dstAddr', 0, 32),
                     BitField('srcPort', 0, 16),
                     BitField('dstPort', 0, 16),
-                    BitField('protocol', 0, 16),
+                    BitField('protocol', 0, 8),
                     BitField('flow_count', 0, 32)]
 
 class L2Controller(object):
@@ -84,8 +86,8 @@ class L2Controller(object):
         self.p_sampling         = sampling_probability_s
         # Debugging
         self.seen_flows         = {}
-        self.sent_hellos        = 0
-        self.sent_reports       = 0
+        self.hellos             = 0
+        self.reports            = 0
         self.hello_timeouts     = 0
         self.report_timeouts    = 0
 
@@ -241,14 +243,14 @@ class L2Controller(object):
                 srcGroup, dstGroup = self.extract_group(flow)
                 group = (srcGroup, dstGroup)
                 if flow_count == 0:
+                    self.hellos += 1
                     # only send a hello if we havent sent a hello yet for this flow
                     if flow not in self.seen_flows:
                         self.send_hello(flow)
-                        self.seen_flows[flow] = 1
-                        self.sent_hellos += 1
+                        self.sent_hellos[flow] = 1
                 else:
                     self.report_flow(flow)
-                    self.sent_reports += 1
+                    self.reports += 1
 
         #Acknowledge digest
         self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
@@ -291,7 +293,8 @@ class L2Controller(object):
                             cpu_header.dstPort,\
                             cpu_header.protocol\
             )
-            flow_count  = cpu_header.flow_count
+            flow_count  = int(cpu_header.flow_count)
+
             if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
                 self.handle_Error(flow_count)
             else:
@@ -300,14 +303,14 @@ class L2Controller(object):
                 srcGroup, dstGroup = self.extract_group(flow)
                 group = (srcGroup, dstGroup)
                 if flow_count == 0:
+                    self.hellos += 1
                     # only send a hello if we havent sent a hello yet for this flow
                     if flow not in self.sent_hellos:
                         self.send_hello(flow)
                         self.sent_hellos[flow] = 1
-                        self.sent_hellos += 1
                 else:
+                    self.reports += 1
                     self.report_flow(flow)
-                    self.sent_reports += 1
 
     def run_cpu_port_loop(self):
         '''
@@ -391,7 +394,6 @@ class L2Controller(object):
         Add an entry to the group_values table. In case the group already has
         an entry, this wont do anything and return a value
         '''
-        blockPrint()
         self.controller.table_add('group_values', 'getValues',\
             [srcGroup, dstGroup], [str(r_g), str(tau_g)])
 
@@ -406,8 +408,6 @@ class L2Controller(object):
 
         self.controller.table_modify('group_values', 'getValues',\
             entry_handle, [str(r_g), str(tau_g)])
-
-        enablePrint()
 
     def extract_group(self, flow):
         '''
@@ -426,7 +426,6 @@ class L2Controller(object):
 
         # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
         # raises an error if the digest IPs have invalid format
-        #TODO: IPv6?
         srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
         if srcGroup is None:
             raise ValueError("Error: invalid srcIP format: {0}".format(srcIP_str))
@@ -448,7 +447,7 @@ class L2Controller(object):
         count_hello_switch = self.controller.register_read("count_hellos")
         count_report_switch = self.controller.register_read("count_reports")
 
-        print("{0}: switch hellos={1}, sent hellos={2}, switch reports={3}, sent reports={4}".format(self.sw_name,\
+        print("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}".format(self.sw_name,\
             count_hello_switch, self.sent_hellos, count_report_switch, self.sent_reports))
 
         print("{0}: hello timeouts={1}, report timeouts={2}".format(self.sw_name, self.hello_timeouts, self.report_timeouts))
