@@ -28,8 +28,7 @@ the cpu header of switch.p4
 
 class Cpu_Header(Packet):
     name = 'CpuPacket'
-    fields_desc = [ BitField('headers', 0, 320),
-                    BitField('srcAddr',0,32),
+    fields_desc = [ BitField('srcAddr', 0, 32),
                     BitField('dstAddr', 0, 32),
                     BitField('srcPort', 0, 16),
                     BitField('dstPort', 0, 16),
@@ -226,14 +225,14 @@ class L2Controller(object):
                 srcGroup, dstGroup = self.extract_group(flow)
                 group = (srcGroup, dstGroup)
                 if flow_count == 0:
+                    self.hellos += 1
                     # only send a hello if we havent sent a hello yet for this flow
                     if flow not in self.sent_hellos:
                         self.send_hello(flow)
                         self.sent_hellos[flow] = 1
-                        self.hellos = self.hellos + 1
                 else:
-                    self.reports = self.reports + 1
                     self.report_flow(flow)
+                    self.reports += 1
 
         #Acknowledge digest
         self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
@@ -276,7 +275,8 @@ class L2Controller(object):
                             cpu_header.dstPort,\
                             cpu_header.protocol\
             )
-            flow_count  = cpu_header.flow_count
+            flow_count  = int(cpu_header.flow_count)
+
             if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
                 self.handle_Error(flow_count)
             else:
@@ -285,14 +285,14 @@ class L2Controller(object):
                 srcGroup, dstGroup = self.extract_group(flow)
                 group = (srcGroup, dstGroup)
                 if flow_count == 0:
+                    self.hellos += 1
                     # only send a hello if we havent sent a hello yet for this flow
                     if flow not in self.sent_hellos:
                         self.send_hello(flow)
                         self.sent_hellos[flow] = 1
-                        self.hellos = self.hellos + 1
                 else:
-                    self.reports = self.reports + 1
                     self.report_flow(flow)
+                    self.reports += 1
 
     def run_cpu_port_loop(self):
         '''
@@ -400,7 +400,6 @@ class L2Controller(object):
 
         # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
         # raises an error if the digest IPs have invalid format
-        #TODO: IPv6?
         srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
         if srcGroup is None:
             raise ValueError("Error: invalid srcIP format: {0}".format(srcIP_str))
@@ -422,12 +421,13 @@ class L2Controller(object):
         signal is sent.
         '''
         count_hello_switch = self.controller.register_read("count_hellos")
-
         count_report_switch = self.controller.register_read("count_reports")
-        f = open("counts.txt", "a")
-        f.write('Received hellos: %s, Sent hellos: %s \nReceived reports: %s, Sent reports: %s\n' % (self.hellos, count_hello_switch, self.reports, count_report_switch ))
-        f.close()
-        print('Received hellos: %s, Sent hellos: %s \nReceived reports: %s, Sent reports: %s\n' % (self.hellos, count_hello_switch, self.reports, count_report_switch ))
+
+        print("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}".format(self.sw_name,\
+            count_hello_switch, self.sent_hellos, count_report_switch, self.sent_reports))
+
+        print("{0}: hello timeouts={1}, report timeouts={2}".format(self.sw_name, self.hello_timeouts, self.report_timeouts))
+
         sys.exit(0)
 
 class InputValueError(Exception):
@@ -489,12 +489,10 @@ if __name__ == '__main__':
 
         print("L2 controller of switch %s ready" % l2_controller.sw_name)
 
+        # register signal handler to handle shutdowns
         signal.signal(signal.SIGINT, l2_controller.signal_handler)
 
         l2_controller.run_cpu_port_loop()
-
-        # register signal handler to handle shutdowns
-        signal.signal(signal.SIGINT, l2_controller.signal_handler)
 
     except InputValueError:
         print("The sampling probability should be between 0 and 1")

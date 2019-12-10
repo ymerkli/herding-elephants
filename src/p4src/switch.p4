@@ -136,36 +136,30 @@ control MyIngress(inout headers hdr,
     // sends a hello msg to the local controller with the 5tuple and a flow
     // counter of 0 to indicate the flow is new.
     action sendHello() {
-        extractFiveTuple();
-        meta.data.flow_count = 0;
+        meta.send_count = 0;
         bit<32> count_hello;
         count_hellos.read(count_hello, 0);
-        count_hello = count_hello +1;
+        count_hello = count_hello + 1;
         count_hellos.write(0, count_hello);
         clone3(CloneType.I2E, 100, meta);
-
     }
 
     // sends a report msg to the local controller with the 5tuple and the current
     // flow counter.
     action sendReport() {
+        meta.send_count = meta.flow_count;
         bit<32> count_report;
         count_reports.read(count_report, 0);
-        count_report = count_report +1;
+        count_report = count_report + 1;
         count_reports.write(0, count_report);
-        extractFiveTuple();
         clone3(CloneType.I2E, 100, meta);
     }
 
     // sends an error message, indicated by an all zero 5-tuple to the
     // controller. the flow counter is used to transmit the error code.
     action sendError() {
-        meta.data.five_tuple.srcAddr = 0;
-        meta.data.five_tuple.dstAddr = 0;
-        meta.data.five_tuple.srcPort = 0;
-        meta.data.five_tuple.dstPort = 0;
-        meta.data.five_tuple.protocol = 0;
-        meta.data.flow_count = (bit<32>) error_code;
+        meta.tau = INT32_MAX;
+        meta.send_count = (bit<32>) error_code;
         clone3(CloneType.I2E, 100, meta);
     }
 
@@ -327,18 +321,28 @@ control MyEgress(inout headers hdr,
     apply {
         if (standard_metadata.instance_type == 1){
             hdr.cpu.setValid();
-
-            hdr.cpu.srcAddr = meta.data.five_tuple.srcAddr;
-            hdr.cpu.dstAddr = meta.data.five_tuple.dstAddr;
-            hdr.cpu.srcPort = meta.data.five_tuple.srcPort;
-            hdr.cpu.dstPort = meta.data.five_tuple.dstPort;
-            hdr.cpu.protocol = (bit<16>)meta.data.five_tuple.protocol;
-            hdr.cpu.flow_count = meta.data.flow_count;
+            if(meta.tau == INT32_MAX){
+                hdr.cpu.srcAddr  = 0;
+                hdr.cpu.dstAddr  = 0;
+                hdr.cpu.srcPort  = 0;
+                hdr.cpu.dstPort  = 0;
+                hdr.cpu.protocol = 0;
+            } else {
+                hdr.cpu.srcAddr  = hdr.ipv4.srcAddr;
+                hdr.cpu.dstAddr  = hdr.ipv4.dstAddr;
+                hdr.cpu.srcPort  = hdr.tcp.srcPort;
+                hdr.cpu.dstPort  = hdr.tcp.dstPort;
+                hdr.cpu.protocol = hdr.ipv4.protocol;
+            }
+            hdr.cpu.flow_count = meta.send_count;
             hdr.ethernet.etherType = CLONE_ETHER_TYPE;
-            bit<32> new_length = ETHERNET_HEADER_BYTE_LENGTH + IPv4_HEADER_BYTE_LENGTH + TCP_HEADER_BYTE_LENGTH + CPU_HEADER_BYTE_LENGTH;
+
+            hdr.ipv4.setInvalid();
+            hdr.tcp.setInvalid();
+            bit<32> new_length = CPU_HEADER_BYTE_LENGTH + ETHERNET_HEADER_BYTE_LENGTH;
             truncate(new_length);
         }
-     }
+    }
 }
 
 /*************************************************************************
