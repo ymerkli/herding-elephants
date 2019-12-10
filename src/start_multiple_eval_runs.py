@@ -181,7 +181,7 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '10000', '%s' % pcap_file_path])
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '1000', '%s' % pcap_file_path])
 
             time.sleep(60)
             print("Sending finished, killing processes")

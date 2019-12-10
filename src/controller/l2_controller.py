@@ -15,7 +15,7 @@ from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
 ## from crc import Crc
 from rpyc.utils.server import ThreadedServer
-from scapy.all import Ether, sniff, Packet, BitField
+from scapy.all import Ether, sniff, Packet, BitField, hexdump
 
 # Copied from the excercises (taken from wikipedia probably), not all are needed
 crc32_polinomials = [0x04C11DB7, 0xEDB88320, 0xDB710641, 0x82608EDB, 0x741B8CD7, 0xEB31D82E,
@@ -24,6 +24,9 @@ crc32_polinomials = [0x04C11DB7, 0xEDB88320, 0xDB710641, 0x82608EDB, 0x741B8CD7,
 '''
 Used for clone method of receiving packets. Defines the same fields as
 the cpu header of switch.p4
+
+
+
 '''
 
 class Cpu_Header(Packet):
@@ -32,7 +35,7 @@ class Cpu_Header(Packet):
                     BitField('dstAddr', 0, 32),
                     BitField('srcPort', 0, 16),
                     BitField('dstPort', 0, 16),
-                    BitField('protocol', 0, 16),
+                    BitField('protocol', 0, 8),
                     BitField('flow_count', 0, 32)]
 
 class L2Controller(object):
@@ -291,8 +294,8 @@ class L2Controller(object):
                         self.send_hello(flow)
                         self.sent_hellos[flow] = 1
                 else:
-                    self.report_flow(flow)
                     self.reports += 1
+                    self.report_flow(flow)
 
     def run_cpu_port_loop(self):
         '''

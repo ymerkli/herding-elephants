@@ -21,7 +21,7 @@
 // IN:  num defining which hash table should be used
 // REQ: meta.hash_data.hash_key
 // STORED:  found flag (if empty space or flow is found) -> meta.found_flag
-//          flow count (if found) -> meta.data.flow_count
+//          flow count (if found) -> meta.flow_count
 #define HASH_AND_CHECK(num) hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, \
          hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)ENTRIES_HASH_TABLE_##num); \
          hash_table_##num.read(meta.hash_data.value, meta.hash_data.hash_table_entry); \
@@ -30,7 +30,7 @@
          } else { \
              meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32); \
              if (meta.hash_data.read_key == meta.hash_data.hash_key) { \
-                 meta.data.flow_count = (bit<32>) meta.hash_data.value & 0x00000000ffffffff; \
+                 meta.flow_count = (bit<32>) meta.hash_data.value & 0x00000000ffffffff; \
                  meta.found_flag = ##num; \
              } \
          }
@@ -88,15 +88,6 @@ control MyIngress(inout headers hdr,
         }
         size = 256;
         default_action = drop;
-    }
-
-    // extracts the five tuple identifying a flow from the packet
-    action extractFiveTuple() {
-        meta.data.five_tuple.srcAddr = hdr.ipv4.srcAddr;
-        meta.data.five_tuple.dstAddr = hdr.ipv4.dstAddr;
-        meta.data.five_tuple.srcPort = hdr.tcp.srcPort;
-        meta.data.five_tuple.dstPort = hdr.tcp.dstPort;
-        meta.data.five_tuple.protocol = hdr.ipv4.protocol;
     }
 
     action extractGroup() {
@@ -245,7 +236,7 @@ control MyIngress(inout headers hdr,
 
                 // reset fields and generate flow id
                 meta.found_flag = 0;
-                meta.data.flow_count = 0;
+                meta.flow_count = 0;
                 hashFlow();
 
                 // search for a stored value
@@ -266,14 +257,14 @@ control MyIngress(inout headers hdr,
                     // check if we found an empty space, if so, try to sample
                     if (meta.hash_data.value == 0) {
                         if (meta.flip_s == 1) {
-                            count_start.read(meta.data.flow_count, 0);
+                            count_start.read(meta.flow_count, 0);
                         }
                     // increase counter
                     } else {
-                        meta.data.flow_count = meta.data.flow_count + 1;
+                        meta.flow_count = meta.flow_count + 1;
                     }
                     // set the report coinflip to zero if the threshold is not reached
-                    if (meta.data.flow_count < meta.tau) {
+                    if (meta.flow_count < meta.tau) {
                         meta.flip_r = 0;
                     }
                 }
@@ -281,14 +272,14 @@ control MyIngress(inout headers hdr,
                 // report and reset counter if necessary
                 if (meta.flip_r == 1) {
                     sendReport();
-                    meta.data.flow_count = 0;
+                    meta.flow_count = 0;
                 }
 
                 // store counter if necessary
-                if (meta.data.flow_count > 0 || meta.flip_r == 1) {
+                if (meta.flow_count > 0 || meta.flip_r == 1) {
                     meta.hash_data.value = (bit<64>) meta.hash_data.hash_key;
                     meta.hash_data.value =  meta.hash_data.value << 32;
-                    meta.hash_data.value =  meta.hash_data.value + (bit<64>) meta.data.flow_count;
+                    meta.hash_data.value =  meta.hash_data.value + (bit<64>) meta.flow_count;
                     if (meta.found_flag == 1) {
                         hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
                     }
