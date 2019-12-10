@@ -4,17 +4,18 @@ src/log
 # Ignore the src/pcap folder
 src/pcap
 
+# Ignore the data folder
+data
+
 # Ignore all swap files
 *.swp
 
-# Ignore these files
-src/p4src/switch.json
-src/p4src/switch.p4i
-src/aggregate_switch.p4i
-src/aggregate_switch.json
-src/load_balancing.p4i
-src/load_balancing.json
-src/topology.db
+# Ignore .p4i and .json files
+src/p4app/*.p4i
+src/p4app/*.json
+
+#Ignore original measurement files
+evaluation/*/measurements.csv
 
 # Ignore generated files
 src/real_elephants.json
@@ -22,3 +23,7 @@ src/found_elephants.json
 src/start_controllers.sh
 src/controller/found_elephants.json
 src/start_controllers.sh
+src/topology.db
+src/counts.txt
+src/flow_evaluator.pyc
+src/kill_skript.sh
