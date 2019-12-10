@@ -196,9 +196,9 @@ class L2Controller(object):
                 group = (srcGroup, dstGroup)
                 if flow_count == 0:
                     # only send a hello if we havent sent a hello yet for this flow
+                    self.hellos = self.hellos + 1
                     if flow not in self.sent_hellos:
                         self.send_hello(flow)
-                        self.hellos = self.hellos + 1
                         self.sent_hellos[flow] = 1
                 else:
                     self.reports = self.reports + 1
