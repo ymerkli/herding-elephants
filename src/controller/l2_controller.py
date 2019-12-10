@@ -2,23 +2,51 @@ import socket
 import struct
 import pickle
 import os
+import sys
 import rpyc
 import nnpy
 import argparse
 import ipaddress
 import re
 import math
+import time
+import signal
+import sys
+import gc; gc.disable()
 
 from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
 ## from crc import Crc
 from rpyc.utils.server import ThreadedServer
-from scapy.all import Ether, sniff, Packet, BitField
+from scapy.all import Ether, sniff, Packet, BitField, hexdump
 
 # Copied from the excercises (taken from wikipedia probably), not all are needed
 crc32_polinomials = [0x04C11DB7, 0xEDB88320, 0xDB710641, 0x82608EDB, 0x741B8CD7, 0xEB31D82E,
                      0xD663B05, 0xBA0DC66B, 0x32583499, 0x992C1A4C, 0x32583499, 0x992C1A4C]
 
+# Disable prints
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore prints
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
+'''
+Used for clone method of receiving packets. Defines the same fields as
+the cpu header of switch.p4
+
+
+
+'''
+class Cpu_Header(Packet):
+    name = 'CpuPacket'
+    fields_desc = [ BitField('srcAddr', 0, 32),
+                    BitField('dstAddr', 0, 32),
+                    BitField('srcPort', 0, 16),
+                    BitField('dstPort', 0, 16),
+                    BitField('protocol', 0, 8),
+                    BitField('flow_count', 0, 32)]
 
 class L2Controller(object):
     '''
@@ -44,16 +72,24 @@ class L2Controller(object):
 
     def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
 
+        # Core functionality
         self.topo               = Topology(db="topology.db")
         self.sw_name            = sw_name
         self.thrift_port        = self.topo.get_thrift_port(sw_name)
         self.controller         = SimpleSwitchAPI(self.thrift_port)
+        self.coordinator_c      = rpyc.connect('localhost', coordinator_port, keepalive=True)
+        self.custom_calcs       = self.controller.get_custom_crc_calcs()
+        self.cpu_port           = self.topo.get_cpu_port_index(self.sw_name)
+        # Parmeters
         self.epsilon            = float(epsilon)
         self.global_threshold_T = float(global_threshold_T)
         self.p_sampling         = sampling_probability_s
-        self.coordinator_c      = rpyc.connect('localhost', coordinator_port)
-        self.custom_calcs       = self.controller.get_custom_crc_calcs()
-        self.sent_hellos        = {}
+        # Debugging
+        self.seen_flows         = {}
+        self.hellos             = 0
+        self.reports            = 0
+        self.hello_timeouts     = 0
+        self.report_timeouts    = 0
 
         self.init()
 
@@ -62,6 +98,9 @@ class L2Controller(object):
         Initialize controller
         '''
 
+        self.coordinator_c._config['async_request_timeout'] = None
+        self.coordinator_c._config['sync_request_timeout'] = None
+
         self.controller.reset_state()
 
         self.set_crc_custom_hashes()
@@ -69,6 +108,16 @@ class L2Controller(object):
         self.write_p_sampling_to_switch()
 
         self.fill_ipv4_lpm_table()
+
+        self.add_mirror()
+
+
+    def add_mirror(self):
+        '''
+        Copied from the exercise, tells the controller on which port to listen
+        '''
+        if self.cpu_port:
+            self.controller.mirroring_add(100, self.cpu_port)
 
     def set_crc_custom_hashes(self):
         '''
@@ -194,12 +243,14 @@ class L2Controller(object):
                 srcGroup, dstGroup = self.extract_group(flow)
                 group = (srcGroup, dstGroup)
                 if flow_count == 0:
+                    self.hellos += 1
                     # only send a hello if we havent sent a hello yet for this flow
-                    if flow not in self.sent_hellos:
+                    if flow not in self.seen_flows:
                         self.send_hello(flow)
                         self.sent_hellos[flow] = 1
                 else:
                     self.report_flow(flow)
+                    self.reports += 1
 
         #Acknowledge digest
         self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
@@ -222,6 +273,53 @@ class L2Controller(object):
             self.recv_msg_digest(msg)
 
 
+    def recv_msg_cpu(self, pkt):
+        '''
+        Handles a received cloned packet. Unpacks the packet using the
+        Cpu_Header class and does either send a Hello, Report or does error
+        handling.
+
+        Args:
+            pkt (scapy.layers.l2.Ether):    The sniffed copy2CPU packet
+        '''
+
+        packet = Ether(str(pkt))
+
+        if packet.type == 0x1234:
+            cpu_header  = Cpu_Header(packet.payload)
+            flow        = ( str(ipaddress.IPv4Address(cpu_header.srcAddr)),\
+                            str(ipaddress.IPv4Address(cpu_header.dstAddr)),\
+                            cpu_header.srcPort,\
+                            cpu_header.dstPort,\
+                            cpu_header.protocol\
+            )
+            flow_count  = int(cpu_header.flow_count)
+
+            if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
+                self.handle_Error(flow_count)
+            else:
+                # if the flow count is zero, the digest is just a hello message
+                # otherwise, it's a report
+                srcGroup, dstGroup = self.extract_group(flow)
+                group = (srcGroup, dstGroup)
+                if flow_count == 0:
+                    self.hellos += 1
+                    # only send a hello if we havent sent a hello yet for this flow
+                    if flow not in self.sent_hellos:
+                        self.send_hello(flow)
+                        self.sent_hellos[flow] = 1
+                else:
+                    self.reports += 1
+                    self.report_flow(flow)
+
+    def run_cpu_port_loop(self):
+        '''
+        The blocking function that will be running on the controller.
+        Waits for new cloned packets and passes them on to the recv function.
+        '''
+        cpu_port_intf = str(self.topo.get_cpu_port_intf(self.sw_name).replace("eth0", "eth1"))
+        sniff(iface=cpu_port_intf, prn=self.recv_msg_cpu)
+
     def report_flow(self, flow):
         '''
         Reports a mule flow to the central coordinator
@@ -230,7 +328,11 @@ class L2Controller(object):
             flow (tuple):   The flow 5-tuple to be reported
         '''
 
-        self.coordinator_c.root.send_report(flow, self.sw_name)
+        try:
+            self.coordinator_c.root.send_report(flow, self.sw_name)
+        except:
+            print("Error: {0} couldnt send report for {1}".format(self.sw_name, flow))
+            self.report_timeouts += 1
 
     def send_hello(self, flow):
         '''
@@ -243,7 +345,11 @@ class L2Controller(object):
             flow (): The new flow 5-tuple we want to let the Coordinator know about
         '''
 
-        self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
+        try:
+            self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
+        except:
+            print("Error: {0} couldnt send hello for {1}".format(self.sw_name, flow))
+            self.hello_timeouts += 1
 
     def hello_callback(self, flow, l_g):
         '''
@@ -320,7 +426,6 @@ class L2Controller(object):
 
         # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
         # raises an error if the digest IPs have invalid format
-        #TODO: IPv6?
         srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
         if srcGroup is None:
             raise ValueError("Error: invalid srcIP format: {0}".format(srcIP_str))
@@ -334,6 +439,20 @@ class L2Controller(object):
             dstGroup = dstGroup.group(1)
 
         return srcGroup, dstGroup
+
+    def signal_handler(self, sig, frame):
+        '''
+        Shutdown handling
+        '''
+        count_hello_switch = self.controller.register_read("count_hellos")
+        count_report_switch = self.controller.register_read("count_reports")
+
+        print("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}".format(self.sw_name,\
+            count_hello_switch, self.sent_hellos, count_report_switch, self.sent_reports))
+
+        print("{0}: hello timeouts={1}, report timeouts={2}".format(self.sw_name, self.hello_timeouts, self.report_timeouts))
+
+        sys.exit(0)
 
 class InputValueError(Exception):
     pass
@@ -388,13 +507,17 @@ def parser():
     return args.n, args.e, args.t, args.s, args.p
 
 if __name__ == '__main__':
+    #sys.tracebacklimit = 0
     try:
         sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
         l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
 
         print("L2 controller of switch %s ready" % l2_controller.sw_name)
 
-        l2_controller.run_digest_loop()
+        # register signal handler to handle shutdowns
+        signal.signal(signal.SIGINT, l2_controller.signal_handler)
+
+        l2_controller.run_cpu_port_loop()
 
     except InputValueError:
         print("The sampling probability should be between 0 and 1")

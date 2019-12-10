@@ -9,47 +9,17 @@ import dpkt
 from scapy.all import *
 from dpkt.compat import compat_ord
 
-global_thresh_to_percentile = {
+global_thresh_to_percentile_5m = {
     239: '99',
     1728: '99_9',
     5577: '99_99'
 }
 
-def pcap_to_list(pcap_path):
-    '''
-    Parses a pcap file and creates a list of five-tuples
-
-    Args:
-        pcap_path (str): The path to the pcap file
-
-    Returns:
-        packets (list): A list of 5-tuples (flows)
-    '''
-
-    packets = []
-
-    pcap_file = open(pcap_path)
-    pkts = dpkt.pcap.Reader(pcap_file)
-
-    for ts, buf in pkts:
-
-        eth = dpkt.ethernet.Ethernet(buf)
-        if isinstance(eth.data, dpkt.ip.IP):
-            ip = eth.data
-            tcp = ip.data
-            try:
-                src_ip   = inet_to_str(ip.src)
-                dst_ip   = inet_to_str(ip.dst)
-                protocol = ip.p
-                src_port = tcp.sport
-                dst_port = tcp.dport
-            except:
-                continue
-
-            five_tuple = (src_ip, dst_ip, src_port, dst_port, protocol)
-            packets.append(five_tuple)
-
-    return packets
+global_thresh_to_percentile = {
+    127: '99',
+    850: '99_9',
+    2670: '99_99'
+}
 
 ##### Given #####
 # (T) glob_thresh_T -> Global threshold
@@ -107,8 +77,11 @@ def CalculateMoles(real_count, sampl_prob):
 
     moles_M = {}
     for flow, pkt_count in real_count.items():
-        if random.random() <= sampl_prob:
-            moles_M[flow] = pkt_count 
+        # for each packet we have the chance to sample
+        for _ in range(pkt_count):
+            if (random.random()) <= sampl_prob:
+                moles_M[flow] = pkt_count
+                break
 
     return moles_M
 
@@ -127,7 +100,7 @@ def CalculateMules(moles_M, mule_tau):
     mules_U = {}
     for flow, pkt_count in moles_M.items():
         if pkt_count >= mule_tau:
-            mules_U[flow] = pkt_count 
+            mules_U[flow] = pkt_count
 
     return mules_U
 
@@ -141,15 +114,15 @@ def DeriveReporting(comm_budget_c, epsilon, observers_l, sampl_prob, real_count)
     mules_U  = CalculateMules(moles_M, mule_tau)
 
     try:
-        report_prob = min(comm_budget_c * mule_tau / (glob_thresh_T * len(mules_U)), 1)
+        report_prob = min(comm_budget_c * mule_tau / (float(glob_thresh_T) * len(mules_U)), 1)
+        #report_prob = comm_budget_c * mule_tau / (float(glob_thresh_T) * len(mules_U))
 
     # if no mules found, always report
     except ZeroDivisionError:
         report_prob = 1
 
     report_thresh_R = max(int(observers_l * report_prob / float(glob_thresh_T)), 1)
-
-    print("DeriveReporting: report_thresh_R = {0}, mules_U = {1}, report_prob = {2}, mule_tau = {3}".format(report_thresh_R, "x", report_prob, mule_tau))
+    #report_thresh_R = int(observers_l * report_prob / float(glob_thresh_T))
 
     return report_thresh_R, mules_U, report_prob, mule_tau
 
@@ -207,10 +180,7 @@ def GetAccuracy(real_count, real_elephants, report_thresh_R, glob_thresh_T, mule
     except ZeroDivisionError:
         raise ValueError("Error: zero division while calculating precision")
 
-    print("GetAccuracy: F1 score = {0}, precision = {1}, recall = {2}".format(f1_score, precision, recall))
-    print("Sampling probability: {0}".format(sampl_prob))
-
-    return f1_score
+    return f1_score, precision, recall
 
 def performance(found_elephants, real_elephants):
     '''
@@ -242,7 +212,7 @@ def performance(found_elephants, real_elephants):
         if flow not in real_elephants:
             fp = fp+1
 
-    print("performance: tp = {0}, fp = {1}, fn = {2}".format(tp, fp, fn))
+    #print("performance: tp = {0}, fp = {1}, fn = {2}".format(tp, fp, fn))
 
     return tp, fp, fn
 
@@ -265,37 +235,37 @@ def TuneAccuracy(glob_thresh_T, switch_mem, comm_budget_c, real_count, real_elep
         report_prob (float):        The optimal probability for which we report a flow when the flow's packet count has reached the mule threshold (mule_tau)
         report_thresh_R (int):      The optimal threshold on the number of reports for which we promote a mule flow to a elephant flow
         sampl_prob (float):         The optimal probability for which we sample a flow at a switch
-        accuracy_max (float):       The maximum accuracy (F1 score) which is achieved with the optimal set of parameters
+        f1_max (float):             The maximum F1 score which is achieved with the optimal set of parameters
     '''
 
-    accuracy_max         = 0
+    f1_max               = 0
     mole_tau, sampl_prob = GetSampling(switch_mem, real_count, glob_thresh_T)
-    sampl_prob           = 1 / mole_tau
+    sampl_prob           = 1 / float(mole_tau)
 
     eps_min = max(ingress_switches_k / glob_thresh_T, 0) # Theorem 1?
     eps_max = min(observers_l / ingress_switches_k, 1) # Theorem 2?
 
-    sigma   = observers_l / glob_thresh_T # Theorem 4
+    sigma   = observers_l / float(glob_thresh_T) # Theorem 4
     epsilon = eps_max
 
     while (eps_min <= epsilon and epsilon <= eps_max):
         report_thresh_R, mules_U, report_prob, mule_tau = DeriveReporting(comm_budget_c, epsilon, observers_l, sampl_prob, real_count)
 
-        accuracy = GetAccuracy(real_count, real_elephants, report_thresh_R, glob_thresh_T, mules_U, report_prob, sampl_prob, mule_tau)
+        f1_score, precision, recall = GetAccuracy(real_count, real_elephants, report_thresh_R, glob_thresh_T, mules_U, report_prob, sampl_prob, mule_tau)
 
-        if accuracy >= accuracy_max:
+        if f1_score >= f1_max:
             eps_max = epsilon
             epsilon = epsilon - sigma
-            accuracy_max = accuracy
+            f1_max  = f1_score
         else:
             break
 
     # we use the last epsilon that still worked
-    print("TuneAccuracy: epsilon = {0}".format(eps_max))
+    print("TuneAccuracy: best epsilon = {0}, max F1 score = {1}".format(eps_max, f1_max))
 
     report_thresh_R, mules_U, report_prob, mule_tau = DeriveReporting(comm_budget_c, eps_max, observers_l, sampl_prob, real_count)
 
-    return eps_max, mule_tau, report_prob, report_thresh_R, sampl_prob, accuracy_max
+    return eps_max, mule_tau, report_prob, report_thresh_R, sampl_prob, f1_max
 
 def parser():
     parser = argparse.ArgumentParser(description = 'parse the keyword arguments')
@@ -351,8 +321,8 @@ def do_tuning(glob_thresh_T, real_count, real_elephants, observers_l, ingress_sw
         f1_opt (float):             The maximum accuracy (F1 score) which is achieved with the optimal set of parameters
     '''
 
-    switch_mem_list     = [10000, 20000, 50000, 100000, 200000, 500000]
-    comm_budget_list    = [2000, 4000, 6000, 10000, 20000, 50000, 100000]
+    switch_mem_list     = [10000, 20000, 40000, 60000, 100000]
+    comm_budget_list    = [20000, 40000, 60000, 80000, 100000]
 
     f1_opt              = 0
     eps_opt             = 0
@@ -362,7 +332,7 @@ def do_tuning(glob_thresh_T, real_count, real_elephants, observers_l, ingress_sw
     sampl_prob_opt      = 0
 
     for switch_mem in switch_mem_list:
-        for comm_budget_c in comm_budget_list: 
+        for comm_budget_c in comm_budget_list:
             eps, mule_tau, report_prob, report_thresh_R, sampl_prob, f1_score = TuneAccuracy(\
                 glob_thresh_T, switch_mem, comm_budget_c, real_count, real_elephants, observers_l, ingress_switches_k\
             )
@@ -415,5 +385,9 @@ if __name__ == "__main__":
     f1_opt, eps_opt, mule_tau, report_thresh_R, report_prob, sampl_prob = do_tuning(glob_thresh_T, real_count, real_elephants, observers_l, ingress_switches_k)
 
     # return epsilon, tau, report_prob
+    f = open("communication_budget_parameters.txt", "w+")
+    f.append("With C = {3}: epsilon = {0}, sampling probability = {1} report_thresh_R = {2}\n".format(eps_max, sampl_prob, report_thresh_R, comm_budget_c))
+    f.close()
+    print("epsilon = {0}, sampling probability = {1} report_thresh_R = {2}".format(eps_max, sampl_prob, report_thresh_R))
     print("Optimum:")
-    print("epsilon = {0}, sampling probability = {1} report_thresh_R = {2}, max F1 = {3}".format(eps_opt, sampl_prob, report_thresh_R, f1_opt))
+    print("epsilon = {0}, sampling probability = {1} report_thresh_R = {2}, F1 = {3}".format(eps_opt, sampl_prob, report_thresh_R, f1_opt))
