@@ -1,8 +1,8 @@
 # Ignore the following folders
 src/log
 src/pcap
-data/
-#
+pcap
+
 # Ignore the following file types
 *.swp
 *.pyc

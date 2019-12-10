@@ -247,7 +247,7 @@ class L2Controller(object):
                     # only send a hello if we havent sent a hello yet for this flow
                     if flow not in self.seen_flows:
                         self.send_hello(flow)
-                        self.sent_hellos[flow] = 1
+                        self.seen_flows[flow] = 1
                 else:
                     self.report_flow(flow)
                     self.reports += 1
@@ -305,9 +305,9 @@ class L2Controller(object):
                 if flow_count == 0:
                     self.hellos += 1
                     # only send a hello if we havent sent a hello yet for this flow
-                    if flow not in self.sent_hellos:
+                    if flow not in self.seen_flows:
                         self.send_hello(flow)
-                        self.sent_hellos[flow] = 1
+                        self.seen_flows[flow] = 1
                 else:
                     self.reports += 1
                     self.report_flow(flow)
@@ -330,8 +330,8 @@ class L2Controller(object):
 
         try:
             self.coordinator_c.root.send_report(flow, self.sw_name)
-        except:
-            print("Error: {0} couldnt send report for {1}".format(self.sw_name, flow))
+        except Exception as e:
+            print("Error: {0} couldnt send report for {1}: {2}".format(self.sw_name, flow, e))
             self.report_timeouts += 1
 
     def send_hello(self, flow):
@@ -347,8 +347,8 @@ class L2Controller(object):
 
         try:
             self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
-        except:
-            print("Error: {0} couldnt send hello for {1}".format(self.sw_name, flow))
+        except Exception as e:
+            print("Error: {0} couldnt send hello for {1}: {2}".format(self.sw_name, flow, e))
             self.hello_timeouts += 1
 
     def hello_callback(self, flow, l_g):
@@ -448,7 +448,7 @@ class L2Controller(object):
         count_report_switch = self.controller.register_read("count_reports")
 
         print("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}".format(self.sw_name,\
-            count_hello_switch, self.sent_hellos, count_report_switch, self.sent_reports))
+            count_hello_switch, self.hellos, count_report_switch, self.reports))
 
         print("{0}: hello timeouts={1}, report timeouts={2}".format(self.sw_name, self.hello_timeouts, self.report_timeouts))
 
