@@ -150,9 +150,9 @@ def main():
 
     parameter_name = string.lower(parameter_name)
 
-    evaluator = FlowEvaluator(csv_file_path, parameter_name) 
+    evaluator = FlowEvaluator(csv_file_path, parameter_name)
 
-    if parameter_name == 'epsilon': 
+    if parameter_name == 'epsilon':
         for epsilon in parameter_rounds:
 
             print("Evaluating for epsilon = {0}".format(epsilon))

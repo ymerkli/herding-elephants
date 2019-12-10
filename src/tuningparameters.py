@@ -100,7 +100,7 @@ def CalculateMules(moles_M, mule_tau):
     mules_U = {}
     for flow, pkt_count in moles_M.items():
         if pkt_count >= mule_tau:
-            mules_U[flow] = pkt_count 
+            mules_U[flow] = pkt_count
 
     return mules_U
 
@@ -332,7 +332,7 @@ def do_tuning(glob_thresh_T, real_count, real_elephants, observers_l, ingress_sw
     sampl_prob_opt      = 0
 
     for switch_mem in switch_mem_list:
-        for comm_budget_c in comm_budget_list: 
+        for comm_budget_c in comm_budget_list:
             eps, mule_tau, report_prob, report_thresh_R, sampl_prob, f1_score = TuneAccuracy(\
                 glob_thresh_T, switch_mem, comm_budget_c, real_count, real_elephants, observers_l, ingress_switches_k\
             )
@@ -385,5 +385,9 @@ if __name__ == "__main__":
     f1_opt, eps_opt, mule_tau, report_thresh_R, report_prob, sampl_prob = do_tuning(glob_thresh_T, real_count, real_elephants, observers_l, ingress_switches_k)
 
     # return epsilon, tau, report_prob
+    f = open("communication_budget_parameters.txt", "w+")
+    f.append("With C = {3}: epsilon = {0}, sampling probability = {1} report_thresh_R = {2}\n".format(eps_max, sampl_prob, report_thresh_R, comm_budget_c))
+    f.close()
+    print("epsilon = {0}, sampling probability = {1} report_thresh_R = {2}".format(eps_max, sampl_prob, report_thresh_R))
     print("Optimum:")
     print("epsilon = {0}, sampling probability = {1} report_thresh_R = {2}, F1 = {3}".format(eps_opt, sampl_prob, report_thresh_R, f1_opt))
