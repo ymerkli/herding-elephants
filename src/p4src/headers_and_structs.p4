@@ -62,9 +62,6 @@ struct metadata {
     hash_data_t hash_data;
     bit<2> found_flag;
     flow_group_t group;
-
-    bit<14> ecmp_hash;
-    bit<14> ecmp_group_id;
 }
 
 
@@ -122,12 +119,12 @@ header tcp_t{
 const bit<32> TCP_HEADER_BYTE_LENGTH = 20;
 
 header cpu_t {
-    ip4Addr_t srcAddrCPU;
-    ip4Addr_t dstAddrCPU;
-    bit<16>   srcPortCPU;
-    bit<16>   dstPortCPU;
-    bit<16>    protocolCPU;
-    bit<32> flow_countCPU;
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+    bit<16>   srcPort;
+    bit<16>   dstPort;
+    bit<16>   protocol;
+    bit<32>   flow_count;
 
 }
 
