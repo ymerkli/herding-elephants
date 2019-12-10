@@ -15,7 +15,7 @@ from p4utils.utils.topology import Topology
 from p4utils.utils.sswitch_API import *
 ## from crc import Crc
 from rpyc.utils.server import ThreadedServer
-from scapy.all import Ether, sniff, Packet, BitField
+from scapy.all import Ether, sniff, Packet, BitField, hexdump
 
 # Copied from the excercises (taken from wikipedia probably), not all are needed
 crc32_polinomials = [0x04C11DB7, 0xEDB88320, 0xDB710641, 0x82608EDB, 0x741B8CD7, 0xEB31D82E,
@@ -24,6 +24,9 @@ crc32_polinomials = [0x04C11DB7, 0xEDB88320, 0xDB710641, 0x82608EDB, 0x741B8CD7,
 '''
 Used for clone method of receiving packets. Defines the same fields as
 the cpu header of switch.p4
+
+
+
 '''
 
 class Cpu_Header(Packet):
@@ -32,8 +35,7 @@ class Cpu_Header(Packet):
                     BitField('dstAddr', 0, 32),
                     BitField('srcPort', 0, 16),
                     BitField('dstPort', 0, 16),
-                    BitField('protocol', 0, 8),
-                    BitField('flow_count', 0, 32)]
+                    BitField('protocol', 0, 8), BitField('flow_count', 0, 32)]
 
 class L2Controller(object):
     '''
@@ -216,6 +218,7 @@ class L2Controller(object):
         for flow_info in digest:
             # if the 5-tuple is all zero, we got an error message
             flow        = flow_info['flow']
+            print(flow)
             flow_count  = flow_info['flow_count']
             if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
                 self.handle_Error(flow_count)
@@ -264,18 +267,20 @@ class L2Controller(object):
         Args:
             msg (): The received digest message
         '''
+        pkt[0].show()
+        hexdump(pkt)
         packet = Ether(str(pkt))
 
         if packet.type == 0x1234:
             cpu_header  = Cpu_Header(packet.payload)
             flow        = (str(ipaddress.IPv4Address(cpu_header.srcAddr)), str(ipaddress.IPv4Address(cpu_header.dstAddr)), cpu_header.srcPort, cpu_header.dstPort, cpu_header.protocol)
             flow_count  = cpu_header.flow_count
-            if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
-                self.handle_Error(flow_count)
-            else:
-                print(flow)
-                print("\n")
-                print(flow_count)
+            # if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
+            #    self.handle_Error(flow_count)
+            # else:
+            print("\n")
+            print(flow)
+            print(flow_count)
 
         # TODO: Implement this:
         '''

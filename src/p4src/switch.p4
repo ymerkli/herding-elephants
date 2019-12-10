@@ -142,7 +142,9 @@ control MyIngress(inout headers hdr,
         count_hellos.read(count_hello, 0);
         count_hello = count_hello +1;
         count_hellos.write(0, count_hello);
+        meta.tau = count_hello;
         clone3(CloneType.I2E, 100, meta);
+        digest(1, meta.data);
 
     }
 
@@ -155,6 +157,7 @@ control MyIngress(inout headers hdr,
         count_reports.write(0, count_report);
         extractFiveTuple();
         clone3(CloneType.I2E, 100, meta);
+        digest(1, meta.data);
     }
 
     // sends an error message, indicated by an all zero 5-tuple to the
@@ -328,13 +331,16 @@ control MyEgress(inout headers hdr,
         if (standard_metadata.instance_type == 1){
             hdr.cpu.setValid();
 
-            hdr.cpu.srcAddr = meta.data.five_tuple.srcAddr;
-            hdr.cpu.dstAddr = meta.data.five_tuple.dstAddr;
-            hdr.cpu.srcPort = meta.data.five_tuple.srcPort;
-            hdr.cpu.dstPort = meta.data.five_tuple.dstPort;
-            hdr.cpu.protocol = meta.data.five_tuple.protocol;
-            hdr.cpu.flow_count = meta.data.flow_count;
+            hdr.cpu.srcAddr = hdr.ipv4.srcAddr;
+            hdr.cpu.dstAddr  = hdr.ipv4.dstAddr;
+            hdr.cpu.srcPort  = 170;
+            hdr.cpu.dstPort = 187;
+            hdr.cpu.protocol = hdr.ipv4.protocol;
+            hdr.cpu.flow_count = INT32_MAX;
             hdr.ethernet.etherType = CLONE_ETHER_TYPE;
+
+            hdr.ipv4.setInvalid();
+            hdr.tcp.setInvalid();
             bit<32> new_length = CPU_HEADER_BYTE_LENGTH + ETHERNET_HEADER_BYTE_LENGTH;
             truncate(new_length);
         }
