@@ -24,20 +24,27 @@ class CoordinatorService(rpyc.Service):
     The switches send messages to the Coordinator
 
     Args:
+        reporting_threshold_R (int): The thresholds on the report count for which we promote a mule to a heavy hitter
+        output_file_path (str):         The filepath where the found heavy hitters (elephants) will be written to json file
+        verbose (bool):                 Whether Coordinator should run in verbose mode (write what's happening to stdout)
 
     Attributes:
-        heavy_hitter_set (list):     A list of flows which are heavy hitters
-        reports (dict):              A dict of flows and their report count. Key is the flow hash
-        reporting_threshold_R (int): The thresholds on the report count for which we promote a mule to a heavy hitter
-        l_g_table (dict):            A dict storing the locality parameter l_g for a flow based on the group g
-                                     to which the flow belongs to. Key is a flow table, value is an int
-        group_to_switches (dict):    A dict storing which switches have seen a flow. Key is a flow tuple, value is an array
-                                     of sw_names
-        callback_table (dict):       A dict storing the callbacks received from switches in hello messages.
-                                     Callbacks are used to send l_g back to switches. Key is a sw_name (str), value is a function.
+        heavy_hitter_set (list):        A list of flows which are heavy hitters
+        reports (dict):                 A dict of flows and their report count. Key is the flow hash
+        reporting_threshold_R (int):    The thresholds on the report count for which we promote a mule to a heavy hitter
+        l_g_table (dict):               A dict storing the locality parameter l_g for a flow based on the group (2-tuple)
+                                        to which the flow belongs to. Key is a group, value is an int
+        group_to_switches (dict):       A dict storing which switches have seen a flow. Key is a group (2-tuple), 
+                                        value is an array of sw_names
+        callback_table (dict):          A dict storing the callbacks received from switches in hello messages.
+                                        Callbacks are used to send l_g back to switches. Key is a sw_name (str), value is a function.
+        output_file_path (str):         The filepath where the found heavy hitters (elephants) will be written to json file
+        received_hellos (int):          The number of hellos the coordinator has received from all switches
+        received_reports (int):         The number of reports the coordinator has received from all switches
+        verbose (bool):                 Whether Coordinator runs in verbose mode (write what's happening to stdout)
     '''
 
-    def __init__(self, reporting_threshold_R, output_file_path):
+    def __init__(self, reporting_threshold_R, output_file_path, verbose):
         self.heavy_hitter_set       = []
         self.reports                = {}
         self.reporting_threshold_R  = reporting_threshold_R
@@ -47,6 +54,7 @@ class CoordinatorService(rpyc.Service):
         self.output_file_path       = output_file_path
         self.received_hellos        = 0
         self.received_reports       = 0
+        self.verbose                = verbose
 
     def exposed_send_report(self, flow, sw_name):
         '''
@@ -73,7 +81,9 @@ class CoordinatorService(rpyc.Service):
             sw_name (str):  The name of the switch that sent the report
         '''
 
-        #print("Received report from {0} for {1}".format(sw_name, flow))
+        if self.verbose:
+            print("Received report from {0} for {1}".format(sw_name, flow))
+
         # if the flow has been reported before, increase its count
         # otherwise, start counting
         if flow in self.reports:
@@ -114,7 +124,9 @@ class CoordinatorService(rpyc.Service):
                                     callback(flow, l_g) (see L2Controller class)
         '''
 
-        #print("Received hello from {0} for {1}".format(sw_name, flow))
+        if self.verbose:
+            print("Received hello from {0} for {1}".format(sw_name, flow))
+
         # store the callback function since we need it several times
         if sw_name not in self.callback_table:
             self.callback_table[sw_name] = hello_callback
@@ -164,7 +176,6 @@ class CoordinatorService(rpyc.Service):
 
         # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
         # raises an error if the digest IPs have invalid format
-        #TODO: IPv6?
         srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
         if srcGroup is None:
             raise ValueError("Error: invalid srcIP format: {0}".format(srcIP_str))
@@ -204,12 +215,17 @@ class CoordinatorServer(object):
     The server running the Coordinator service
 
     Args:
-        server_port (int):      The port on which the Coordinator will be running on
-        output_file_path (str): The file path where the heavy hitter set will be written to
+        server_port (int):                  The port on which the Coordinator will be running on
+        reporting_threshold_R (int):        The thresholds on the report count for which we promote a mule to a heavy hitter
+        output_file_path (str):             The file path where the heavy hitter set will be written to
+        verbose (bool):                     Whether Coordinator should run in verbose mode (write what's happening to stdout)
+    Attributes:
+        coordinator_service (rpyc service): The rpyc service which runs on the coordinator server
+        server (rpyc threaded server):      The rpyc server (running in threaded mode) which runs the service
     '''
 
-    def __init__(self, server_port, reporting_threshold_R, output_file_path):
-        self.coordinator_service = CoordinatorService(reporting_threshold_R, output_file_path)
+    def __init__(self, server_port, reporting_threshold_R, output_file_path, verbose):
+        self.coordinator_service = CoordinatorService(reporting_threshold_R, output_file_path, verbose)
         self.server              = ThreadedServer(self.coordinator_service, port=server_port)
 
     def start(self):
@@ -260,13 +276,18 @@ def parser():
         help="The output path for the heavy hitter set"
     )
 
+    parser.add_argument(
+        "--v",
+        action="store_true"
+    )
+
     args = parser.parse_args()
 
-    return args.p, args.r, args.o
+    return args.p, args.r, args.o, args.v
 
 if __name__ == '__main__':
 
-    coordinator_server_port, reporting_threshold_R, output_file_path = parser()
+    coordinator_server_port, reporting_threshold_R, output_file_path, verbose = parser()
 
     # error checking
     if reporting_threshold_R < 1:
@@ -274,7 +295,7 @@ if __name__ == '__main__':
             reporting_threshold_R
         ))
 
-    coordinator = CoordinatorServer(coordinator_server_port, reporting_threshold_R, output_file_path)
+    coordinator = CoordinatorServer(coordinator_server_port, reporting_threshold_R, output_file_path, verbose)
 
     # register signal handler to handle shutdowns
     signal.signal(signal.SIGINT, coordinator.signal_handler)
