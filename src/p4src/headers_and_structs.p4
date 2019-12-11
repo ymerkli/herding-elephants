@@ -27,7 +27,6 @@ struct five_tuple_t {
     bit<8>    protocol;
 }
 
-
 // Used by hash functions and the table lookup to store data
 struct hash_data_t {
     flow_id_t hash_key;
@@ -109,15 +108,13 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
-
 header cpu_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
     bit<16>   srcPort;
     bit<16>   dstPort;
-    bit<8>    protocol;
-    bit<32> flow_count;
-
+    bit<8>   protocol;
+    bit<32>   flow_count;
 }
 
 const bit<32> CPU_HEADER_BYTE_LENGTH = 17;

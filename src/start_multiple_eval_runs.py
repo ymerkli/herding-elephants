@@ -9,6 +9,7 @@ import csv
 import json
 import string
 import re
+import sys
 
 from p4utils.utils.topology import Topology
 from flow_evaluator import FlowEvaluator
@@ -20,9 +21,31 @@ path_to_src = re.match(r"^(.+/)*(.+)\.(.+)", path_to_src).group(1) #remove the f
 found_elephants_path = "{0}../evaluation/data/found_elephants.json".format(path_to_src)
 
 global_thresh_to_percentile = {
-    239: '99',
-    1728: '99_9',
-    5577: '99_99'
+    'eval5m': {
+        239: '99',
+        1728: '99_9',
+        5577: '99_99'
+    },
+    'eval1m': {
+        134: '99',
+        901: '99_9',
+        3180: '99_99'
+    },
+    'eval400k': {
+        91: '99',
+        470: '99_9',
+        1504: '99_99'
+    },
+    'eval100k': {
+        50: '99',
+        247: '99_9',
+        1091: '99_99'
+    },
+    'eval500': {
+        11: '99',
+        37: '99_9',
+        37: '99_99'
+    }
 }
 
 def startup(global_threshold, report_threshold, epsilon, sampling_probability):
@@ -133,9 +156,18 @@ def main():
     except InputValueError:
         print("The sampling probability and epsilon should be between 0 and 1")
 
+    pcap_file_name = re.match(r"^(.+/)*(.+)\.(.+)", pcap_file_path).group(2)
+    # naming convention for evaluation pcap datasets: eval<num_packets>.pcap
+    num_packets    = re.match(r"eval(\d+[km]?)", pcap_file_name).group(1)
+
     # select the real elephants depending on the global threshold
-    real_elephants_path  = "{0}../evaluation/data/real_elephants_{1}.json".format(
-        path_to_src, global_thresh_to_percentile[t]
+    if pcap_file_name not in global_thresh_to_percentile:
+        raise ValueError("Error: pcap set {0} is not known".format(pcap_file_name))
+    if t not in global_thresh_to_percentile[pcap_file_name]:
+        raise ValueError("Error: global threshold {0} is not mapped to a percentile for {1}".format(t, pcap_file_name))
+
+    real_elephants_path  = "{0}../evaluation/data/real_elephants_{1}_{2}.json".format(
+        path_to_src, num_packets, global_thresh_to_percentile[pcap_file_name][t]
     )
     print("Real elephants path: ", real_elephants_path)
 
@@ -157,7 +189,7 @@ def main():
             # send traffic from host
             send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '300', '%s' % pcap_file_path])
 
-            time.sleep(60)
+            time.sleep(10)
             print("Sending finished, killing processes")
             kill_processes(pid_list)
 
@@ -181,9 +213,9 @@ def main():
             time.sleep(10)
 
             # send traffic from host
-            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '1000', '%s' % pcap_file_path])
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '300', '%s' % pcap_file_path])
 
-            time.sleep(60)
+            time.sleep(10)
             print("Sending finished, killing processes")
             kill_processes(pid_list)
 
@@ -202,4 +234,5 @@ def main():
     print("All rounds finished")
 
 if __name__ == '__main__':
+    sys.tracebacklimit = 0
     main()

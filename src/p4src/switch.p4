@@ -130,10 +130,9 @@ control MyIngress(inout headers hdr,
         meta.send_count = 0;
         bit<32> count_hello;
         count_hellos.read(count_hello, 0);
-        count_hello = count_hello +1;
+        count_hello = count_hello + 1;
         count_hellos.write(0, count_hello);
         clone3(CloneType.I2E, 100, meta);
-
     }
 
     // sends a report msg to the local controller with the 5tuple and the current
@@ -142,7 +141,7 @@ control MyIngress(inout headers hdr,
         meta.send_count = meta.flow_count;
         bit<32> count_report;
         count_reports.read(count_report, 0);
-        count_report = count_report +1;
+        count_report = count_report + 1;
         count_reports.write(0, count_report);
         clone3(CloneType.I2E, 100, meta);
     }
@@ -314,16 +313,16 @@ control MyEgress(inout headers hdr,
         if (standard_metadata.instance_type == 1){
             hdr.cpu.setValid();
             if(meta.tau == INT32_MAX){
-                hdr.cpu.srcAddr = 0;
+                hdr.cpu.srcAddr  = 0;
                 hdr.cpu.dstAddr  = 0;
                 hdr.cpu.srcPort  = 0;
-                hdr.cpu.dstPort = 0;
+                hdr.cpu.dstPort  = 0;
                 hdr.cpu.protocol = 0;
             } else {
-                hdr.cpu.srcAddr = hdr.ipv4.srcAddr;
+                hdr.cpu.srcAddr  = hdr.ipv4.srcAddr;
                 hdr.cpu.dstAddr  = hdr.ipv4.dstAddr;
                 hdr.cpu.srcPort  = hdr.tcp.srcPort;
-                hdr.cpu.dstPort = hdr.tcp.dstPort;
+                hdr.cpu.dstPort  = hdr.tcp.dstPort;
                 hdr.cpu.protocol = hdr.ipv4.protocol;
             }
             hdr.cpu.flow_count = meta.send_count;
@@ -334,7 +333,7 @@ control MyEgress(inout headers hdr,
             bit<32> new_length = CPU_HEADER_BYTE_LENGTH + ETHERNET_HEADER_BYTE_LENGTH;
             truncate(new_length);
         }
-     }
+    }
 }
 
 /*************************************************************************

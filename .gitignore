@@ -1,14 +1,13 @@
-# Ignore the src/log folder
+# Ignore the following folders
 src/log
-
-# Ignore the src/pcap folder
 src/pcap
-
-# Ignore the data folder
+pcap
 data
 
-# Ignore all swap files
+# Ignore the following file types
 *.swp
+*.pyc
+*.p4i
 
 # Ignore .p4i and .json files
 src/p4app/*.p4i
@@ -22,7 +21,5 @@ src/real_elephants.json
 src/found_elephants.json
 src/controller/found_elephants.json
 src/start_controllers.sh
+src/kill_script.sh
 src/topology.db
-src/counts.txt
-src/flow_evaluator.pyc
-src/kill_skript.sh
