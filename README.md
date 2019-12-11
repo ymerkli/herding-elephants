@@ -11,28 +11,6 @@
 git clone https://gitlab.ethz.ch/nsg/adv-comm-net-projects/02-herding.git ~/
 ```
 
-### Update local repository
-
-```bash
-git pull https://gitlab.ethz.ch/nsg/adv-comm-net-projects/02-herding.git
-```
-
-### Commit and push
-```bash
-cd /home/p4/02-herding
-git add filename.txt
-git commit -m "YourMessage"
-git push -u origin master
-```
-
-### Commit and push to branch
-```bash
-cd /home/p4/02-herding
-git add filename.txt
-git commit -m "YourMessage"
-git push -u origin branchname
-```
-
 ## Project description
 Herd is distributed algorithm which detects network-wide heavy hitters by combining sample-and-hold with probabilistic reporting to a central coordinator.
 Further an algorithm to tune Herd for a maximum F1-score under communication and state constraints is also implemented.
