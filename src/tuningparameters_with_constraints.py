@@ -368,8 +368,8 @@ if __name__ == "__main__":
         writer.writeheader()
         i = 0
         print("Starting calculation of communication constraints parameters")
-        while (i <= nr_eval_rounds):
-            comm_budget_c += difference/nr_eval_rounds
+        while (i < nr_eval_rounds):
+            comm_budget_c = comm_budget_array[i]
             i += 1
             eps, mule_tau, report_prob, report_thresh_R, sampl_prob, f1_score = TuneAccuracy(\
                 glob_thresh_T, switch_mem, comm_budget_c, real_count, real_elephants, observers_l, ingress_switches_k\
