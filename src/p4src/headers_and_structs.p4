@@ -19,14 +19,6 @@ const bit<16> CLONE_ETHER_TYPE = 0x1234;
 *********************** S T R U C T S  ***********************************
 *************************************************************************/
 
-struct five_tuple_t {
-    ip4Addr_t srcAddr;
-    ip4Addr_t dstAddr;
-    bit<16>   srcPort;
-    bit<16>   dstPort;
-    bit<8>    protocol;
-}
-
 // Used by hash functions and the table lookup to store data
 struct hash_data_t {
     flow_id_t hash_key;
@@ -43,7 +35,7 @@ struct flow_group_t {
 
 // We need fields for: 2 coinflips,
 //                     1 local threshold,
-//                     1 report_data struct for digest command
+//                     2 counters to temporarily store the flow count from a table
 //                     1 hash_data struct for counter lookup
 //                     1 found_flag to indicate which table we are operating on
 //                     1 flow_group struct for the group_values table lookup
@@ -113,7 +105,7 @@ header cpu_t {
     ip4Addr_t dstAddr;
     bit<16>   srcPort;
     bit<16>   dstPort;
-    bit<8>   protocol;
+    bit<8>    protocol;
     bit<32>   flow_count;
 }
 

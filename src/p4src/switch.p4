@@ -5,8 +5,6 @@
 
 #include "headers_and_structs.p4"
 #include "parser.p4"
-//TODO (to replicate paper):
-// 3) Add support for ipv6 and udp
 
 // Hash table and group table properties
 #define HASH_TABLE_FIELD_WIDHT 64
@@ -64,17 +62,9 @@ control MyIngress(inout headers hdr,
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
-
-        //set the src mac address as the previous dst
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-
-       //set the destination mac address that we got from the match in the table
         hdr.ethernet.dstAddr = dstAddr;
-
-        //set the output port that we also get from the table
         standard_metadata.egress_spec = port;
-
-        //decrease ttl by 1
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
@@ -89,11 +79,6 @@ control MyIngress(inout headers hdr,
         size = 256;
         default_action = drop;
     }
-
-    action extractGroup() {
-        meta.group.srcGroup = (bit<8>) (hdr.ipv4.srcAddr & 0xff000000 >> 24);
-        meta.group.dstGroup = (bit<8>) (hdr.ipv4.dstAddr & 0xff000000 >> 24);
-        }
 
     // Hashes the 5-tuple to generate an id
     // STORED: hash_key -> meta.hash_data.hash_key
@@ -228,7 +213,8 @@ control MyIngress(inout headers hdr,
         if(hdr.ipv4.isValid()) {
             // extract the first 8 bits of the ip addresses to use in the
             // group_values table lookup
-            extractGroup();
+            meta.group.srcGroup = (bit<8>) (hdr.ipv4.srcAddr & 0xff000000 >> 24);
+            meta.group.dstGroup = (bit<8>) (hdr.ipv4.dstAddr & 0xff000000 >> 24);
             // if we have an entry hit, we get the group parameters and can proceed
             if (group_values.apply().hit) {
                 // simulate coin flips (meta.flip_r is now set)

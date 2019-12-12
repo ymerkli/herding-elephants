@@ -14,6 +14,24 @@ import sys
 from p4utils.utils.topology import Topology
 from flow_evaluator import FlowEvaluator
 
+'''
+
+Evaluates f1 score, recall and precicion for multiple rounds and writes the
+results to a csv file.
+
+Args:
+    global threshold: The threshold corresponding to the percentile one wants to
+                      evaluate.
+    pcap file path:   The pcap file the algorithm should use for evaluation.
+    input csv file:   The csv file where this skript can find the epsilon,
+                      report probability,report threshold and sampling probability
+                      to use for each round.
+    outuput csv file: The file which should be used to write the results
+
+Returns: The results of each round are written to the specified csv file.
+
+'''
+
 #Get the full path to the src folder
 path_to_src = os.path.realpath(__file__)
 path_to_src = re.match(r"^(.+/)*(.+)\.(.+)", path_to_src).group(1) #remove the filename from the path
@@ -127,6 +145,7 @@ def main():
 
     evaluator = FlowEvaluator(output_csv_file_path, 'round')
 
+    # use input csv file to get parameters
     with open(param_csv_file_path) as csv_file:
         reader = csv.reader(csv_file)
         for row in reader:
@@ -162,7 +181,7 @@ def main():
 
             # Start the evaluation of the current round
             f1_score, precision, recall = evaluator.get_accuracy(real_elephants_path, found_elephants_path)
-            # Write the found measures to the csv file
+            # Write the found measures to the output csv file
             evaluator.write_accuracies_to_csv(f1_score, precision, recall, round)
 
     print("All rounds finished")
