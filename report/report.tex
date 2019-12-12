@@ -153,7 +153,7 @@ If unlimited bandwidth was available $r$ could be set to 1, since there would be
 \subsection{Switch logic} \label{switch}
 Herd uses randomness for sampling packets and reporting to the global coordinator. Of course p4 doens't have a random library. Therefore hashes are used to 'flip' coins and simulate randomness. Further the switch can't process floating point numbers. For this reason the coordinator converts the probabilities into 32-bit numbers. In the flip action this numbers are then compared to hashes. Depending on the comparison a flip-flag, which represents a True or False, is either set or reset. This flag represents whether the random coin toss was successful or not.
 
-A packet arrives at the switch. The switch extracts the first 8 bits to look up the group value of the packet. For unknown groups the switch sends a hello message to the coordinator, which reports back to the controller with a locality parameter for the group. For known groups the switch uses the sample-and-hold algorithm to either make a new entry in one of the three hash tables or increase the value associated with the flow. If the local thresh $\tau$ was reached flip again a coin. If the flip was successful tell local controller to report to coordinator and reset the counting value. 
+A packet arrives at the switch. The switch extracts the first 8 bits to look up the group value of the packet. For unknown groups the switch sends a hello message to the coordinator, which reports back to the controller with a locality parameter for the group. For known groups the switch uses tcpthe sample-and-hold algorithm to either make a new entry in one of the three hash tables or increase the value associated with the flow. If the local thresh $\tau$ was reached flip again a coin. If the flip was successful tell local controller to report to coordinator and reset the counting value. 
 
 \subsection{Controllers} \label{controller}
 
@@ -164,9 +164,9 @@ A packet arrives at the switch. The switch extracts the first 8 bits to look up 
 	\label{fig:global_fig}
 \end{figure}
 
-When writing controller in this section the control plane of the ingress switches are meant, so not including the controller of the coordinator. 
+When writing 'controller' in this section the L2Controllers are meant, so not including the controller of the coordinator. 
 
-The controller starts by cleaning all the hash tables. Then it fills in the forwarding table. In our testing setup the switches with Herd on them only have two neighbors, a switch for load balancing between the ten Herd switches and an aggregating switch which sends traffic to the end hosts.
+The L2Controller starts by cleaning all the hash tables. Then it fills in the forwarding table. In our testing setup the switches with Herd on them only have two neighbors, a switch for load balancing between the ten Herd switches and an aggregating switch which sends traffic to the end hosts.
 
 Further, the controller runs a digest loop in order to handle the communication between the data and the control plane of the programmable switch. The controller unpacks the received digest message. For each flow the controller checks whether it has seen that flow before. If the flow was not seen before the controller sends a hello to the coordinator, but only if this wasn't already done for the group of the flow. The group is simply a two-tuple consisting of the source- and the destination-IP. When sending a hello the controller expects a callback from the coordinator, telling it the according locality parameter. The coordinator can then calculate the according group parameters $\tau_g$ and $r_g$. If it is a known flow the controller sends a report. %"digest loop"
 
@@ -196,10 +196,21 @@ The original paper mentions the implementation of a rolling window which resets 
 
 Further we faced severe speed issues. The scapy library often reached its limit in terms of speed. Another challenge was that the pcap files are often so big that it takes a long time to test the implementation of Herd. This makes the testing process even slower together with scapy. 
 %how we solved it. I need to have explained again.
+
+We ended up using copy-to-CPU in trying to increase the speed. Further, tcpreplay is used in order to send packets specified in the pcap file from the host $h1$. We also recompiled the p4app without logging and debugging disabled. However, all this didn't help much. Already with not much more than 200 packets per seconds many packets didn't make it to the coordinator. We suspect that during the time coordinator needs to process a hello the ingress switch somehow loses lots a packets.
+
 However, the speed issues we faced are only a problem in software, since the speed of the whole architecture in would be a multiple of the speed in software when implented onto hardware.
 
 \subsection{Assessement of the original paper} \label{original_paper}
 Due to the original paper on being only a rejected conference submission and not an accepted paper we faced many challenges along the way. The authors are often vague. For instance the topology used for evaluation is barely mentioned. The paper also contains mistakes. For example in the GetSampling function the sampling probability is not adjusted in the while-loop which could trap the program in an infinite loop. The idea of a rolling time windows sounds rushed. This is why we implemented that the switch resets once the table is full.
+
+Many import ideas of the protocol and its assessment are only mentioned with a few words, or not even all. The unit of the communication budget $C$ can only be guessed since it is written once on a graph, the unit of the state constraint $S$ is never mentioned at all. Even though large parts of the algorithm for the tuning of the parameters is in pseudocode many section are unclear and substandartly explained. Section 5.2 of the paper is especially poorly explained. Even though it explains the algorithm "DeriveReporting" the formluas are barely derived at all. %too harsh?
+Many key ideas are not explained at all, for example where to data set for the tuning algorithm is derived from or from where the algorithm knows the number of switches which observe a flow $l$, Since algorithm doesn't seem to be embedded into the running protocol. The authors seem to solve this problem by using a constand $l$ of 2 in their evaluation.
+
+What happens when all the hash tables are full is mentioned in a single cryptic sentence. Luckily, we were able to solve this issue ourselves by emptying the tables in such an event.
+
+The whole evaluation section is a mess.%Maybe a bit harsh.
+The figure 6 (a) and (b) don't say much at all since it only measures the precision. Precision only takes false and true positives into account,  but false negatives, which very import for a heavy hitter detector, are completely omitted. Again the lack of overall units makes the understanding of the graphs unnecessary difficult. The Tuning Efficacy is not a bad idea per se, but the last paragraph of the evaluation is very unprecisely written. The two graphs belonging to that section seem very rushed, they don't even have the measured parameters attached to the axis and the heat meter.
 
 %\lipsum[1-5]
 
@@ -233,6 +244,9 @@ To generate a sizeable amount of traffic on the sending host $h1$ we use CAIDA's
 
 Configuring the parameters $\tau$, $r$ and $R$ in isolation might actually impact the accuracy of Herd negatively. Thus $tuningparameters.py$ simulates the whole protocol with given training data in order to reach the best possible accuracy for the running protocol.
 
+However, since we had severe speed issues we weren't able to evaluate the protocol with five million packets like the original paper did. Using the whole five million packets would have taken around seven hours for each run. Since the evaluation also should have varying parameters this would have taken weeks for the assessment of each parameter, given that we have no errors. Thus we ended up using 100k and 400k packets, this takes two hours, respectively eight hours, with varying parameters.
+
+%substitution for evaluation graphs and their discussion
 \subsection{Evaluation} \label{evaluation}
 \begin{figure}
 	\centering
@@ -256,7 +270,9 @@ Something in %\figref{topology_fig}. %I still don't understand how \figrefs work
 \hint{A brief conclusion about how you solved the project.} \\
 We reimplemented Herd, a distributed heavy hitter protocol. Compared to the original paper we changed when to reset the flow/count tables. Further we had to implement a load balancing switch in front of the Herd switches for the evaluation. Additionaly, we had severe speed issues in the implementation in software compared to a implementation in hardware.
 
-Further research could go towards improving the selection of the parameters. How it is implemented at the moment, the tuning has to be done ahead of the protocol with training data. An improved protocol could maybe adjust the parameters according to captured data, and not prerecorded data. Even a dynamicaly changing tuning can be imagined. Another research topic would be, in case a single coordinator reaches its limit in processing power and speed, to have multiple coordinators, each responsible for a subnet, transferring data between each other.
+Further research could go towards improving the selection of the parameters. How it is implemented at the moment, the tuning has to be done offline, ahead of the protocol, with given training data. An improved protocol could maybe adjust the parameters according to captured data, and not prerecorded data. Even a dynamicaly changing tuning can be imagined which runs the tuning algorithm after certain events, e.g. after a timer or after reseting the hash tables. 
+
+Another research topic would be, in case a single coordinator reaches its limit in processing power and speed, to have multiple coordinators, each responsible for a subnet, transferring data between each other.
 %\lipsum[1]
 
 \label{lastpage} % this must stay here
