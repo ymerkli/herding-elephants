@@ -129,7 +129,6 @@ class L2Controller(object):
             self.controller.set_crc32_parameters(custom_crc32, crc32_polinomials[i], 0xffffffff, 0xffffffff, True, True)
             i+=1
 
-
     def write_p_sampling_to_switch(self):
         '''
         Writes the registers needed to initialize counters in the switch.
@@ -142,6 +141,7 @@ class L2Controller(object):
         # register names are defined in switch.p4
         self.controller.register_write("sampling_probability", 0, sampling_probability)
         self.controller.register_write("count_start", 0, counter_startvalue)
+
 
     def reset_hash_tables(self):
         '''
@@ -186,93 +186,6 @@ class L2Controller(object):
                 # we only add one single rule for the agregating switch
                 break
 
-    def unpack_digest(self, msg, num_samples):
-        '''
-        Unpacks a digest received from the data plane
-
-        Args:
-            msg ():             The received message
-            num_samples (int):  Number of samples
-
-        Returns:
-            digest (list):      An array of flow_info's (dicts), where we store the flow 5-tuple (key 'flow')
-                                and the flow_count (int) (key flow_count)
-        '''
-
-        digest = []
-        starting_index = 32
-        for sample in range(num_samples):
-            srcIP, dstIP, srcPort, dstPort, protocol, flow_count  = struct.unpack(">LLHHBL", msg[starting_index:starting_index + 17])
-
-            # convert int IPs to str
-            srcIP = str(ipaddress.IPv4Address(srcIP))
-            dstIP = str(ipaddress.IPv4Address(dstIP))
-
-            # construct flow tuple
-            flow = (srcIP, dstIP, srcPort, dstPort, protocol)
-            flow_info = {
-                'flow': flow,
-                'flow_count': flow_count
-            }
-            digest.append(flow_info)
-
-        return digest
-
-    def recv_msg_digest(self, msg):
-        '''
-        Handles a received digest message. Unpacks the digest using self.unpack_digest() and then
-        send a hello or a report to the Coordinator
-
-        Args:
-            msg (): The received digest message
-        '''
-
-        topic, device_id, ctx_id, list_id, buffer_id, num = struct.unpack("<iQiiQi", msg[:32])
-
-        digest = self.unpack_digest(msg, num)
-
-        for flow_info in digest:
-            # if the 5-tuple is all zero, we got an error message
-            flow        = flow_info['flow']
-            flow_count  = flow_info['flow_count']
-            if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
-                self.handle_Error(flow_count)
-            else:
-                # if the flow count is zero, the digest is just a hello message
-                # otherwise, it's a report
-                srcGroup, dstGroup = self.extract_group(flow)
-                group = (srcGroup, dstGroup)
-                if flow_count == 0:
-                    self.hellos += 1
-                    # only send a hello if we havent sent a hello yet for this flow
-                    if flow not in self.seen_flows:
-                        self.send_hello(flow)
-                        self.seen_flows[flow] = 1
-                else:
-                    self.report_flow(flow)
-                    self.reports += 1
-
-        #Acknowledge digest
-        self.controller.client.bm_learning_ack_buffer(ctx_id, list_id, buffer_id)
-
-    def run_digest_loop(self):
-        '''
-        The blocking function that will be running on the controller.
-        Waits for new digests and passes them on
-        '''
-
-        sub = nnpy.Socket(nnpy.AF_SP, nnpy.SUB)
-        notifications_socket = self.controller.client.bm_mgmt_get_info().notifications_socket
-        sub.connect(notifications_socket)
-        sub.setsockopt(nnpy.SUB, nnpy.SUB_SUBSCRIBE, '')
-
-        print("Switch {0}: starting digest loop".format(self.sw_name))
-
-        while True:
-            msg = sub.recv()
-            self.recv_msg_digest(msg)
-
-
     def recv_msg_cpu(self, pkt):
         '''
         Handles a received cloned packet. Unpacks the packet using the
@@ -298,19 +211,12 @@ class L2Controller(object):
             if flow == (str(ipaddress.IPv4Address(0)),str(ipaddress.IPv4Address(0)),0,0,0):
                 self.handle_Error(flow_count)
             else:
-                # if the flow count is zero, the digest is just a hello message
-                # otherwise, it's a report
+                # we only send reports here since there is no hellos
                 srcGroup, dstGroup = self.extract_group(flow)
                 group = (srcGroup, dstGroup)
-                if flow_count == 0:
-                    self.hellos += 1
-                    # only send a hello if we havent sent a hello yet for this flow
-                    if flow not in self.seen_flows:
-                        self.send_hello(flow)
-                        self.seen_flows[flow] = 1
-                else:
-                    self.reports += 1
-                    self.report_flow(flow)
+
+                self.reports += 1
+                self.report_flow(flow)
 
     def run_cpu_port_loop(self):
         '''
@@ -391,23 +297,8 @@ class L2Controller(object):
         r_g = int(r_g) # convert back to int
 
         '''
-        Add an entry to the group_values table. In case the group already has
-        an entry, this wont do anything and return a value
+        Locality not needed, table set disabled
         '''
-        self.controller.table_add('group_values', 'getValues',\
-            [srcGroup, dstGroup], [str(r_g), str(tau_g)])
-
-        '''
-        In case the group already had an entry, the table_add won't update it
-        and simply return a warning. We simply do a table_update after every
-        single table_add. This doesn't hurt for new group adds and correctly
-        updates the group values for already existing groups
-        '''
-        entry_handle = self.controller.get_handle_from_match('group_values',\
-            [srcGroup, dstGroup])
-
-        self.controller.table_modify('group_values', 'getValues',\
-            entry_handle, [str(r_g), str(tau_g)])
 
     def extract_group(self, flow):
         '''
@@ -444,24 +335,13 @@ class L2Controller(object):
         '''
         Shutdown handling
         '''
-        count_hello_switch = self.controller.register_read("count_hellos")
         count_report_switch = self.controller.register_read("count_reports")
 
-        print("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}".format(self.sw_name,\
-            count_hello_switch, self.hellos, count_report_switch, self.reports))
-
-        print("{0}: hello timeouts={1}, report timeouts={2}".format(self.sw_name, self.hello_timeouts, self.report_timeouts))
-        mem_used = 0
-        for i in range (1,4):
-            switch_mem = self.controller.register_read("hash_table_{}".format(i))
-            for place in switch_mem:
-                if(switch_mem):
-                    mem_used += 1
-
-        f = open("counter_results","a")
-        f.write("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}\n".format(self.sw_name,\
-            count_hello_switch, self.hellos, count_report_switch, self.reports))
-
+        print("{0}: switch reports={1}, recv reports={2}".format(self.sw_name,\
+            count_report_switch, self.reports))
+        f = open("counter_results_ps","a")
+        f.write("{0}: switch reports={1}, recv reports={2}\n".format(self.sw_name,\
+            count_report_switch, self.reports))
 
         sys.exit(0)
 

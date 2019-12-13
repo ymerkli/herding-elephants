@@ -95,8 +95,7 @@ control MyIngress(inout headers hdr,
         ///               HERD SECTION                  ///
 
     // registers set by local controller
-    register<bit<32>>(1) sampling_probability;
-    register<bit<32>>(1) count_start; // equals 1/sampling_probability
+    register<bit<32>>(1) report_threshold;
 
     register<bit<32>>(1) count_hellos;
     register<bit<32>>(1) count_reports;
@@ -108,17 +107,6 @@ control MyIngress(inout headers hdr,
 
     // used to introduce more randomness in the flip function
     register<bit<32>>(2) last_coinflips;
-
-    // sends a hello msg to the local controller with the 5tuple and a flow
-    // counter of 0 to indicate the flow is new.
-    action sendHello() {
-        meta.send_count = 0;
-        bit<32> count_hello;
-        count_hellos.read(count_hello, 0);
-        count_hello = count_hello + 1;
-        count_hellos.write(0, count_hello);
-        clone3(CloneType.I2E, 100, meta);
-    }
 
     // sends a report msg to the local controller with the 5tuple and the current
     // flow counter.
@@ -138,50 +126,26 @@ control MyIngress(inout headers hdr,
         clone3(CloneType.I2E, 100, meta);
     }
 
-    // called by a table hit in group_table
-    // IN:  group report probability (converted to uint32) p_report,
-    //      group parameter tau (threshold)
-    // STORED:  group threshold -> meta.tau
-    //          report probability -> meta.flip_r
-    action getValues(uint32_probability p_report, tau_t tau_g) {
-        meta.tau = tau_g;
-        meta.flip_r = p_report;
-    }
-
     // Takes timestamps and ip dst/srcAddr and hashes them to a bit 32 value
     // which is compared against the saved probabilities.
     // REQ: meta.flip_r (report probability)
     //      sampling_probability(0)
-    // STORED:  sampling coinflip -> meta.flip_s
     //          report coinflip -> meta.flip_r
     action flip() {
-        uint32_probability p_report = meta.flip_r;
-        uint32_probability p_sample;
+        // report probability is 1/k which is 1/10 with our setup. This equals to 1/10*(2^32-1)
+        uint32_probability p_report = 429496729;
         // load last coin flip values to use them as fields in the new coin flip
-        bit<32> last_flip_s;
         bit<32> last_flip_r;
-        last_coinflips.read(last_flip_s, 0);
         last_coinflips.read(last_flip_r, 1);
-        sampling_probability.read(p_sample, 0);
         // generate hashes
-        hash(meta.flip_s, HashAlgorithm.crc32, (bit<1>)0,
-            {standard_metadata.enq_timestamp,
-                standard_metadata.ingress_global_timestamp,
-                hdr.ipv4.dstAddr, last_flip_r}, INT32_MAX);
         hash(meta.flip_r, HashAlgorithm.crc32, (bit<1>)0,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
-                hdr.ipv4.srcAddr, last_flip_s}, INT32_MAX);
+                hdr.ipv4.srcAddr, last_flip_r}, INT32_MAX);
         // safe hashes
-        last_coinflips.write(0, meta.flip_s);
         last_coinflips.write(1, meta.flip_r);
         // compare against the stored probabilities and set the flip fields
         // accordingly.
-        if (meta.flip_s < p_sample) {
-            meta.flip_s = 1;
-        } else {
-            meta.flip_s = 0;
-        }
         if (meta.flip_r < p_report) {
             meta.flip_r = 1;
         } else {
@@ -189,102 +153,65 @@ control MyIngress(inout headers hdr,
         }
     }
 
-    // group id MAT to retrieve the group parameters (local probability
-    // and local threshold). a hit calls the getValues action which writes them
-    // in the metadata
-    table group_values {
-        key = {
-            meta.group.srcGroup: exact;
-            meta.group.dstGroup: exact;
-        }
-        actions = {
-            getValues;
-            NoAction;
-        }
-        size = GROUP_TABLE_SIZE;
-        default_action = NoAction;
-    }
-
     apply {
 
         // Herd section //
 
         if(hdr.ipv4.isValid()) {
-            // extract the first 8 bits of the ip addresses to use in the
-            // group_values table lookup
-            meta.group.srcGroup = (bit<8>) (hdr.ipv4.srcAddr & 0xff000000 >> 24);
-            meta.group.dstGroup = (bit<8>) (hdr.ipv4.dstAddr & 0xff000000 >> 24);
-            // if we have an entry hit, we get the group parameters and can proceed
-            if (group_values.apply().hit) {
-                // simulate coin flips (meta.flip_r is now set)
-                flip();
 
-                // reset fields and generate flow id
-                meta.found_flag = 0;
-                meta.flow_count = 0;
-                hashFlow();
+            flip();
+            report_threshold.read(meta.tau, 0);
 
-                // search for a stored value
-                HASH_AND_CHECK(1)
-                if (meta.found_flag == 0) {
-                    HASH_AND_CHECK(2);
-                }
-                if (meta.found_flag == 0) {
-                    HASH_AND_CHECK(3);
-                }
+            // reset fields and generate flow id
+            meta.found_flag = 0;
+            meta.flow_count = 0;
+            hashFlow();
 
-                // send error if no space and value found
-                if (meta.found_flag == 0) {
-                    meta.flip_r = 0;
-                    error_code = 0x0;
-                    sendError();
-                } else {
-                    // check if we found an empty space, if so, try to sample.
-                    // if we don't sample, we can reset the found flag as we
-                    // dont have to safe a counter.
-                    if (meta.hash_data.value == 0) {
-                        if (meta.flip_s == 1) {
-                            count_start.read(meta.flow_count, 0);
-                        } else {
-                            meta.found_flag = 0;
-                        }
-                    // increase counter
-                    } else {
-                        meta.flow_count = meta.flow_count + 1;
-                    }
-                    // set the report coinflip to zero if the threshold is not reached
-                    if (meta.flow_count < meta.tau) {
-                        meta.flip_r = 0;
-                    } else {
-                        meta.send_count = meta.flow_count;
-                        meta.flow_count = 0;
-                    }
-                }
-
-                // report and reset counter if necessary
-                if (meta.flip_r == 1) {
-                    sendReport();
-                }
-
-                // store counter if necessary
-                meta.hash_data.value = (bit<64>) meta.hash_data.hash_key;
-                meta.hash_data.value =  meta.hash_data.value << 32;
-                meta.hash_data.value =  meta.hash_data.value + (bit<64>) meta.flow_count;
-                if (meta.found_flag == 1) {
-                    hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
-                }
-                if (meta.found_flag == 2) {
-                    hash_table_2.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
-                }
-                if (meta.found_flag == 3) {
-                    hash_table_3.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
-                }
-            // no group_values table hit -> send hello message to controller
-            } else {
-                sendHello();
+            // search for a stored value
+            HASH_AND_CHECK(1)
+            if (meta.found_flag == 0) {
+                HASH_AND_CHECK(2);
+            }
+            if (meta.found_flag == 0) {
+                HASH_AND_CHECK(3);
             }
 
+            // send error if no space and value found
+            if (meta.found_flag == 0) {
+                meta.flip_r = 0;
+                error_code = 0x0;
+                sendError();
+            } else {
+                meta.flow_count = meta.flow_count + 1;
 
+                // set the report coinflip to zero if the threshold is not reached
+                // reset counter if threshold is reached and 
+                if (meta.flow_count < meta.tau) {
+                    meta.flip_r = 0;
+                } else {
+                    meta.send_count = meta.flow_count;
+                    meta.flow_count = 0;
+                }
+            }
+
+            // report and reset counter if necessary
+            if (meta.flip_r == 1) {
+                sendReport();
+            }
+
+            // store counter if necessary
+            meta.hash_data.value = (bit<64>) meta.hash_data.hash_key;
+            meta.hash_data.value =  meta.hash_data.value << 32;
+            meta.hash_data.value =  meta.hash_data.value + (bit<64>) meta.flow_count;
+            if (meta.found_flag == 1) {
+                hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+            }
+            if (meta.found_flag == 2) {
+                hash_table_2.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+            }
+            if (meta.found_flag == 3) {
+                hash_table_3.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
+            }
             // Other packet processing stuff //
             ipv4_lpm.apply();
         }
