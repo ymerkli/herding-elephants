@@ -1,0 +1,71 @@
+{
+  "program": "p4src/switch_rla.p4",
+  "switch": "simple_switch",
+  "compiler": "p4c",
+  "options": "--target bmv2 --arch v1model --std p4-16",
+  "switch_cli": "simple_switch_CLI",
+  "cli": true,
+  "pcap_dump": false,
+  "enable_log": false,
+  "topo_module": {
+    "file_path": "",
+    "module_name": "p4utils.mininetlib.apptopo",
+    "object_name": "AppTopoStrategies"
+  },
+  "controller_module": null,
+  "topodb_module": {
+    "file_path": "",
+    "module_name": "p4utils.utils.topology",
+    "object_name": "Topology"
+  },
+  "mininet_module": {
+    "file_path": "",
+    "module_name": "p4utils.mininetlib.p4net",
+    "object_name": "P4Mininet"
+  },
+  "topology": {
+    "assignment_strategy": "l3",
+    "links": [
+      ["h1", "lb1"],
+      ["lb1", "s1"], ["lb1", "s2"], ["lb1", "s3"], ["lb1", "s4"], ["lb1", "s5"],
+      ["lb1", "s6"], ["lb1", "s7"], ["lb1", "s8"], ["lb1", "s9"], ["lb1", "s10"],
+      ["ag1", "s1"], ["ag1", "s2"], ["ag1", "s3"], ["ag1", "s4"], ["ag1", "s5"],
+      ["ag1", "s6"], ["ag1", "s7"], ["ag1", "s8"], ["ag1", "s9"], ["ag1", "s10"],
+      ["h2", "ag1"]
+    ],
+    "hosts": {
+      "h1": {
+      },
+      "h2": {
+      }
+    },
+    "switches": {
+      "s1": {"cpu_port": true
+      },
+      "s2": {"cpu_port": true
+      },
+      "s3": {"cpu_port": true
+      },
+      "s4": {"cpu_port": true
+      },
+      "s5": {"cpu_port": true
+      },
+      "s6": {"cpu_port": true
+      },
+      "s7": {"cpu_port": true
+      },
+      "s8": {"cpu_port": true
+      },
+      "s9": {"cpu_port": true
+      },
+      "s10": {"cpu_port": true
+      },
+      "lb1": {
+        "program": "p4src/load_balancing.p4"
+      },
+      "ag1": {
+        "program": "p4src/aggregating_switch.p4"
+      }
+    }
+  }
+}

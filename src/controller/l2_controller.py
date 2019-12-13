@@ -35,9 +35,6 @@ def enablePrint():
 '''
 Used for clone method of receiving packets. Defines the same fields as
 the cpu header of switch.p4
-
-
-
 '''
 class Cpu_Header(Packet):
     name = 'CpuPacket'
@@ -68,9 +65,18 @@ class L2Controller(object):
         coordinator_c (rpyc connection):        An rpyc connection to the Coordinator
         epsilon (int):                          The approximation factor
         global_threshold_T (float):             The global threshold (float to prevent integer division)
+        p_sampling (float):                     The probability to sample a flow (s) [0-1]
+        seen_flows (dict):                      A dict of flows the L2Controller has already seen and has already
+                                                sent a hello for
+        hellos (int):                           The number of hellos the controller has received from the data plane
+        reports (int):                          The number of reports the controler has received from the data plane
+        hello_timeouts (int):                   The number of times the connection to the coordinator timed out when
+                                                the L2Controller tried to send a hello
+        report_timeouts (int):                  The number of times the connection to the coordinator timed out when
+                                                the L2Controller tried to send a report
     '''
 
-    def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
+    def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port, verbose):
 
         # Core functionality
         self.topo               = Topology(db="topology.db")
@@ -90,6 +96,7 @@ class L2Controller(object):
         self.reports            = 0
         self.hello_timeouts     = 0
         self.report_timeouts    = 0
+        self.verbose            = verbose
 
         self.init()
 
@@ -129,7 +136,6 @@ class L2Controller(object):
             self.controller.set_crc32_parameters(custom_crc32, crc32_polinomials[i], 0xffffffff, 0xffffffff, True, True)
             i+=1
 
-
     def write_p_sampling_to_switch(self):
         '''
         Writes the registers needed to initialize counters in the switch.
@@ -146,7 +152,6 @@ class L2Controller(object):
     def reset_hash_tables(self):
         '''
         Resets the hash tables on the switch
-
         '''
 
         for i in range (1,4):
@@ -224,7 +229,7 @@ class L2Controller(object):
         send a hello or a report to the Coordinator
 
         Args:
-            msg (): The received digest message
+            msg: The received digest message
         '''
 
         topic, device_id, ctx_id, list_id, buffer_id, num = struct.unpack("<iQiiQi", msg[:32])
@@ -390,6 +395,8 @@ class L2Controller(object):
         r_g = (2**32 - 1) * r_g
         r_g = int(r_g) # convert back to int
 
+        if not self.verbose:
+            blockPrint()
         '''
         Add an entry to the group_values table. In case the group already has
         an entry, this wont do anything and return a value
@@ -408,6 +415,9 @@ class L2Controller(object):
 
         self.controller.table_modify('group_values', 'getValues',\
             entry_handle, [str(r_g), str(tau_g)])
+
+        if not self.verbose:
+            enablePrint()
 
     def extract_group(self, flow):
         '''
@@ -507,6 +517,11 @@ def parser():
             help="The port where the coordinator server is running on"
     )
 
+    parser.add_argument(
+        "--v",
+        action="store_true"
+    )
+
     args = parser.parse_args()
 
     if (args.s < 0 or 1 < args.s):
@@ -515,13 +530,13 @@ def parser():
     if (args.e <= 0 or 1 < args.e):
         raise InputValueError
 
-    return args.n, args.e, args.t, args.s, args.p
+    return args.n, args.e, args.t, args.s, args.p, args.v
 
 if __name__ == '__main__':
     #sys.tracebacklimit = 0
     try:
-        sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
-        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
+        sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port, verbose = parser()
+        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port, verbose)
 
         print("L2 controller of switch %s ready" % l2_controller.sw_name)
 

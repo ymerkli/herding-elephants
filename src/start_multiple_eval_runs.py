@@ -54,7 +54,7 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     topo = Topology(db="topology.db")
 
     # start controllers and coordinator here
-    coordinator = subprocess.Popen(['sudo', 'python', 'controller/coordinator.py', '--r', '%s' % report_threshold])
+    coordinator = subprocess.Popen(['sudo', 'python', 'controller/coordinator.py', '--v', '--r', '%s' % report_threshold])
     pids_to_kill.append(coordinator.pid)
 
     print("Coordinator PID: ", coordinator.pid)
@@ -63,7 +63,7 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     for p4switch_name in topo.get_p4switches():
         # only start L2controller for ingress switches
         if re.match(r"s\d+", p4switch_name):
-            controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller.py', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
+            controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller.py', '--v', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
 
             '''
             Prepend L2Controller PIDs
@@ -181,6 +181,8 @@ def main():
         for epsilon in parameter_rounds:
 
             print("Evaluating for epsilon = {0}".format(epsilon))
+            r = int(1 / float(epsilon))
+
             pid_list = startup(t, r, epsilon, s)
             print(pid_list)
             print("Startup finished, waiting for controllers to be ready")
@@ -207,6 +209,8 @@ def main():
         for sampling_prob in parameter_rounds:
 
             print("Evaluating for sampling probability = {0}".format(sampling_prob))
+            r = int(1 / float(epsilon))
+
             pid_list = startup(t, r, e, sampling_prob)
             print(pid_list)
             print("Startup finished, waiting for controllers to be ready")
