@@ -23,7 +23,7 @@ The parameters _s_, _τ_, _r_ and _R_ can be calculated to maximize the F1-score
 We do this by more or less with a try and error approach.
 
 ## How to test
-For our evaluation, we've implemented an automated testing procedure which takes a set of parameters to evaluate over. For each parameter, a mininet will be started, the coordinator and all L2Controllers (one per ingress switch in the given topology) will be started for the given parameters, the load balancer and aggregator switch will be
+For our evaluation, we've implemented an automated testing procedure which takes a set of parameters to evaluate over. For each parameter, a mininet will be started, the coordinator and all Herd Controllers (one per ingress switch in the given topology) will be started for the given parameters, the load balancer and aggregator switch will be
 initialized and finally, all packets from the given pcap file will be sent from a host connected to the load balancer.
 
 ### Automated testing
@@ -75,8 +75,8 @@ IMPORTANT: the coordinator needs to be running before starting any l2_controller
 python ~/02-herding/src/controllers/coordinator.py --r <reporting_threshold> --v
 ```
 
-### Run the L2 controller
-Run the L2 controller on each ingress switch and pass the following parameters:
+### Run the controller
+Run the herd controller on each ingress switch and pass the following parameters:
 * switch name: --n <switch_name>
 * epsilon: --e <epsilon>
 * global threshold: --t <global_threshold>

@@ -156,7 +156,7 @@ control MyIngress(inout headers hdr,
 
     apply {
 
-        // Herd section //
+        // Randomized reporting section //
 
         if(hdr.ipv4.isValid()) {
 

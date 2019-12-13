@@ -60,7 +60,7 @@ control MyIngress(inout headers hdr,
 
 
     // used to introduce more randomness in the flip function
-    register<bit<32>>(2) last_coinflips;
+    register<bit<32>>(1) last_coinflips;
 
 
     // sends a report msg to the local controller with the 5tuple and the current
@@ -77,13 +77,11 @@ control MyIngress(inout headers hdr,
 
     // Takes timestamps and ip dst/srcAddr and hashes them to a bit 32 value
     // which is compared against the saved probabilities.
-    // REQ: meta.flip_r (report probability)
-    //      sampling_probability(0)
+    // REQ:  sampling_probability(0)
     // STORED:  sampling coinflip -> meta.flip_s
-    //          report coinflip -> meta.flip_r
     action flip() {
         uint32_probability p_sample;
-        // load last coin flip values to use them as fields in the new coin flip
+        // load last coin flip value to use them as fields in the new coin flip
         bit<32> last_flip_s;
         last_coinflips.read(last_flip_s, 0);
         sampling_probability.read(p_sample, 0);
@@ -105,7 +103,7 @@ control MyIngress(inout headers hdr,
 
     apply {
 
-        // Herd section //
+        // Probabilistic sampling and report section //
 
         // simulate coin flips (meta.flip_r is now set)
         flip();
