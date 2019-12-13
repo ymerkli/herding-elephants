@@ -102,7 +102,7 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     return pids_to_kill
 
 def kill_processes(pid_list):
-    f = open("kill_skript.sh", "w+")
+    f = open("kill_script.sh", "w+")
     for pid in pid_list:
         print(pid)
         f.write("sudo kill -2 %s\n" % pid)
@@ -174,7 +174,7 @@ def main():
             print("Sending finished, killing processes")
             kill_processes(pid_list)
 
-            os.system("lxterminal -e bash -c 'sudo bash kill_skript.sh'")
+            os.system("lxterminal -e bash -c 'sudo bash kill_script.sh'")
 
             # wait for everything to finish (especially the coordinator to write out found_elephants.json)
             time.sleep(5)
