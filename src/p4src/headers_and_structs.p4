@@ -13,7 +13,7 @@ typedef bit<9> egressSpec_t;
 // Constants //
 const uint32_probability INT32_MAX = 4294967295;
 const bit<16> ipv4_type = 0x800;
-
+const bit<16> CLONE_ETHER_TYPE = 0x1234;
 
 /*************************************************************************
 *********************** S T R U C T S  ***********************************
@@ -25,12 +25,6 @@ struct five_tuple_t {
     bit<16>   srcPort;
     bit<16>   dstPort;
     bit<8>    protocol;
-}
-
-// Used by the digest commands to transport data to the local controller
-struct report_data_t {
-    five_tuple_t five_tuple;
-    bit<32> flow_count;
 }
 
 // Used by hash functions and the table lookup to store data
@@ -57,13 +51,11 @@ struct metadata {
     uint32_probability flip_s;
     uint32_probability flip_r;
     tau_t tau;
-    report_data_t data;
+    bit<32> flow_count;
+    bit<32> send_count;
     hash_data_t hash_data;
     bit<2> found_flag;
     flow_group_t group;
-
-    bit<14> ecmp_hash;
-    bit<14> ecmp_group_id;
 }
 
 
@@ -77,6 +69,8 @@ header ethernet_t {
     macAddr_t srcAddr;
     bit<16>   etherType;
 }
+
+const bit<32> ETHERNET_HEADER_BYTE_LENGTH = 14;
 
 header ipv4_t {
     bit<4>    version;
@@ -114,8 +108,20 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
+header cpu_t {
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+    bit<16>   srcPort;
+    bit<16>   dstPort;
+    bit<8>   protocol;
+    bit<32>   flow_count;
+}
+
+const bit<32> CPU_HEADER_BYTE_LENGTH = 17;
+
 struct headers {
     ethernet_t ethernet;
     ipv4_t ipv4;
     tcp_t tcp;
+    cpu_t cpu;
 }

@@ -5,7 +5,7 @@
   "options": "--target bmv2 --arch v1model --std p4-16",
   "switch_cli": "simple_switch_CLI",
   "cli": true,
-  "pcap_dump": true,
+  "pcap_dump": false,
   "enable_log": false,
   "topo_module": {
     "file_path": "",
@@ -40,25 +40,25 @@
       }
     },
     "switches": {
-      "s1": {
+      "s1": {"cpu_port": true
       },
-      "s2": {
+      "s2": {"cpu_port": true
       },
-      "s3": {
+      "s3": {"cpu_port": true
       },
-      "s4": {
+      "s4": {"cpu_port": true
       },
-      "s5": {
+      "s5": {"cpu_port": true
       },
-      "s6": {
+      "s6": {"cpu_port": true
       },
-      "s7": {
+      "s7": {"cpu_port": true
       },
-      "s8": {
+      "s8": {"cpu_port": true
       },
-      "s9": {
+      "s9": {"cpu_port": true
       },
-      "s10": {
+      "s10": {"cpu_port": true
       },
       "lb1": {
         "program": "p4src/load_balancing.p4"

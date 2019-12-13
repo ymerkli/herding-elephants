@@ -21,7 +21,7 @@
 // IN:  num defining which hash table should be used
 // REQ: meta.hash_data.hash_key
 // STORED:  found flag (if empty space or flow is found) -> meta.found_flag
-//          flow count (if found) -> meta.data.flow_count
+//          flow count (if found) -> meta.flow_count
 #define HASH_AND_CHECK(num) hash(meta.hash_data.hash_table_entry, HashAlgorithm.crc32_custom, (bit<1>)0, {hdr.ipv4.srcAddr, \
          hdr.ipv4.dstAddr, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.ipv4.protocol}, (bit<32>)ENTRIES_HASH_TABLE_##num); \
          hash_table_##num.read(meta.hash_data.value, meta.hash_data.hash_table_entry); \
@@ -30,7 +30,7 @@
          } else { \
              meta.hash_data.read_key = (bit<32>) (meta.hash_data.value >> 32); \
              if (meta.hash_data.read_key == meta.hash_data.hash_key) { \
-                 meta.data.flow_count = (bit<32>) meta.hash_data.value & 0x00000000ffffffff; \
+                 meta.flow_count = (bit<32>) meta.hash_data.value & 0x00000000ffffffff; \
                  meta.found_flag = ##num; \
              } \
          }
@@ -90,15 +90,6 @@ control MyIngress(inout headers hdr,
         default_action = drop;
     }
 
-    // extracts the five tuple identifying a flow from the packet
-    action extractFiveTuple() {
-        meta.data.five_tuple.srcAddr = hdr.ipv4.srcAddr;
-        meta.data.five_tuple.dstAddr = hdr.ipv4.dstAddr;
-        meta.data.five_tuple.srcPort = hdr.tcp.srcPort;
-        meta.data.five_tuple.dstPort = hdr.tcp.dstPort;
-        meta.data.five_tuple.protocol = hdr.ipv4.protocol;
-    }
-
     action extractGroup() {
         meta.group.srcGroup = (bit<8>) (hdr.ipv4.srcAddr & 0xff000000 >> 24);
         meta.group.dstGroup = (bit<8>) (hdr.ipv4.dstAddr & 0xff000000 >> 24);
@@ -122,6 +113,9 @@ control MyIngress(inout headers hdr,
     register<bit<32>>(1) sampling_probability;
     register<bit<32>>(1) count_start; // equals 1/sampling_probability
 
+    register<bit<32>>(1) count_hellos;
+    register<bit<32>>(1) count_reports;
+
     // hash tables to store counters
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_1) hash_table_1;
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_2) hash_table_2;
@@ -133,28 +127,31 @@ control MyIngress(inout headers hdr,
     // sends a hello msg to the local controller with the 5tuple and a flow
     // counter of 0 to indicate the flow is new.
     action sendHello() {
-        extractFiveTuple();
-        meta.data.flow_count = 0;
-        digest(1, meta.data);
+        meta.send_count = 0;
+        bit<32> count_hello;
+        count_hellos.read(count_hello, 0);
+        count_hello = count_hello + 1;
+        count_hellos.write(0, count_hello);
+        clone3(CloneType.I2E, 100, meta);
     }
 
     // sends a report msg to the local controller with the 5tuple and the current
     // flow counter.
     action sendReport() {
-        extractFiveTuple();
-        digest(1, meta.data);
+        meta.send_count = meta.flow_count;
+        bit<32> count_report;
+        count_reports.read(count_report, 0);
+        count_report = count_report + 1;
+        count_reports.write(0, count_report);
+        clone3(CloneType.I2E, 100, meta);
     }
 
     // sends an error message, indicated by an all zero 5-tuple to the
     // controller. the flow counter is used to transmit the error code.
     action sendError() {
-        meta.data.five_tuple.srcAddr = 0;
-        meta.data.five_tuple.dstAddr = 0;
-        meta.data.five_tuple.srcPort = 0;
-        meta.data.five_tuple.dstPort = 0;
-        meta.data.five_tuple.protocol = 0;
-        meta.data.flow_count = (bit<32>) error_code;
-        digest(1, meta.data);
+        meta.tau = INT32_MAX;
+        meta.send_count = (bit<32>) error_code;
+        clone3(CloneType.I2E, 100, meta);
     }
 
     // called by a table hit in group_table
@@ -239,7 +236,7 @@ control MyIngress(inout headers hdr,
 
                 // reset fields and generate flow id
                 meta.found_flag = 0;
-                meta.data.flow_count = 0;
+                meta.flow_count = 0;
                 hashFlow();
 
                 // search for a stored value
@@ -260,14 +257,14 @@ control MyIngress(inout headers hdr,
                     // check if we found an empty space, if so, try to sample
                     if (meta.hash_data.value == 0) {
                         if (meta.flip_s == 1) {
-                            count_start.read(meta.data.flow_count, 0);
+                            count_start.read(meta.flow_count, 0);
                         }
                     // increase counter
                     } else {
-                        meta.data.flow_count = meta.data.flow_count + 1;
+                        meta.flow_count = meta.flow_count + 1;
                     }
                     // set the report coinflip to zero if the threshold is not reached
-                    if (meta.data.flow_count < meta.tau) {
+                    if (meta.flow_count < meta.tau) {
                         meta.flip_r = 0;
                     }
                 }
@@ -275,14 +272,14 @@ control MyIngress(inout headers hdr,
                 // report and reset counter if necessary
                 if (meta.flip_r == 1) {
                     sendReport();
-                    meta.data.flow_count = 0;
+                    meta.flow_count = 0;
                 }
 
                 // store counter if necessary
-                if (meta.data.flow_count > 0 || meta.flip_r == 1) {
+                if (meta.flow_count > 0 || meta.flip_r == 1) {
                     meta.hash_data.value = (bit<64>) meta.hash_data.hash_key;
                     meta.hash_data.value =  meta.hash_data.value << 32;
-                    meta.hash_data.value =  meta.hash_data.value + (bit<64>) meta.data.flow_count;
+                    meta.hash_data.value =  meta.hash_data.value + (bit<64>) meta.flow_count;
                     if (meta.found_flag == 1) {
                         hash_table_1.write(meta.hash_data.hash_table_entry, meta.hash_data.value);
                     }
@@ -313,8 +310,30 @@ control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
     apply {
+        if (standard_metadata.instance_type == 1){
+            hdr.cpu.setValid();
+            if(meta.tau == INT32_MAX){
+                hdr.cpu.srcAddr  = 0;
+                hdr.cpu.dstAddr  = 0;
+                hdr.cpu.srcPort  = 0;
+                hdr.cpu.dstPort  = 0;
+                hdr.cpu.protocol = 0;
+            } else {
+                hdr.cpu.srcAddr  = hdr.ipv4.srcAddr;
+                hdr.cpu.dstAddr  = hdr.ipv4.dstAddr;
+                hdr.cpu.srcPort  = hdr.tcp.srcPort;
+                hdr.cpu.dstPort  = hdr.tcp.dstPort;
+                hdr.cpu.protocol = hdr.ipv4.protocol;
+            }
+            hdr.cpu.flow_count = meta.send_count;
+            hdr.ethernet.etherType = CLONE_ETHER_TYPE;
 
-     }
+            hdr.ipv4.setInvalid();
+            hdr.tcp.setInvalid();
+            bit<32> new_length = CPU_HEADER_BYTE_LENGTH + ETHERNET_HEADER_BYTE_LENGTH;
+            truncate(new_length);
+        }
+    }
 }
 
 /*************************************************************************

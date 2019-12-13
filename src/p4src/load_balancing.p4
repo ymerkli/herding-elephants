@@ -39,7 +39,7 @@ control MyIngress(inout headers hdr,
                 standard_metadata.ingress_global_timestamp,
                 hdr.ipv4.dstAddr}, INT32_MAX);
 
-    // hash the flow to a virtual port from 0 to 9
+        // hash the flow to a virtual port from 0 to 9
         hash(meta.tau, HashAlgorithm.crc16, (bit<1>)0,
             {hdr.ipv4.srcAddr}, (bit<32>)10);
     }
@@ -90,12 +90,6 @@ control MyIngress(inout headers hdr,
 
      }
 }
-
-
-
-
-
-
 
 /*************************************************************************
 ****************  E G R E S S   P R O C E S S I N G   *******************
