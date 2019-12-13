@@ -210,7 +210,7 @@ def main():
         for sampling_prob in parameter_rounds:
 
             print("Evaluating for sampling probability = {0}".format(sampling_prob))
-            r = int(1 / float(epsilon))
+            r = int(1 / float(e))
 
             pid_list = startup(t, r, e, sampling_prob)
             print(pid_list)

@@ -84,8 +84,8 @@ def plot_values(x_values, x_label, f1scores, precisions, recalls):
     exp = int(math.log10(max(x_values)))
     majors = []
 
-    plt.plot(x_values, f1scores, label='F1 scores', marker='o', color='blue')
-    plt.plot(x_values, precisions, label='Precision', marker='o', color='red')
+    plt.plot(x_values, f1scores, label='F1 score', marker='x', color='red')
+    plt.plot(x_values, precisions, label='Precision', marker='o', color='blue')
     plt.plot(x_values, recalls, label='Recall', marker='o', color='green')
     plt.xlabel('Approximation factor $\epsilon$')
     ax.set_xscale('log')
