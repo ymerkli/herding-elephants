@@ -469,8 +469,8 @@ class HerdController(object):
                     mem_used += 1
 
         f = open("../evaluation/counters/counter_results_herd","a")
-        f.write("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}\n".format(self.sw_name,\
-            count_hello_switch, self.hellos, count_report_switch, self.reports))
+        f.write("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}\nSwitch memory used: {5}".format(self.sw_name,\
+            count_hello_switch, self.hellos, count_report_switch, self.reports, mem_used))
 
 
         sys.exit(0)
