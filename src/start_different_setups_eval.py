@@ -12,7 +12,20 @@ import re
 import sys
 
 from p4utils.utils.topology import Topology
-from flow_evaluator import FlowEvaluator
+from flow_evaluator import
+
+'''
+Evaluates f1 score, recall and precicion for multiple rounds for each of the following modes:
+Herd, Rla (probabilistic reporting), Ps (probabilistic sampling)
+
+Args:
+    global threshold: The threshold corresponding to the percentile one wants to
+                      evaluate.
+    sampling probability: The sampling probability used by Herd Controllers
+    pcap file path:   The pcap file the algorithm should use for evaluation.
+    csv files: The files which should be used to write the results (one needed for each mode)
+
+'''
 
 #Get the full path to the src folder
 path_to_src = os.path.realpath(__file__)
@@ -147,7 +160,6 @@ def parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--t', type=int, required=True, help="The global threshold T")
     parser.add_argument('--s', type=float, required=True, help="The sampling probability s")
-    parser.add_argument('--e', type=float, required=True, help="Epsilon")
     parser.add_argument('--p', type=str, required=True, help="The path to the pcap file")
     parser.add_argument('--f', type=str, required=True, help="The path to the csv file for the normal round")
     parser.add_argument('--g', type=str, required=True, help="The path to the csv file for the rla round")
@@ -158,15 +170,12 @@ def parser():
     if (args.s < 0 or 1 < args.s):
         raise InputValueError
 
-    if (args.e <= 0 or 1 < args.e):
-        raise InputValueError
-
-    return args.t, args.e, args.s, args.p, args.f, args.g, args.h
+    return args.t, args.s, args.p, args.f, args.g, args.h
 
 
 def main():
     try:
-        t, e, s, pcap_file_path, csv_file_path, csv_file_path_rla, csv_file_path_ps= parser()
+        t, s, pcap_file_path, csv_file_path, csv_file_path_rla, csv_file_path_ps= parser()
     except InputValueError:
         print("The sampling probability and epsilon should be between 0 and 1")
 

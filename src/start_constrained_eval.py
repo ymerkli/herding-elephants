@@ -15,9 +15,8 @@ from p4utils.utils.topology import Topology
 from flow_evaluator import FlowEvaluator
 
 '''
-
-Evaluates f1 score, recall and precicion for multiple rounds and writes the
-results to a csv file.
+Evaluates f1 score, recall and precicion for each line of parameters in the file
+given and writes the results to a csv file.
 
 Args:
     global threshold: The threshold corresponding to the percentile one wants to
@@ -27,8 +26,6 @@ Args:
                       report probability,report threshold and sampling probability
                       to use for each round.
     outuput csv file: The file which should be used to write the results
-
-Returns: The results of each round are written to the specified csv file.
 
 '''
 
