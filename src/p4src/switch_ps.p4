@@ -55,7 +55,6 @@ control MyIngress(inout headers hdr,
 
     // registers set by local controller
     register<bit<32>>(1) sampling_probability;
-    register<bit<32>>(1) count_start; // equals 1/sampling_probability
 
     register<bit<32>>(1) count_reports;
 
@@ -102,22 +101,6 @@ control MyIngress(inout headers hdr,
         } else {
             meta.flip_s = 0;
         }
-    }
-
-    // group id MAT to retrieve the group parameters (local probability
-    // and local threshold). a hit calls the getValues action which writes them
-    // in the metadata
-    table group_values {
-        key = {
-            meta.group.srcGroup: exact;
-            meta.group.dstGroup: exact;
-        }
-        actions = {
-            getValues;
-            NoAction;
-        }
-        size = GROUP_TABLE_SIZE;
-        default_action = NoAction;
     }
 
     apply {

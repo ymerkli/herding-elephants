@@ -98,8 +98,7 @@ control MyIngress(inout headers hdr,
     // registers set by local controller
     register<bit<32>>(1) report_threshold;
 
-    // Used to store hello and report counters for debugging and evaluation.
-    register<bit<32>>(1) count_hellos;
+    // Used to store report counters for debugging and evaluation.
     register<bit<32>>(1) count_reports;
 
     // hash tables to store counters

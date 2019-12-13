@@ -468,7 +468,7 @@ class L2Controller(object):
                 if(switch_mem):
                     mem_used += 1
 
-        f = open("counter_results","a")
+        f = open("../evaluation/counters/counter_results","a")
         f.write("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}\n".format(self.sw_name,\
             count_hello_switch, self.hellos, count_report_switch, self.reports))
 
