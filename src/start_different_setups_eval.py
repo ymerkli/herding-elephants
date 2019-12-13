@@ -65,11 +65,11 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability, m
     for p4switch_name in topo.get_p4switches():
         # only start L2controller for ingress switches
         if re.match(r"s\d+", p4switch_name):
-            if (mode == 1):
+            if (mode == 'norm'):
                 controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller.py', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
-            else if (mode ==2):
-                controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller_rla.py', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '1'])
-            else if (mode == 3):
+            elif (mode == 'rla'):
+                controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller_rla.py', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon])
+            elif (mode == 'ps'):
                 controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller_ps.py', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
 
             '''
@@ -191,12 +191,15 @@ def main():
     evaluator_ps =  FlowEvaluator(csv_file_path_ps, parameter_name)
 
     if parameter_name == 'epsilon':
-        for epsilon in parameter_rounds:
+        os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches.json' &")
+        time.sleep(30)
+
+        for epsilon in parameter_rounds_norm:
 
 
             print("Evaluating for epsilon = {0}".format(epsilon))
             r = int(1/float(epsilon))
-            mode = 1
+            mode = 'norm'
             pid_list = startup(t, r, epsilon, s, mode)
             print(pid_list)
             print("Startup finished, waiting for controllers to be ready")
@@ -231,7 +234,7 @@ def main():
 
 
             r = int(1/float(epsilon))
-            mode = 2
+            mode = 'rla'
             pid_list = startup_rla(t, r, epsilon, 1, mode)
             print(pid_list)
             print("Startup finished, waiting for controllers to be ready")
@@ -264,7 +267,7 @@ def main():
 
 
             r = int(t/(1/s))
-            mode = 3
+            mode = 'ps'
             pid_list = startup(t, r, epsilon, s, mode)
             print(pid_list)
             print("Startup finished, waiting for controllers to be ready")

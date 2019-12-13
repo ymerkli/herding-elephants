@@ -70,7 +70,7 @@ class L2Controller(object):
         global_threshold_T (float):             The global threshold (float to prevent integer division)
     '''
 
-    def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
+    def __init__(self, sw_name, epsilon, global_threshold_T, coordinator_port):
 
         # Core functionality
         self.topo               = Topology(db="topology.db")
@@ -83,12 +83,8 @@ class L2Controller(object):
         # Parmeters
         self.epsilon            = float(epsilon)
         self.global_threshold_T = float(global_threshold_T)
-        self.p_sampling         = sampling_probability_s
-        # Debugging
-        self.seen_flows         = {}
-        self.hellos             = 0
+        # Evaluation
         self.reports            = 0
-        self.hello_timeouts     = 0
         self.report_timeouts    = 0
 
         self.init()
@@ -209,9 +205,6 @@ class L2Controller(object):
                 self.handle_Error(flow_count)
             else:
                 # we only send reports here since there is no hellos
-                srcGroup, dstGroup = self.extract_group(flow)
-                group = (srcGroup, dstGroup)
-
                 self.reports += 1
                 self.report_flow(flow)
 
@@ -236,97 +229,6 @@ class L2Controller(object):
         except Exception as e:
             print("Error: {0} couldnt send report for {1}: {2}".format(self.sw_name, flow, e))
             self.report_timeouts += 1
-
-    def send_hello(self, flow):
-        '''
-        Sends a hello message to the central coordinator, notifying that the switch has seen
-        a flow it's never seen before. We also send a callback to the coordinator, through
-        which the coordiantor can send back the l_g. The coordinator will store the callback
-        in case our l_g needs to be updated
-
-        Args:
-            flow (): The new flow 5-tuple we want to let the Coordinator know about
-        '''
-
-        try:
-            self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
-        except Exception as e:
-            print("Error: {0} couldnt send hello for {1}: {2}".format(self.sw_name, flow, e))
-            self.hello_timeouts += 1
-
-    def hello_callback(self, flow, l_g):
-        '''
-        The callback function for the coordinator to receive the update l_g
-        Will call the add_group_values function to update the group based values for
-        the new value of l_g
-
-        Args:
-            flow (tuple):   The flow 5-tuple for which we sent a hello
-            l_g (int):      The locality parameter l_g for the group to which flow belongs
-        '''
-
-        self.add_group_values(flow, l_g)
-
-    def add_group_values(self, flow, l_g):
-        '''
-        Calculates the group values tau_g and r_g from the stored l_g and then writes
-        these values into the group_values table.
-        The use of these values are:
-            tau_g (int):    The mule threshold (i.e. report threshold) of group g.
-                            If a mole count exceeds this threshold, the flow is reported to the coordinator.
-            r_g (int):      The report probability for group g. If we found a mule,
-                            we report to the coordinator with probability r_g
-
-        Args:
-            flow (tuple):   The flow for which we want the group values
-            l_g (int):      The locality parameter l_g for the group to which flow belongs
-        '''
-
-        tau_g = math.ceil(self.epsilon * self.global_threshold_T / float(l_g))
-        tau_g = int(tau_g)
-
-        r_g   = 1 / float(l_g)
-
-        srcGroup, dstGroup = self.extract_group(flow)
-
-        # convert r_g to use in coinflips on the switch (no floating point)
-        r_g = (2**32 - 1) * r_g
-        r_g = int(r_g) # convert back to int
-
-        '''
-        Locality not needed, table set disabled
-        '''
-
-    def extract_group(self, flow):
-        '''
-        Extracts the group of the given IP (i.e. the first 8 bits of
-        the srcIP and first 8 bits of the dstIP
-
-        Args:
-            flow (tuple):   The flow for which we want the group values
-
-        Returns:
-            group (tuple): 2-tuple with srcGroup and dstGroup
-        '''
-        # stringify digest IPs
-        srcIP_str = str(flow[0])
-        dstIP_str = str(flow[1])
-
-        # extract group ids (i.e. the first 8 bits of the IPv4 src and dst addresses) from IPs using regex
-        # raises an error if the digest IPs have invalid format
-        srcGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', srcIP_str)
-        if srcGroup is None:
-            raise ValueError("Error: invalid srcIP format: {0}".format(srcIP_str))
-        else:
-            srcGroup = srcGroup.group(1)
-
-        dstGroup = re.match(r'\b(\d{1,3})\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', dstIP_str)
-        if dstGroup is None:
-            raise ValueError("Error: invalid srcIP format: {0}".format(dstIP_str))
-        else:
-            dstGroup = dstGroup.group(1)
-
-        return srcGroup, dstGroup
 
     def signal_handler(self, sig, frame):
         '''
@@ -370,13 +272,6 @@ def parser():
     )
 
     parser.add_argument(
-            "--s",
-            type=float,
-            required=True,
-            help="The sampling probability s"
-    )
-
-    parser.add_argument(
             "--p",
             type=int,
             required=False,
@@ -386,19 +281,16 @@ def parser():
 
     args = parser.parse_args()
 
-    if (args.s < 0 or 1 < args.s):
-        raise InputValueError
-
     if (args.e <= 0 or 1 < args.e):
         raise InputValueError
 
-    return args.n, args.e, args.t, args.s, args.p
+    return args.n, args.e, args.t, args.p
 
 if __name__ == '__main__':
     #sys.tracebacklimit = 0
     try:
-        sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
-        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
+        sw_name, epsilon, global_threshold_T, coordinator_port = parser()
+        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, coordinator_port)
 
         print("L2 controller of switch %s ready" % l2_controller.sw_name)
 
