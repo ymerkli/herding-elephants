@@ -48,7 +48,7 @@ class Cpu_Header(Packet):
                     BitField('protocol', 0, 8),
                     BitField('flow_count', 0, 32)]
 
-class L2Controller(object):
+class RlaController(object):
     '''
     The controller that is running on each switch and will be communicating with
     the central coordiantor
@@ -70,7 +70,7 @@ class L2Controller(object):
         global_threshold_T (float):             The global threshold (float to prevent integer division)
         reports (int):                          The number of reports the controler has received from the data plane
         report_timeouts (int):                  The number of times the connection to the coordinator timed out when
-                                                the L2Controller tried to send a report
+                                                the Controller tried to send a report
     '''
 
     def __init__(self, sw_name, epsilon, global_threshold_T, coordinator_port):
@@ -242,7 +242,7 @@ class L2Controller(object):
 
         print("{0}: switch reports={1}, recv reports={2}".format(self.sw_name,\
             count_report_switch, self.reports))
-        f = open("counter_results_rla","a")
+        f = open("../evaluation/counters/counter_results_rla","a")
         f.write("{0}: switch reports={1}, recv reports={2}\n".format(self.sw_name,\
             count_report_switch, self.reports))
 
@@ -293,14 +293,14 @@ def parser():
 if __name__ == '__main__':
     try:
         sw_name, epsilon, global_threshold_T, coordinator_port = parser()
-        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, coordinator_port)
+        rla_controller = RlaController(sw_name, epsilon, global_threshold_T, coordinator_port)
 
-        print("L2 controller of switch %s ready" % l2_controller.sw_name)
+        print("rla controller of switch %s ready" % rla_controller.sw_name)
 
         # register signal handler to handle shutdowns
-        signal.signal(signal.SIGINT, l2_controller.signal_handler)
+        signal.signal(signal.SIGINT, rla_controller.signal_handler)
 
-        l2_controller.run_cpu_port_loop()
+        rla_controller.run_cpu_port_loop()
 
     except InputValueError:
         print("The sampling probability should be between 0 and 1")

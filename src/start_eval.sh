@@ -1,6 +1,6 @@
 #!/bin/bash
 
-lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches.json' &
+lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_herd.json' &
 echo 'Starting mininet...'
 sleep 30
 echo 'Starting evaluation...'
@@ -14,4 +14,4 @@ sleep 100
 sudo python start_constrained_eval.py --t 50 --p ../data/eval100k.pcap --i ../parameters/constrained_state/parameters_100k.csv --o ../evaluation/constrained_state/measurements.csv
 sleep 100
 
-sudo python start_different_setups_eval.py --t 50 --s 0.1 --e 0.2 --p ../data/eval100k.pcap --f ../evaluation/accuracy_epsilon/measurements.csv --g ../evaluation/accuracy_epsilon/measurements_rla.csv --h ../evaluation/accuracy_epsilon/measurements_ps.csv
+sudo python start_different_setups_eval.py --t 50 --s 0.1 --e 0.2 --p ../data/eval100k.pcap --f ../evaluation/accuracy_epsilon/measurements_herd.csv --g ../evaluation/accuracy_epsilon/measurements_rla.csv --h ../evaluation/accuracy_epsilon/measurements_ps.csv

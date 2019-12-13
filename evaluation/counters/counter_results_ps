@@ -1,0 +1,120 @@
+-
+-
+ **** Evaluation for epsilon 0.005 finished ****
+-
+-
+-
+-
+ **** Evaluation for epsilon 0.02 finished ****
+-
+-
+-
+-
+ **** Evaluation for epsilon 0.05 finished ****
+-
+-
+-
+-
+ **** Evaluation for epsilon 0.2 finished ****
+-
+-
+-
+-
+ **** Evaluation for epsilon 0.6 finished ****
+-
+-
+-
+-
+ **** Evaluation for epsilon 1.0 finished ****
+-
+-
+s4: switch reports=[1024], recv reports=1024
+s5: switch reports=[885], recv reports=885
+s6: switch reports=[869], recv reports=869
+s7: switch reports=[1009], recv reports=1009
+s10: switch reports=[859], recv reports=859
+s1: switch reports=[975], recv reports=975
+s2: switch reports=[1139], recv reports=1139
+s3: switch reports=[1304], recv reports=1304
+s8: switch reports=[940], recv reports=940
+s9: switch reports=[965], recv reports=965
+s4: switch reports=[1074], recv reports=1074
+s5: switch reports=[866], recv reports=866
+s6: switch reports=[896], recv reports=896
+s7: switch reports=[1004], recv reports=1004
+s10: switch reports=[875], recv reports=875
+s1: switch reports=[907], recv reports=907
+s2: switch reports=[1123], recv reports=1123
+s3: switch reports=[1254], recv reports=1254
+s8: switch reports=[941], recv reports=941
+s9: switch reports=[1029], recv reports=1029
+-
+-
+ **** Evaluation for epsilon 0.005 finished ****
+-
+-
+s4: switch reports=[1107], recv reports=1107
+s5: switch reports=[894], recv reports=894
+s6: switch reports=[858], recv reports=858
+s7: switch reports=[1063], recv reports=1063
+s10: switch reports=[924], recv reports=924
+s1: switch reports=[986], recv reports=986
+s2: switch reports=[1158], recv reports=1158
+s3: switch reports=[1164], recv reports=1164
+s8: switch reports=[962], recv reports=962
+s9: switch reports=[971], recv reports=971
+-
+-
+ **** Evaluation for epsilon 0.02 finished ****
+-
+-
+s4: switch reports=[1059], recv reports=1059
+s5: switch reports=[845], recv reports=845
+s6: switch reports=[807], recv reports=807
+s7: switch reports=[1099], recv reports=1099
+s10: switch reports=[855], recv reports=855
+s1: switch reports=[972], recv reports=972
+s2: switch reports=[1106], recv reports=1106
+s3: switch reports=[1258], recv reports=1258
+s8: switch reports=[985], recv reports=985
+s9: switch reports=[989], recv reports=989
+-
+-
+ **** Evaluation for epsilon 0.05 finished ****
+-
+-
+s4: switch reports=[1062], recv reports=1062
+s5: switch reports=[840], recv reports=840
+s6: switch reports=[866], recv reports=866
+s7: switch reports=[1044], recv reports=1044
+s10: switch reports=[841], recv reports=841
+s1: switch reports=[988], recv reports=988
+s2: switch reports=[1132], recv reports=1132
+s3: switch reports=[1231], recv reports=1231
+s8: switch reports=[949], recv reports=949
+s9: switch reports=[942], recv reports=942
+-
+-
+ **** Evaluation for epsilon 0.2 finished ****
+-
+-
+s4: switch reports=[1021], recv reports=1021
+s5: switch reports=[872], recv reports=872
+s6: switch reports=[841], recv reports=841
+s7: switch reports=[1035], recv reports=1035
+s10: switch reports=[886], recv reports=886
+s1: switch reports=[962], recv reports=962
+s2: switch reports=[1094], recv reports=1094
+s3: switch reports=[1196], recv reports=1196
+s8: switch reports=[973], recv reports=973
+s9: switch reports=[997], recv reports=997
+-
+-
+ **** Evaluation for epsilon 0.6 finished ****
+-
+-
+-
+-
+ **** Evaluation for epsilon 1.0 finished ****
+-
+-

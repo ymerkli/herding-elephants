@@ -61,12 +61,12 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     time.sleep(5)
 
     for p4switch_name in topo.get_p4switches():
-        # only start L2controller for ingress switches
+        # only start controller for ingress switches
         if re.match(r"s\d+", p4switch_name):
-            controller = subprocess.Popen(['sudo', 'python', 'controller/l2_controller.py', '--v', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
+            controller = subprocess.Popen(['sudo', 'python', 'controller/herd_controller.py', '--v', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
 
             '''
-            Prepend L2Controller PIDs
+            Prepend Controller PIDs
             This way socket.recv errors are avoid since we dont kill the coordinator first
             '''
             pids_to_kill.insert(0, controller.pid)

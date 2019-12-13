@@ -48,7 +48,7 @@ class Cpu_Header(Packet):
                     BitField('protocol', 0, 8),
                     BitField('flow_count', 0, 32)]
 
-class L2Controller(object):
+class PsController(object):
     '''
     The controller that is running on each switch and will be communicating with
     the central coordiantor for the probabilistic sampling algorithm.
@@ -66,15 +66,13 @@ class L2Controller(object):
         thrift_port (int):                      The thrift port of the switch
         controller (p4utils SimpleSwitchAPI):   The controller of the switch
         coordinator_c (rpyc connection):        An rpyc connection to the Coordinator
-        epsilon (int):                          The approximation factor
-        global_threshold_T (float):             The global threshold (float to prevent integer division)
         p_sampling (float):                     The probability to sample a flow (s) [0-1]
         reports (int):                          The number of reports the controler has received from the data plane
         report_timeouts (int):                  The number of times the connection to the coordinator timed out when
-                                                the L2Controller tried to send a report
+                                                the Controller tried to send a report
     '''
 
-    def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
+    def __init__(self, sw_name, sampling_probability_s, coordinator_port):
 
         # Core functionality
         self.topo               = Topology(db="topology.db")
@@ -85,8 +83,6 @@ class L2Controller(object):
         self.custom_calcs       = self.controller.get_custom_crc_calcs()
         self.cpu_port           = self.topo.get_cpu_port_index(self.sw_name)
         # Parmeters
-        self.epsilon            = float(epsilon)
-        self.global_threshold_T = float(global_threshold_T)
         self.p_sampling         = sampling_probability_s
         # Debugging
         self.reports            = 0
@@ -134,14 +130,11 @@ class L2Controller(object):
         '''
         Writes the registers needed to initialize counters in the switch.
         '''
-
-        counter_startvalue = int(1/self.p_sampling)
         # convert to uint32_probability
-        sampling_probability = (2**32 - 1)*self.p_sampling
+        sampling_probability = int((2**32 - 1)*self.p_sampling)
 
         # register names are defined in switch.p4
         self.controller.register_write("sampling_probability", 0, sampling_probability)
-        self.controller.register_write("count_start", 0, counter_startvalue)
 
     def fill_ipv4_lpm_table(self):
         '''
@@ -282,19 +275,19 @@ def parser():
     if (args.e <= 0 or 1 < args.e):
         raise InputValueError
 
-    return args.n, args.e, args.t, args.s, args.p
+    return args.n, args.s, args.p
 
 if __name__ == '__main__':
     try:
-        sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
-        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)
+        sw_name, sampling_probability_s, coordinator_port = parser()
+        ps_controller = PsController(sw_name, sampling_probability_s, coordinator_port)
 
-        print("L2 controller of switch %s ready" % l2_controller.sw_name)
+        print("ps controller of switch %s ready" % ps_controller.sw_name)
 
         # register signal handler to handle shutdowns
-        signal.signal(signal.SIGINT, l2_controller.signal_handler)
+        signal.signal(signal.SIGINT, ps_controller.signal_handler)
 
-        l2_controller.run_cpu_port_loop()
+        ps_controller.run_cpu_port_loop()
 
     except InputValueError:
         print("The sampling probability should be between 0 and 1")

@@ -45,7 +45,7 @@ class Cpu_Header(Packet):
                     BitField('protocol', 0, 8),
                     BitField('flow_count', 0, 32)]
 
-class L2Controller(object):
+class HerdController(object):
     '''
     The controller that is running on each switch and will be communicating with
     the central coordiantor
@@ -66,14 +66,14 @@ class L2Controller(object):
         epsilon (int):                          The approximation factor
         global_threshold_T (float):             The global threshold (float to prevent integer division)
         p_sampling (float):                     The probability to sample a flow (s) [0-1]
-        seen_flows (dict):                      A dict of flows the L2Controller has already seen and has already
+        seen_flows (dict):                      A dict of flows the Controller has already seen and has already
                                                 sent a hello for
         hellos (int):                           The number of hellos the controller has received from the data plane
         reports (int):                          The number of reports the controler has received from the data plane
         hello_timeouts (int):                   The number of times the connection to the coordinator timed out when
-                                                the L2Controller tried to send a hello
+                                                the Controller tried to send a hello
         report_timeouts (int):                  The number of times the connection to the coordinator timed out when
-                                                the L2Controller tried to send a report
+                                                the Controller tried to send a report
     '''
 
     def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port, verbose):
@@ -143,7 +143,7 @@ class L2Controller(object):
 
         counter_startvalue = int(1/self.p_sampling)
         # convert to uint32_probability
-        sampling_probability = (2**32 - 1)*self.p_sampling
+        sampling_probability = int((2**32 - 1)*self.p_sampling)
 
         # register names are defined in switch.p4
         self.controller.register_write("sampling_probability", 0, sampling_probability)
@@ -468,7 +468,7 @@ class L2Controller(object):
                 if(switch_mem):
                     mem_used += 1
 
-        f = open("../evaluation/counters/counter_results","a")
+        f = open("../evaluation/counters/counter_results_herd","a")
         f.write("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}\n".format(self.sw_name,\
             count_hello_switch, self.hellos, count_report_switch, self.reports))
 
@@ -536,14 +536,14 @@ if __name__ == '__main__':
     #sys.tracebacklimit = 0
     try:
         sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port, verbose = parser()
-        l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port, verbose)
+        herd_controller = HerdController(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port, verbose)
 
-        print("L2 controller of switch %s ready" % l2_controller.sw_name)
+        print("Herd controller of switch %s ready" % herd_controller.sw_name)
 
         # register signal handler to handle shutdowns
-        signal.signal(signal.SIGINT, l2_controller.signal_handler)
+        signal.signal(signal.SIGINT, herd_controller.signal_handler)
 
-        l2_controller.run_cpu_port_loop()
+        herd_controller.run_cpu_port_loop()
 
     except InputValueError:
         print("The sampling probability should be between 0 and 1")
