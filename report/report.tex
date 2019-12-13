@@ -88,21 +88,17 @@ In this work, we have implemented Herd \cite{anon2019herd}. Herd is a distribute
 
 \section{Introduction}
 
-Heavy hitters are a minority of flows that are responsible for a majority of packets inside a network. Network operators are interested in spotting them in order to detect and prevent Denial of Service attacks and to maximize the throughput by detecting congestion and failures. To effectively manage and protect networks, heavy hitter detection needs to be quick and efficient. For the following sections, we assume a network to consist of multiple ingress switches through which traffic enters a network. The topology of the inner network is ignored and not important for this work.
-%Heavy hitters can also be used for network management such as usage-based pricing or load balancing.
+Heavy hitters are a minority of flows that are responsible for a majority of packets inside a network. Network operators are interested in spotting them in order to detect and prevent Denial of Service attacks and to maximize the throughput by detecting congestion and failures. Further, heavy hitter detection can also be used for network management such as usage-based pricing or load balancing. To effectively manage and protect networks, heavy hitter detection needs to be quick and efficient. For the following sections, we assume a network to consist of multiple ingress switches through which traffic enters a network. The topology of the inner network is ignored and not important for this work.
 
-Detection of heavy hitters faces several challenges. First of all, heavy hitters don't necessarily enter a network through a single ingress switch. Further, they don't always originate from a single source. As an example, a single host inside a network might be the target of a denial-of-service attack, but traffic targeted towards the host may enter over multiple ingress switches. Local detection on ingress switches will will not capture the network-wide view of a flow and will inherently fail at detecting network-wide heavy hitters. Second, network devices are usually limited in their resources, especially when it comes to memory and processing power. This often results in network operators having to choose between high detection accuracy and low processing overhead (i.e. low delay).
+Detection of heavy hitters faces several challenges. First of all, heavy hitters don't necessarily enter a network through a single ingress switch and they don't always originate from a single source. As an example, a single host inside a network might be the target of a denial-of-service attack, but traffic targeted towards the host may enter over multiple ingress switches. Local detection on ingress switches will not capture the network-wide view of a flow and will inherently fail at detecting network-wide heavy hitters. Second, network devices are usually limited in their resources, especially when it comes to memory and processing power. This often results in network operators having to choose between high detection accuracy and low processing overhead (i.e. low delay).
 
 \noindent The problem of a missing network-wide view can be solved by introducing a centralized instance that receives and aggregates partial information from network devices. The burden of heavy hitter detection thus no longer lies on ingress switches but on this centralized instance; usually a general-purpose CPU. The ingress switches only observe and report flows.
 
 \noindent With unlimited memory and processing power on switches and unlimited communication, detecting network-wide heavy hitters would be easy. Each switch could keep track of every single flow, communicate as much as needed with the centralized instance, which can immediately detect based on aggregated information. In reality, switches are highly limited in their memory and processing power. Sending a subset of flow information to a central, general-purpose CPU lifts parts of the limitations on processing power and memory, however new limitations are introduced by the resulting network-wide communication and the fact that a general-purpose CPU is not able to process data at line rate.
 
-%(DDoS?)
-
 %brief description of Herd
 Herd \cite{anon2019herd} solves these problems by sampling traffic probabilistically, which saves memory on the switches, and reporting to a central coordinator once an observed flow exceeds a certain threshold. This allows for high accuracy in flow detection while operating under the constraints imposed by network devices. The coordinator sees all flows that entered the network and that were reported by an ingress switch. The coordinator is thus able to combine partial information reported by various ingress switches. This system makes it possible to not only detect local heavy hitters, but also distributed ones, potentially even detecting distributed Denial of Service attacks (DDoS) before they grow to their full potential.
 
-%\lipsum[1-2]
 
 \section{Background and related work}
 
@@ -124,11 +120,11 @@ These algorithms address the resource constraints of switches, however they fail
 We have implemented Herd, as proposed by \cite{anon2019herd}. The Herd architecture consists of local ingress switches and a central coordinator that achieves a global view. Ingress switches probabilistically sample and report incoming flows to the coordinator.
 Each flow can be of local and global significance. Additionally to mice and elephants, Herd thus introduces two more flow categories to describe all four types of significance: mice, moles, mules and elephants.
 
-\subsection{From mice to elephants} \label{animals}
+\subsection{Herd algorithm} \label{animals}
 
-All flows that enter a network are first classified as mice (a flow is defined by the five-tuple $(srcIP, dstIP, srcPort, dstPort, protocol)$). Mice are the most common but also the smallest flow type. When a packet arrives Herd uses the sample-and-hold algorithm: if the flow to which the packet belongs is already tracked, then its counter is simply increased. Otherwise, we start tracking the flow with probability $s$. With an increasing number of packets belonging to the same flow, the flow's packet count is more likely to be tracked.
+All flows that enter a network are first classified as mice (a flow is defined by the five-tuple $(srcIP, dstIP, srcPort, dstPort, protocol)$). Mice are the most common but also the smallest flow type. When a packet arrives, Herd uses the sample-and-hold algorithm: if the flow to which the packet belongs is already tracked, then its counter is simply increased. Otherwise, we start tracking the flow with sampling probability $s$. With an increasing number of packets belonging to the same flow, the flow's packet count is more likely to be tracked.
 
-\noindent Once a flow is captured by an ingress switch it advances to the next higher tier: the mole. A mole flow is simply a flow whose packet count is tracked by an ingress switch. As such, a mole flow exhibits local signficance but no global significance.
+\noindent Once a flow is captured by an ingress switch it advances to the next higher tier: the mole. A mole flow is simply a flow whose packet count is tracked by an ingress switch. As such, a mole flow exhibits local significance but no global significance.
 
 As soon as the packet count of a mole flow on a single ingress switch exceeds the mule threshold $\tau$, the mole flow is reported to the coordinator with report probability $r$. The packet count threshold $\tau$ is introduced for two reasons: First, the coordinator should not waste its precious memory on every mouse flow that happened to be sampled by the switch. By making sure that each reported flow's packet count exceeds a certain threshold, we ensure to only report globally significant flows that have the potential to  become an elephant, especially when combining reports for the same flow from multiple ingress switches. The other reason is that the network does not have infinite bandwidth, so the switches have to be careful not to congest the links with coordinator communication. A flow that has been reported to the coordinator at least once advances from mole flow to mule flow, which means that the flow now has global significance.
 
@@ -139,7 +135,7 @@ The coordinator has a global view over all mule flows reported by the ingress sw
 \begin{figure}
 	\centering
 	\includegraphics[width=0.5\textwidth, scale=1]{figures/paper_zoo}
-	\caption{Zoology in the Herd protocol. \cite{anon2019herd}}
+	\caption{Zoology in the Herd protocol.}
 	\label{fig:zoo_fig}
 \end{figure}
 
@@ -160,26 +156,50 @@ $$g_{src,dst} = \{f | f.srcIP \in src, f.dstIP \in dst\}$$
 \subsection{Switch logic} \label{switch}
 Herd uses randomness for packet sampling and reporting to the global coordinator. Since P4 doesn't have a random library, hashes are used to 'flip' coins and simulate randomness. A  32bit hash $h$ is calculated from timestamps, the destination IP and the last hash; if 
 
-$$h < INT32\_MAX * probability$$
+$$h < int32_{MAX} * probability$$
 
-\noindent the probability is hit. However, the right part of this inequation requires floating point arithmetic, which P4 does not have. For this reason, the calculation $INT32_{MAX} * probability$ is done by the local controller at startup and the resulting \textit{int32} number is then written into a register which can be read by the data plane.
+\noindent the probability is hit. However, the right part of this inequation requires floating point arithmetic, which P4 does not have. For this reason, the calculation $int32_{MAX} * probability$ is done by the local controller at startup and the resulting \textit{int32} number is then written into a register which can be read by the data plane.
 
 As described in section \ref{locality}, the mule threshold $\tau_g$ and the report probability $r_g$ vary on a per-group level. We thus use a match-action table that maps a group $g_{src,dst}$ to its respective values $\tau_g$ and $r_g$. A second match-action table is used for packet forwarding. As of now, ingress switches simply forward all traffic to an internal aggregator switch, thus this table only has one rule.
 
-The life of a packet when entering an ingress switch looks as follows: the switch first extracts the group $g_{src,dst}$ to which the flow belongs and applies the group values match-action table. In case of a table miss the switch sends (via copy-to-cpu) a hello message to the local controller, which will then send the hello to the coordinator. The coordinator answers with the locality parameter $l_g$ to the local controller, which will then add a rule to the group values table. For known groups the switch applies the sample-and-hold algorithm. In case the flow is not yet being sampled, we start sampling it with sampling probability $s$. If the flow is already being sampled, its counter is increased. In case the counter reaches the group-based mule threshold $\tau_g$, the switch resets the counter and reports the flow with report probability $r_g$. Again, the report will first be sent to the local controller (via copy-to-cpu), which will then send it to the coordinator. Counters are stored in a multi-stage hash table with three stages. The index of the flow counter in the hash table is determined by hashing the flow five-tuple $(srcIP, dstIP, srcPort, dstPort, protocol)$. Register entries are 64 bit wide. The lower 32 bit store the flow count. The upper 32 bit store a hash (with a different hash function) of the flow five-tuple (hash key) which is used to detect hash collision. In case of a hash collision, the next hash table is considered.
+The life of a packet when entering an ingress switch looks as follows: the switch first extracts the group $g_{src,dst}$ to which the flow belongs and applies the group values match-action table. In case of a table miss the switch sends a hello message to the local controller, which will then send the hello to the coordinator. The coordinator answers with the locality parameter $l_g$ to the local controller, which will then add a rule to the group values table. For known groups the switch applies the sample-and-hold algorithm. In case the flow is not yet being sampled, we start sampling it with sampling probability $s$. If the flow is already being sampled, its counter is increased. In case the counter reaches the group-based mule threshold $\tau_g$, the switch resets the counter and reports the flow with report probability $r_g$. Again, the report will first be sent to the local controller, which will then send it to the coordinator. The communication between data plane and control plane (hellos and reports) is done via copy-to-cpu, where a cloned packet has a CPU header which has six fields: $(srcIP, dstIP, srcPort, dstPort, protocol, flow_count)$.
 
-\subsection{Controllers} \label{controller}
+The counters counting the number of seen packets per flow are stored in a multi-stage hash table with three stages. The index of the flow counter in the hash table is determined by hashing the flow five-tuple $(srcIP, dstIP, srcPort, dstPort, protocol)$. Register entries are 64 bit wide. The lower 32 bit store the flow count. The upper 32 bit store a hash (with a different hash function) of the flow five-tuple (hash key) which is used to detect hash collision. In case of a hash collision, the next hash table is considered. Note that the width of the registers can be chosen smaller than 64 bit. In case of few flows, hash collision become less likely and a smaller hash space for the flow key is acceptable. Further, the flow counter will never become larger than $\tau_g$ since at that point it will be reset to zero and a report will be sent. We decided to use 64 bit wide registers to make sure that hash collisions are unlikely, even for large numbers of flows.
 
-A controller is running on each ingress switch. The controller's main task is to communicate with the coordinator and write rules into the group values match-action table.
+\subsection{Herd Controller} \label{controller}
 
-During the startup phase, the controller cleans all hash tables, writes the sampling probability to the data plane, fills the forwarding table and connects to the coordinator RPC server. To handle communication between data plane and control plane, the controller uses copy-to-cpu. We also tried digests, however we found that digests are slower which introduces significant delay between the data plane sending a message and the controller receiving it, which leads to an increase in false negatives since the switch misses packets as long as no table entries are written.
+A Herd controller is running on each ingress switch. The controller's main task is to communicate with the coordinator and write rules into the group values match-action table.
 
-The controller unpacks the received digest message. For each flow the controller checks whether it has seen that flow before. If the flow was not seen before the controller sends a hello to the coordinator, but only if this wasn't already done for the group of the flow. The group is simply a two-tuple consisting of the source- and the destination-IP. When sending a hello the controller expects a callback from the coordinator, telling it the according locality parameter. The coordinator can then calculate the according group parameters $\tau_g$ and $r_g$. If it is a known flow the controller sends a report. %"digest loop"
+\noindent During the startup phase, the controller cleans all hash tables, writes the sampling probability to the data plane, fills the forwarding table and connects to the coordinator RPC server. To handle communication between data plane and control plane, the controller sniffs on the copy-to-cpu interface and unpacks each received cloned placket. Each clone packet includes a CPU header, stating the flow five-tuple and the packet count for the flow (flow count). The controller determines based on the flow count whether the received message is a hello or a report: hellos have a flow count of zero whereas reports have an flow count larger than zero. The controller then sends the hello or report by initiating a remote procedure call towards the coordinator, including the flow and the switch name as arguments.
+
+\noindent When a flow belonging to a never before seen group $g$ arrives at an ingress switch, it is possible that the data plane sends multiple hellos due to delayed writes into the group values table. In order to avoid overloading the network with hellos, we adapted the Herd controllers to keep track of the flows for which a hello was already sent. This way, each controller only sends one hello per flow to the coordinator and we don't overload the network or the coordinator with unnecessary hello messages.
+
+Controller-coordinator communication is two-way since the coordinator needs to answer with the locality parameter $l_g$ and respective flow $f$ upon receiving a hello. Additionally to a sending part, the Herd Controller thus also has a receiving part. Upon receival of $l_g$, the controller calculates the mule threshold as $\tau_g = \frac{\epsilon \cdot T}{l_g}$ and the reporting probability as $r_g = \frac{1}{l_g}$. Additionally, $r_g$ is transformed into an \textit{'int32-probability'} (see section \ref{switch}). The controller then writes $\tau_g$ and $r_g$ into the group values table with the group $g$ $(f \in g)$ as match key and $\tau_g, r_g$ 
+
+
+
+
+Due to the delay between the switch sending a hello and the controller writing the group values into the match action table, it is possible that the group values table does not yet have an entry for a group although a hello was already sent. Thus, if the second packet of a flow for which a hello was sent arrives \textit{before} the table write happens, a second hello will be sent to the controller. It is therefore possible that the Herd controller receives multiple hellos for the same flow. 
+
+
+
+
+
+Whenever an incoming packet on the switch creates a table miss in the group values table, the switch will send a hello. The total delay between the switch sending a hello and the controller writing the table rule is 
+
+$$\Delta t_{hello} = t_{copy-to-cpu} + 2*t_{CC} + t_{table\_write} + \epsilon$$
+
+\noindent where $t_{copy-to-cpu}$ is the delay introduced by the copy-to-cpu, $t_{CC}$ is the delay introduced by the controller-coordinator communication, $t_{table\_write}$ is the time it takes to write $\tau_g$ and $r_g$ into the group values table and $\epsilon$ are negligible processing delays. In case the arrival time of the first packet belo
+
+ 
+
+
+
 
 \subsection{Coordinator} \label{coordinator}
 The global coordinator handles all the messages sent to it and reports back with new locality parameters to the individual switches if necessary. 
 
-When a hello arrives from a switch the coordinator checks whether the coordinator has already seen the switch or the flow before. If not it saves them. Now the coordinator uses the HandleHello function from the original paper. First it checks whether it had already got a hello from that switch with that flow. If not if saves it in the dictionary $S_f$ and finally sends notices all switches in updated $S_f$, but only if the size of $S_f$ doubled in order not to overwhelm the links with update messages. If $S_f$ didn't double in size, the coordinator only sends a notification to the new switch in $S_f$ about the current size of $S_f$.
+When a hello arrives from a switch the coordinator checks whether the coordinator has already seen the switch or the flow before. If not it saves them. Now the uses the HandleHello function from the original paper. First it checks whether it had already got a hello from that switch with that flow. If not if saves it in the dictionary $S_f$ and finally sends notices all switches in updated $S_f$, but only if the size of $S_f$ doubled in order not to overwhelm the links with update messages. If $S_f$ didn't double in size, the coordinator only sends a notification to the new switch in $S_f$ about the current size of $S_f$.
 
 Handling the reports is quite simpler. The coordinator simply counts the number of reports arriving at it for each flow. And after enough reports arrived the flow get put into a list with all the other heavy hitters. Finally upon shutdown it writes found elephants into a $.json$ file for further processing.
 
@@ -195,7 +215,7 @@ If unlimited bandwidth was available $r$ could be set to 1, since there would be
 Flow counters are stored on each ingress switch in a multi-stage hash table. In case of full hash tables, Herd proposes to just send all packets of the flow to the coordinator. This introduces significant delay and communication cost. In our implementation, we handle full hash tables differently. Instead of sending all packets to the coordinator, the data plane sends an error message to the controller, indicating full hash tables. The controller will subsequently resets the hash tables. We argue that due to the fact that counters of large flows are reset back to 0 anyways in case of a report, this leads to a minor decrease in accuracy.
 
 \subsection{Challenges} \label{challenges}
-Since the traffic we received from CAIDA for the evaluation had no MAC addresses we had to append our own created MAC addresses. 
+Since the traffic we received from CAIDA for the evaluation had no MAC addresses we had to append our own created MAC addresses.
 
 The topology for the evaluation needs an additional load-balancer in front of the switches running Herd. This is needed in order to distribute the packets across all the ingress switches from $h1$. 
 
@@ -211,13 +231,14 @@ Further we faced severe speed issues. The scapy library often reached its limit 
 %how we solved it. I need to have explained again.
 However, the speed issues we faced are only a problem in software, since the speed of the whole architecture in would be a multiple of the speed in software when implented onto hardware.
 
+We also tried digests, however we found that digests are slower which introduces significant delay between the data plane sending a message and the controller receiving it, which leads to an increase in false negatives since the switch misses packets as long as no table entries are written. In real hardware, this would not be an issue since there exists a direct link between data plane and control plane, which allows for diminishing delay. In real hardware, the delay introduced by the communication between controller and coordinator would be would dominate.
+
 \subsection{Assessment of the original paper} \label{original_paper}
 Due to the original paper on being only a rejected conference submission and not an accepted paper we faced many challenges along the way. The authors are often extremely vague. For instance the topology used for evaluation is barely mentioned. The paper also contains mistakes. For example in the GetSampling function the sampling probability is not adjusted in the while-loop which could trap the program in an infinite loop. The idea of a rolling time windows sounds rushed. This is why we implemented that the switch resets once the table is full.
 
 %\lipsum[1-5]
 
 \section{Evaluation}
-\hint{Describe how you tested your implementation and summarize the results.} \\
 \subsection{Topology} \label{topology}
 
 \begin{figure}
@@ -227,7 +248,7 @@ Due to the original paper on being only a rejected conference submission and not
 	\label{fig:topology_fig}
 \end{figure}
 
-As topology we use two host, $h1$ sends the traffic and $h2$ receives it. $h1$ sends to programmable switch $lb1$ which is there for load balancing. $lb1$ fowards the packets to the switches $s1 - 10$, which run the Herd protocol. The ingress switches $s1 - 10$ are an aggregating switch $ag1$ which is finally linked to the receiving host $h2$.\\
+As topology we use two host, $h1$ sends the traffic and $h2$ receives it. $h1$ sends to programmable switch $lb1$ which is there for load balancing. $lb1$ fowards the packets to the switches $s1 - s10$, which run the Herd protocol. The ingress switches $s1 - 10$ are an aggregating switch $ag1$ which is finally linked to the receiving host $h2$.\\
 
 We had to separately build a load balancer for our test setup. In order to distribute the flows between the Herd switches the load balancing switch chooses randomly two Herd switches. The load balancer then forwards each packet of the flow to one of the two chosen switches. This has to be done this way since in the evaluation of the original paper each flow has exactly two switches observing each flow. Of course this procedure wouldn't be necessary in a real world application. There the number of observing switches would not be given by a separate switch, but according to the flows themselves, and therefore out of the direct control of the operators. Also the number of observing switches would not be limited by two. The coordinator would then forward this number to the switches according to the algorithm with the hello messages to take the locality of the flows into account.
 
