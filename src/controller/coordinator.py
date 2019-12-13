@@ -34,7 +34,7 @@ class CoordinatorService(rpyc.Service):
         reporting_threshold_R (int):    The thresholds on the report count for which we promote a mule to a heavy hitter
         l_g_table (dict):               A dict storing the locality parameter l_g for a flow based on the group (2-tuple)
                                         to which the flow belongs to. Key is a group, value is an int
-        group_to_switches (dict):       A dict storing which switches have seen a flow. Key is a group (2-tuple), 
+        group_to_switches (dict):       A dict storing which switches have seen a flow. Key is a group (2-tuple),
                                         value is an array of sw_names
         callback_table (dict):          A dict storing the callbacks received from switches in hello messages.
                                         Callbacks are used to send l_g back to switches. Key is a sw_name (str), value is a function.
@@ -300,6 +300,7 @@ if __name__ == '__main__':
     # register signal handler to handle shutdowns
     signal.signal(signal.SIGINT, coordinator.signal_handler)
 
+    # no output if active
     #sys.tracebacklimit = 0
 
     # start the coordinator

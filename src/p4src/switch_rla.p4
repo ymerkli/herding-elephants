@@ -12,7 +12,8 @@
 #define ENTRIES_HASH_TABLE_2 10000
 #define ENTRIES_HASH_TABLE_3 1000
 
-#define GROUP_TABLE_SIZE 2<<16
+// corresponds to 1/10
+#define UINT32_10 429496729
 
 
 // Does the flow counter lookup for a given hash table.
@@ -97,6 +98,7 @@ control MyIngress(inout headers hdr,
     // registers set by local controller
     register<bit<32>>(1) report_threshold;
 
+    // Used to store hello and report counters for debugging and evaluation.
     register<bit<32>>(1) count_hellos;
     register<bit<32>>(1) count_reports;
 
@@ -106,7 +108,7 @@ control MyIngress(inout headers hdr,
     register<bit<HASH_TABLE_FIELD_WIDHT>>(ENTRIES_HASH_TABLE_3) hash_table_3;
 
     // used to introduce more randomness in the flip function
-    register<bit<32>>(2) last_coinflips;
+    register<bit<32>>(1) last_coinflips;
 
     // sends a report msg to the local controller with the 5tuple and the current
     // flow counter.
@@ -132,18 +134,18 @@ control MyIngress(inout headers hdr,
     //      sampling_probability(0)
     //          report coinflip -> meta.flip_r
     action flip() {
-        // report probability is 1/k which is 1/10 with our setup. This equals to 1/10*(2^32-1)
-        uint32_probability p_report = 429496729;
+        // report probability is 1/k which is 1/10 with our setup.
+        uint32_probability p_report = UINT32_10;
         // load last coin flip values to use them as fields in the new coin flip
         bit<32> last_flip_r;
-        last_coinflips.read(last_flip_r, 1);
+        last_coinflips.read(last_flip_r, 0);
         // generate hashes
         hash(meta.flip_r, HashAlgorithm.crc32, (bit<1>)0,
             {standard_metadata.enq_timestamp,
                 standard_metadata.ingress_global_timestamp,
                 hdr.ipv4.srcAddr, last_flip_r}, INT32_MAX);
         // safe hashes
-        last_coinflips.write(1, meta.flip_r);
+        last_coinflips.write(0, meta.flip_r);
         // compare against the stored probabilities and set the flip fields
         // accordingly.
         if (meta.flip_r < p_report) {
@@ -185,7 +187,7 @@ control MyIngress(inout headers hdr,
                 meta.flow_count = meta.flow_count + 1;
 
                 // set the report coinflip to zero if the threshold is not reached
-                // reset counter if threshold is reached and 
+                // reset counter if threshold is reached and
                 if (meta.flow_count < meta.tau) {
                     meta.flip_r = 0;
                 } else {

@@ -68,6 +68,9 @@ class L2Controller(object):
         coordinator_c (rpyc connection):        An rpyc connection to the Coordinator
         epsilon (int):                          The approximation factor
         global_threshold_T (float):             The global threshold (float to prevent integer division)
+        reports (int):                          The number of reports the controler has received from the data plane
+        report_timeouts (int):                  The number of times the connection to the coordinator timed out when
+                                                the L2Controller tried to send a report
     '''
 
     def __init__(self, sw_name, epsilon, global_threshold_T, coordinator_port):
@@ -128,10 +131,11 @@ class L2Controller(object):
 
     def write_threshold_to_switch(self):
         '''
-        Writes the report threshold in the switch. k = 1/10 for our setup.
+        Writes the report threshold in the switch. k = 1/10 for our setup since
+        we have 10 ingress switches.
         '''
-
-        report_threshold = int(self.epsilon*self.global_threshold_T/10)
+        k = 1/10
+        report_threshold = int(self.epsilon*self.global_threshold_T*k)
 
         # register names are defined in switch.p4
         self.controller.register_write("report_threshold", 0, report_threshold)
@@ -287,7 +291,6 @@ def parser():
     return args.n, args.e, args.t, args.p
 
 if __name__ == '__main__':
-    #sys.tracebacklimit = 0
     try:
         sw_name, epsilon, global_threshold_T, coordinator_port = parser()
         l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, coordinator_port)

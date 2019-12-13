@@ -1,0 +1,90 @@
+s4: switch hellos=[806], recv hellos=806, switch reports=[1493], recv reports=1493
+s10: switch hellos=[819], recv hellos=819, switch reports=[812], recv reports=812
+s5: switch hellos=[785], recv hellos=785, switch reports=[953], recv reports=953
+s1: switch hellos=[831], recv hellos=831, switch reports=[1195], recv reports=1195
+s6: switch hellos=[1011], recv hellos=1011, switch reports=[979], recv reports=979
+s8: switch hellos=[845], recv hellos=845, switch reports=[1025], recv reports=1025
+s2: switch hellos=[791], recv hellos=791, switch reports=[1132], recv reports=1132
+s7: switch hellos=[815], recv hellos=815, switch reports=[1051], recv reports=1051
+s3: switch hellos=[805], recv hellos=805, switch reports=[2425], recv reports=2425
+s9: switch hellos=[825], recv hellos=825, switch reports=[806], recv reports=806
+-
+-
+ **** Evaluation for epsilon 0.005 finished ****
+-
+-
+s5: switch hellos=[783], recv hellos=783, switch reports=[923], recv reports=923
+s6: switch hellos=[1037], recv hellos=1037, switch reports=[940], recv reports=940
+s4: switch hellos=[785], recv hellos=785, switch reports=[1377], recv reports=1377
+s7: switch hellos=[825], recv hellos=825, switch reports=[1027], recv reports=1027
+s10: switch hellos=[808], recv hellos=808, switch reports=[785], recv reports=785
+s2: switch hellos=[804], recv hellos=804, switch reports=[1162], recv reports=1162
+s3: switch hellos=[878], recv hellos=878, switch reports=[2366], recv reports=2366
+s1: switch hellos=[793], recv hellos=793, switch reports=[1186], recv reports=1186
+s9: switch hellos=[811], recv hellos=811, switch reports=[835], recv reports=835
+s8: switch hellos=[834], recv hellos=834, switch reports=[857], recv reports=857
+-
+-
+ **** Evaluation for epsilon 0.02 finished ****
+-
+-
+s4: switch hellos=[853], recv hellos=853, switch reports=[1077], recv reports=1077
+s6: switch hellos=[1033], recv hellos=1033, switch reports=[694], recv reports=694
+s5: switch hellos=[796], recv hellos=796, switch reports=[774], recv reports=774
+s7: switch hellos=[859], recv hellos=859, switch reports=[793], recv reports=793
+s10: switch hellos=[811], recv hellos=811, switch reports=[668], recv reports=668
+s1: switch hellos=[822], recv hellos=822, switch reports=[790], recv reports=790
+s2: switch hellos=[790], recv hellos=790, switch reports=[946], recv reports=946
+s3: switch hellos=[841], recv hellos=841, switch reports=[1614], recv reports=1614
+s9: switch hellos=[784], recv hellos=784, switch reports=[725], recv reports=725
+s8: switch hellos=[835], recv hellos=835, switch reports=[846], recv reports=846
+-
+-
+ **** Evaluation for epsilon 0.05 finished ****
+-
+-
+s6: switch hellos=[873], recv hellos=870, switch reports=[351], recv reports=351
+s1: switch hellos=[814], recv hellos=814, switch reports=[403], recv reports=403
+s5: switch hellos=[800], recv hellos=799, switch reports=[327], recv reports=327
+s7: switch hellos=[869], recv hellos=868, switch reports=[374], recv reports=374
+s2: switch hellos=[840], recv hellos=839, switch reports=[456], recv reports=456
+s10: switch hellos=[836], recv hellos=834, switch reports=[288], recv reports=288
+s4: switch hellos=[851], recv hellos=847, switch reports=[496], recv reports=496
+s3: switch hellos=[953], recv hellos=953, switch reports=[685], recv reports=685
+s9: switch hellos=[846], recv hellos=845, switch reports=[377], recv reports=377
+s8: switch hellos=[879], recv hellos=879, switch reports=[422], recv reports=422
+-
+-
+ **** Evaluation for epsilon 0.2 finished ****
+-
+-
+s6: switch hellos=[1074], recv hellos=1074, switch reports=[163], recv reports=163
+s5: switch hellos=[839], recv hellos=839, switch reports=[160], recv reports=160
+s4: switch hellos=[867], recv hellos=867, switch reports=[214], recv reports=214
+s7: switch hellos=[868], recv hellos=868, switch reports=[173], recv reports=173
+s1: switch hellos=[881], recv hellos=881, switch reports=[196], recv reports=196
+s10: switch hellos=[831], recv hellos=831, switch reports=[137], recv reports=137
+s9: switch hellos=[850], recv hellos=850, switch reports=[186], recv reports=186
+s3: switch hellos=[864], recv hellos=864, switch reports=[286], recv reports=286
+s2: switch hellos=[868], recv hellos=868, switch reports=[210], recv reports=210
+s8: switch hellos=[883], recv hellos=883, switch reports=[176], recv reports=176
+-
+-
+ **** Evaluation for epsilon 0.6 finished ****
+-
+-
+s4: switch hellos=[827], recv hellos=825, switch reports=[136], recv reports=131
+s7: switch hellos=[843], recv hellos=842, switch reports=[100], recv reports=100
+s6: switch hellos=[1141], recv hellos=1140, switch reports=[75], recv reports=75
+s10: switch hellos=[833], recv hellos=830, switch reports=[80], recv reports=80
+s3: switch hellos=[929], recv hellos=929, switch reports=[152], recv reports=152
+s5: switch hellos=[810], recv hellos=810, switch reports=[102], recv reports=102
+s1: switch hellos=[927], recv hellos=918, switch reports=[100], recv reports=99
+s2: switch hellos=[834], recv hellos=834, switch reports=[145], recv reports=145
+s8: switch hellos=[865], recv hellos=859, switch reports=[96], recv reports=96
+s9: switch hellos=[826], recv hellos=826, switch reports=[113], recv reports=113
+-
+-
+ **** Evaluation for epsilon 1.0 finished ****
+-
+-

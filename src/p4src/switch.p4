@@ -98,6 +98,7 @@ control MyIngress(inout headers hdr,
     register<bit<32>>(1) sampling_probability;
     register<bit<32>>(1) count_start; // equals 1/sampling_probability
 
+    // Used to store hello and report counters for debugging and evaluation.
     register<bit<32>>(1) count_hellos;
     register<bit<32>>(1) count_reports;
 
@@ -257,7 +258,7 @@ control MyIngress(inout headers hdr,
                         meta.flip_r = 0;
                     } else {
                         meta.send_count = meta.flow_count;
-                        meta.flow_count = 0;
+                        meta.flow_count = 0;    // reset counter if threshold is reached
                     }
                 }
 

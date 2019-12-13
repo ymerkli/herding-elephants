@@ -51,7 +51,7 @@ class Cpu_Header(Packet):
 class L2Controller(object):
     '''
     The controller that is running on each switch and will be communicating with
-    the central coordiantor
+    the central coordiantor for the probabilistic sampling algorithm.
 
     Args:
         sw_name (str):                  The name of the switch where the controller is running on
@@ -68,6 +68,10 @@ class L2Controller(object):
         coordinator_c (rpyc connection):        An rpyc connection to the Coordinator
         epsilon (int):                          The approximation factor
         global_threshold_T (float):             The global threshold (float to prevent integer division)
+        p_sampling (float):                     The probability to sample a flow (s) [0-1]
+        reports (int):                          The number of reports the controler has received from the data plane
+        report_timeouts (int):                  The number of times the connection to the coordinator timed out when
+                                                the L2Controller tried to send a report
     '''
 
     def __init__(self, sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port):
@@ -281,7 +285,6 @@ def parser():
     return args.n, args.e, args.t, args.s, args.p
 
 if __name__ == '__main__':
-    #sys.tracebacklimit = 0
     try:
         sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port = parser()
         l2_controller = L2Controller(sw_name, epsilon, global_threshold_T, sampling_probability_s, coordinator_port)

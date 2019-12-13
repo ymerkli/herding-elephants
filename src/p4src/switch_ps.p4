@@ -6,16 +6,6 @@
 #include "headers_and_structs.p4"
 #include "parser.p4"
 
-// Hash table and group table properties
-#define HASH_TABLE_FIELD_WIDHT 64
-#define ENTRIES_HASH_TABLE_1 100000
-#define ENTRIES_HASH_TABLE_2 10000
-#define ENTRIES_HASH_TABLE_3 1000
-
-#define GROUP_TABLE_SIZE 2<<16
-
-
-
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
 *************************************************************************/
@@ -36,8 +26,6 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     ///         GENERAL PACKET PROCESSING STUFF        ///
-
-    bit<4> error_code;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -69,7 +57,6 @@ control MyIngress(inout headers hdr,
     register<bit<32>>(1) sampling_probability;
     register<bit<32>>(1) count_start; // equals 1/sampling_probability
 
-    register<bit<32>>(1) count_hellos;
     register<bit<32>>(1) count_reports;
 
 
@@ -140,9 +127,7 @@ control MyIngress(inout headers hdr,
         // simulate coin flips (meta.flip_r is now set)
         flip();
 
-            // check if we found an empty space, if so, try to sample.
-            // if we don't sample, we can reset the found flag as we
-            // dont have to safe a counter.
+        // try to sample and send report.
         if (meta.flip_s == 1) {
             meta.send_count = 1;
             sendReport();
@@ -150,7 +135,6 @@ control MyIngress(inout headers hdr,
 
         // Other packet processing stuff //
         ipv4_lpm.apply();
-        }
     }
 }
 
