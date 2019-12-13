@@ -49,6 +49,11 @@ global_thresh_to_percentile = {
 }
 
 def startup(global_threshold, report_threshold, epsilon, sampling_probability):
+    '''
+    Starts the coordinator and controllers with the given parameters. Returns the pids of all
+    processes that are started.
+
+    '''
 
     pids_to_kill = []
     topo = Topology(db="topology.db")
@@ -57,7 +62,6 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     coordinator = subprocess.Popen(['sudo', 'python', 'controller/coordinator.py', '--v', '--r', '%s' % report_threshold])
     pids_to_kill.append(coordinator.pid)
 
-    print("Coordinator PID: ", coordinator.pid)
     time.sleep(5)
 
     for p4switch_name in topo.get_p4switches():
@@ -71,8 +75,6 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
             '''
             pids_to_kill.insert(0, controller.pid)
 
-    print(pids_to_kill)
-
     # we need to sleep for a bit before running the lb ag controllers
     time.sleep(5)
     # start lb and ag controllers
@@ -84,6 +86,11 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     return pids_to_kill
 
 def kill_processes(pid_list):
+    '''
+    Writes a bash kill command to kill_script.sh for every entry in the pid list
+
+    '''
+
     f = open("kill_script.sh", "w+")
     for pid in pid_list:
         print(pid)

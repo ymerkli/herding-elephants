@@ -48,9 +48,12 @@ global_thresh_to_percentile = {
     }
 }
 
-
-
 def startup(global_threshold, report_threshold, epsilon, sampling_probability, mode):
+    '''
+    Starts the coordinator and controllers with the given parameters. Returns the pids of all
+    processes that are started.
+
+    '''
 
     pids_to_kill = []
     topo = Topology(db="topology.db")
@@ -59,7 +62,6 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability, m
     coordinator = subprocess.Popen(['sudo', 'python', 'controller/coordinator.py', '--r', '%s' % report_threshold])
     pids_to_kill.append(coordinator.pid)
 
-    print("Coordinator PID: ", coordinator.pid)
     time.sleep(5)
 
     for p4switch_name in topo.get_p4switches():
@@ -78,8 +80,6 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability, m
             '''
             pids_to_kill.insert(0, controller.pid)
 
-    print(pids_to_kill)
-
     # we need to sleep for a bit before running the lb ag controllers
     time.sleep(5)
     # start lb and ag controllers
@@ -92,6 +92,11 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability, m
 
 
 def kill_processes(pid_list):
+    '''
+    Writes a bash kill command to kill_script.sh for every entry in the pid list
+
+    '''
+
     f = open("kill_script.sh", "w+")
     for pid in pid_list:
         print(pid)
@@ -180,7 +185,7 @@ def main():
     )
     print("Real elephants path: ", real_elephants_path)
 
-    parameter_rounds_norm, parameter_name = read_rounds(csv_file_path)
+    parameter_rounds_herd, parameter_name = read_rounds(csv_file_path)
     parameter_rounds_rla, dummy = read_rounds(csv_file_path_rla)
     parameter_rounds_ps, dummy = read_rounds(csv_file_path_ps)
 
@@ -194,8 +199,7 @@ def main():
         os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_herd.json' &")
         time.sleep(30)
 
-        for epsilon in parameter_rounds_norm:
-
+        for epsilon in parameter_rounds_herd:
 
             print("Evaluating for epsilon = {0}".format(epsilon))
             r = int(1/float(epsilon))

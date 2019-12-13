@@ -35,9 +35,6 @@ def enablePrint():
 '''
 Used for clone method of receiving packets. Defines the same fields as
 the cpu header of switch.p4
-
-
-
 '''
 class Cpu_Header(Packet):
     name = 'CpuPacket'
@@ -55,8 +52,6 @@ class PsController(object):
 
     Args:
         sw_name (str):                  The name of the switch where the controller is running on
-        epsilon (float):                The approximation factor
-        global_threshold_T (int):       The global threshold
         sampling_probability_s (float): The probability to sample a flow (s) [0-1]
         coordinator_port (int):         The port on which the coordinator server is running on
 
@@ -219,7 +214,7 @@ class PsController(object):
 
         print("{0}: switch reports={1}, recv reports={2}".format(self.sw_name,\
             count_report_switch, self.reports))
-        f = open("counter_results_ps","a")
+        f = open("../evaluation/counters/counter_results_ps","a")
         f.write("{0}: switch reports={1}, recv reports={2}\n".format(self.sw_name,\
             count_report_switch, self.reports))
 
@@ -236,20 +231,6 @@ def parser():
             type=str,
             required=True,
             help="The name of the switch"
-    )
-
-    parser.add_argument(
-            "--e",
-            type=float,
-            required=True,
-            help="The approximation factor epsilon"
-    )
-
-    parser.add_argument(
-            "--t",
-            type=int,
-            required=True,
-            help="The global threshold T"
     )
 
     parser.add_argument(
@@ -270,9 +251,6 @@ def parser():
     args = parser.parse_args()
 
     if (args.s < 0 or 1 < args.s):
-        raise InputValueError
-
-    if (args.e <= 0 or 1 < args.e):
         raise InputValueError
 
     return args.n, args.s, args.p
