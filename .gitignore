@@ -1,20 +1,23 @@
-# Ignore the src/log folder
+# Ignore the following folders
 src/log
-
-# Ignore the src/pcap folder
 src/pcap
+pcap
+.vscode
 
-# Ignore all swap files
+# Ignore the following file types
 *.swp
+*.pyc
+*.p4i
 
 # Ignore these files
 src/p4src/switch.json
 src/p4src/switch.p4i
-src/aggregate_switch.p4i
-src/aggregate_switch.json
-src/load_balancing.p4i
-src/load_balancing.json
+src/p4src/aggregating_switch.p4i
+src/p4src/aggregating_switch.json
+src/p4src/load_balancing.p4i
+src/p4src/load_balancing.json
 src/topology.db
+evaluation/data/found_elephants.json
 
 # Ignore generated files
 src/real_elephants.json
@@ -22,3 +25,4 @@ src/found_elephants.json
 src/start_controllers.sh
 src/controller/found_elephants.json
 src/start_controllers.sh
+src/kill_script.sh

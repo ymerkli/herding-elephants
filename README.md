@@ -11,29 +11,7 @@
 git clone https://gitlab.ethz.ch/nsg/adv-comm-net-projects/02-herding.git ~/
 ```
 
-### Update local repository
-
-```bash
-git pull https://gitlab.ethz.ch/nsg/adv-comm-net-projects/02-herding.git
-```
-
-### Commit and push
-```bash
-cd /home/p4/02-herding
-git add filename.txt
-git commit -m "YourMessage"
-git push -u origin master
-```
-
-### Commit and push to branch
-```bash
-cd /home/p4/02-herding
-git add filename.txt
-git commit -m "YourMessage"
-git push -u origin branchname
-```
-
-#### Brief project description
+## Project description
 Herd is distributed algorithm which detects network-wide heavy hitters by combining sample-and-hold with probabilistic reporting to a central coordinator.
 Further an algorithm to tune Herd for a maximum F1-score under communication and state constraints is also implemented.
 
@@ -43,21 +21,63 @@ All flows start as mice. Mice flows get picked randomly with probability _s_ and
 
 The parameters _s_, _τ_, _r_ and _R_ can be calculated to maximize the F1-score under the constraints of limited switch memory _S_ and a maximum communication budget per switch. In order to calculate _τ_ we use an approximation factor _ε_.
 We do this by more or less with a try and error approach.
+
 ## How to test
-### Run the p4app
+For our evaluation, we've implemented an automated testing procedure which takes a set of parameters to evaluate over. For each parameter, a mininet will be started, the coordinator and all L2Controllers (one per ingress switch in the given topology) will be started for the given parameters, the load balancer and aggregator switch will be
+initialized and finally, all packets from the given pcap file will be sent from a host connected to the load balancer.
+
+### Automated testing
+#### 1. Define a measurements script
+First, you have to decide over which parameter you want to sweep and which values of the parameter should be chosen. Currently supported parameters are: epsilon, sampling_probability (make sure to spell these correctly in the csv file). Create a .csv file in the following format:
+```
+<parameter_name>,f1score,precision,recall
+<parameter_value_1>
+<parameter_value_2>
+...
+<parameter_value_n>
+```
+There already exists a basic evaluation file in `~/02-herding/evaluation/basic/measurements.csv` which can be used.
+#### 2. Decide on parameter values
+The following values need to be specified to start an evaluation run:
+* global_threshold: The number of packets for which a flow is considered a heavy hitter. This needs to be determined using the `global_threshold.py` script. The global threshold is usually the 99th percentile on the packet count over all flows. For the given pcap files, the global_thresholds are specified in `~/02-herding/evaluation/data/global_thresholds.json`.
+* sampling probability: With which probability should an ingress switch sample a not yet tracked flow. Larger sampling proability leads to better performance (ess likely to miss a flow) but also more states on the switch.
+* epsilon: The approximation factor epsilon. Epsilon is a tuning parameter and non-trivial to select right. A usual good choice is epsilon=l/k, where `l=number of ingress switches that see a flow` and `k=number of ingress switches`. For the usual case of `l=2` and `k=10`, `epsilon=0.2`.
+* reporting threshold: After how many reports for a flow should the coordinator classify the flow as a heavy hitter. This parameter can be tuned and might be adapted to a specific pcap file. As a general rule, the paper specifies 1/epsilon.
+* pcap file: The path to the pcap file which should be sent from the host.
+* csv file: The path to the csv file where the parameter values to evaluate over are taken from and f1score, precision, recall will be written to.
+
+NOTE: The parameter you want to sweep over still needs to be initialized to some value, but this value will be ignored.
+#### 3. Start an evaluation run
+An evaluation run is started using the script `start_topology_and_eval.sh` as follows:
+```bash
+sudo bash start_topology_and_eval.sh <sampling_prob> <epsilon> <global_threshold> <reporting_threshold> <csv_file_path> <pcap_file_path> <p4app_file_path>
+```
+`start_topology_and_eval.sh` will start a mininet for the given p4app and then start the evaluation runs.
+
+NOTE: During our evaluation, we've encountered dropped packets at the load balancer at around 8000 packets per second and dropped hellos and reports between ingress switch and local controller at around 400 packets per second. The limiting factor seemed to be the communication between data plane and controll plane and the time delay between sending a hello to the central coordinator and receiving a hello callback and then adding rules to the switch table. Due to this, we had to test at rather low sending speeds (300 packets per second). That's why evaluation takes rather long and the pcap files are rather short.
+
+For a quick test evaluation which won't take much time, run the following command:
+```bash
+sudo bash start_topology_and_eval.sh 0.2 0.2 11 10 ~/02-herding/evaluation/basic/measurements.csv ~/02-herding/pcap/eval500.pcap ~/02-herding/src/p4app/p4app_10_switches.json
+```
+#### 4. Check the results
+After all evaluation rounds have finished, check your csv file. For each evalution round, you will find the f1score, precision and recall.
+These accuracy measures are calculated using `~/02-herding/evaluation/data/real_elephants_...`. These json files list all flows for the specific pcap files which are heavy hitters (i.e. the packet count for the flow exceeds the global threshold).
+
+### Manual run
+#### Start the mininet
 ```bash
 sudo p4run --conf ~/02-herding/src/p4app/<p4app_name>.json
 ```
-
 ### Run the coordinator
 IMPORTANT: the coordinator needs to be running before starting any l2_controller
 ```bash
-python ~/02-herding/src/controllers/coordinator.py
+python ~/02-herding/src/controllers/coordinator.py --r <reporting_threshold> --v
 ```
 
 ### Run the L2 controller
-Run the L2 controller on each switch and pass the following parameters:
-* switch name: --s <switch_name>
+Run the L2 controller on each ingress switch and pass the following parameters:
+* switch name: --n <switch_name>
 * epsilon: --e <epsilon>
 * global threshold: --t <global_threshold>
 * sampling probability: --s <sampling_probability>
@@ -67,22 +87,8 @@ python ~/02-herding/src/controllers/l2_controller.py --s <switch_name> --e <epil
 ```
 
 ### Send some traffic
-Log into a host and send some traffic
+Log into a host and send some traffic. Due to aforemention issues with sending speed, keep the sending speed below 300pps.
 ```bash
 mx <host_name>
-python ~/02-herding/src/send.py
+sudo tcpreplay -i <host_name>-eth0 -p 300 <pcap_file_path>
 ```
-
-### Start mininet and send traffic
-* Topology can be changed by editing the first cmd
-* Controllers are started by the restart_controllers.py skript with the given parameters
-* Pcap file is used later to generate traffic
-
-After startup of the mininet, coordinator and controllers, h1 executes send.py 
-which uses the given pcap file to simulate traffic.
-
-```bash
-bash start_topology.sh
-```
-
-Brief project description
