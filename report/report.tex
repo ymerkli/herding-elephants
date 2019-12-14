@@ -170,41 +170,32 @@ The counters counting the number of seen packets per flow are stored in a multi-
 
 A Herd controller is running on each ingress switch. The controller's main task is to communicate with the coordinator and write rules into the group values match-action table.
 
-\noindent During the startup phase, the controller cleans all hash tables, writes the sampling probability to the data plane, fills the forwarding table and connects to the coordinator RPC server. To handle communication between data plane and control plane, the controller sniffs on the copy-to-cpu interface and unpacks each received cloned placket. Each clone packet includes a CPU header, stating the flow five-tuple and the packet count for the flow (flow count). The controller determines based on the flow count whether the received message is a hello or a report: hellos have a flow count of zero whereas reports have an flow count larger than zero. The controller then sends the hello or report by initiating a remote procedure call towards the coordinator, including the flow and the switch name as arguments.
+\noindent During the startup phase, the controller cleans all hash tables, writes the sampling probability to the data plane, fills the forwarding table and connects to the coordinator RPC server. To handle communication between data plane and control plane, the controller sniffs on the copy-to-cpu interface and unpacks each received cloned placket. Each clone packet includes a CPU header, stating the flow five-tuple and the packet count for the flow (flow count). The controller determines, based on the flow count, whether the received message is a hello or report: hellos have a flow count of zero whereas reports have a flow count larger than zero. The controller then sends the hello or report to the coordinator by initiating a remote procedure call, including the flow and the switch name as arguments.
 
 \noindent When a flow belonging to a never before seen group $g$ arrives at an ingress switch, it is possible that the data plane sends multiple hellos due to delayed writes into the group values table. In order to avoid overloading the network with hellos, we adapted the Herd controllers to keep track of the flows for which a hello was already sent. This way, each controller only sends one hello per flow to the coordinator and we don't overload the network or the coordinator with unnecessary hello messages.
 
-Controller-coordinator communication is two-way since the coordinator needs to answer with the locality parameter $l_g$ and respective flow $f$ upon receiving a hello. Additionally to a sending part, the Herd Controller thus also has a receiving part. Upon receival of $l_g$, the controller calculates the mule threshold as $\tau_g = \frac{\epsilon \cdot T}{l_g}$ and the reporting probability as $r_g = \frac{1}{l_g}$. Additionally, $r_g$ is transformed into an \textit{'int32-probability'} (see section \ref{switch}). The controller then writes $\tau_g$ and $r_g$ into the group values table with the group $g$ $(f \in g)$ as match key and $\tau_g, r_g$ 
+Additionally to a sending, the Herd Controller also needs to receive messages from the coordinator. Upon receival of $l_g$, the controller calculates the mule threshold as $\tau_g = \frac{\epsilon \cdot T}{l_g}$ and the reporting probability as $r_g = \frac{1}{l_g}$, where $r_g$ is then transformed into an \textit{'int32-probability'} (see section \ref{switch}). The controller then writes $\tau_g$ and $r_g$ into the group values table with the group $g$ $(f \in g)$ as match key and $\tau_g, r_g$ 
 
 
+\subsection{Herd controller - coordinator communication} \label{communication}
 
+The communication model specified by Herd has the following three important characteristics: First, the coordinator needs to provide a service to one or many Herd controllers, which request the service. Second, communication should be asynchronous since hellos and reports can be generated anytime. Waiting for synchronous communication rounds would introduce additional delay, which would worsen accurcay. Last but not least, the communication needs to be two-way, since the coordinator needs to respond to hellos.
 
-Due to the delay between the switch sending a hello and the controller writing the group values into the match action table, it is possible that the group values table does not yet have an entry for a group although a hello was already sent. Thus, if the second packet of a flow for which a hello was sent arrives \textit{before} the table write happens, a second hello will be sent to the controller. It is therefore possible that the Herd controller receives multiple hellos for the same flow. 
-
-
-
-
-
-Whenever an incoming packet on the switch creates a table miss in the group values table, the switch will send a hello. The total delay between the switch sending a hello and the controller writing the table rule is 
-
-$$\Delta t_{hello} = t_{copy-to-cpu} + 2*t_{CC} + t_{table\_write} + \epsilon$$
-
-\noindent where $t_{copy-to-cpu}$ is the delay introduced by the copy-to-cpu, $t_{CC}$ is the delay introduced by the controller-coordinator communication, $t_{table\_write}$ is the time it takes to write $\tau_g$ and $r_g$ into the group values table and $\epsilon$ are negligible processing delays. In case the arrival time of the first packet belo
-
+We decided to use a remote procedure call (RPC) protocol, since it fulfills all three mentioned characteristics. The coordinator server runs an RPC service that implements two exposed methods, $send\_hello$ and $send\_report$, which can be invoked by Herd controllers. The communication from coordinator to Herd controller is implemented through a callback. When invoking $send\_hello$, a Herd controller passes the name of the switch and a callback function, which will be registered at the coordinator and called once the locality parameter $l_g$ is sent back.
  
 
-
-
-
 \subsection{Coordinator} \label{coordinator}
-The global coordinator handles all the messages sent to it and reports back with new locality parameters to the individual switches if necessary. 
+The central coordinator receives and handles hellos and reports sent by Herd controllers and sends back the locality parameter $l_g$. The coordinator further keeps track of the number of sent reports and classifies flows as heavy hitters.
 
-When a hello arrives from a switch the coordinator checks whether the coordinator has already seen the switch or the flow before. If not it saves them. Now the uses the HandleHello function from the original paper. First it checks whether it had already got a hello from that switch with that flow. If not if saves it in the dictionary $S_f$ and finally sends notices all switches in updated $S_f$, but only if the size of $S_f$ doubled in order not to overwhelm the links with update messages. If $S_f$ didn't double in size, the coordinator only sends a notification to the new switch in $S_f$ about the current size of $S_f$.
+\noindent When a hello arrives, the coordinator first registers the callback for the sending switch. It then extracts the group $g$ from the flow five-tuple and looks up the locality parameter $l_g$. The coordinator further keeps track of which switches observe at least one flow belonging to group $g$. In case the number of switches that see a group doubled, $l_g$ is updated and sent to each switch that observes $g$. Otherwise, $l_g$ is only sent to the switch sending the hello.
 
-Handling the reports is quite simpler. The coordinator simply counts the number of reports arriving at it for each flow. And after enough reports arrived the flow get put into a list with all the other heavy hitters. Finally upon shutdown it writes found elephants into a $.json$ file for further processing.
+Handling reports is rather simple. The coordinator simply counts the number of received reports for each flow. As soon as the number of reports reaches the reporting threshold $R$, the flow is put into a heavy hitter set and thus promoted to an elephant flow.
 
 \subsection{Tuning the parameters} \label{tuningparameters}
-Until now it was assumed that the parameters $\tau$, $s$, $r$ and $R$ were given. Now we try to find those paramaters in order to maximize the detection accuracy of Herd under communication and switch memory constraints. We do this by simulating the whole protocol for one Herd switch and the coordinator. In tuningparameters.py one can specify the packets needed to promote a flow into a heavy hitter and a set of training data in form of a pcap-file, but also the limited switch memory and communication budget. The program then iterates through the possible approximation factors $\epsilon$ and returns the parameters which maxime the accuracy.
+Until now it was assumed that the approximation parameter $\epsilon$, the sampling probability $s$ and the report threshold $R$ were given. 
+
+
+Now we try to find those paramaters in order to maximize the detection accuracy of Herd under communication and switch memory constraints. We do this by simulating the whole protocol for one Herd switch and the coordinator. In tuningparameters.py one can specify the packets needed to promote a flow into a heavy hitter and a set of training data in form of a pcap-file, but also the limited switch memory and communication budget. The program then iterates through the possible approximation factors $\epsilon$ and returns the parameters which maxime the accuracy.
 
 First, we try to configure the sampling probability $s$ of the sample-and-hold algorithm. With unlimited switch memory $S$ the sampling probability could simply be set to $s=1$ and the switches would memorize all flows going through them. Let $M$ be the set of observed moles on the switch. Thus the switch has to store $|M|$ different flows. From this we conclude that we need $|M| \leq S$ in order to be able to store all the observed flows. To be sure that the real $M$ has enough space in $S$ we even want $|M| < S$. In order to have this in expectation $s$ is set to $1/\tau$. For that an estimation of $\tau$ is needed. At the beginning $\tau$ is set to the global threshold $T$. $T$ is the size a flow needs to have in order to be recognized as a heavy hitter. Then we look in our training data $D$ how many moles are found and check whether the found moles $M$ use up all the memory $S$. Afterwards $\tau$ is made smaller to increase the chance to categorize a flow as mole. This is done iteratively as long as there is still space in $S$. 
 
@@ -212,86 +203,82 @@ If unlimited bandwidth was available $r$ could be set to 1, since there would be
 
 \subsection{Full hash tables} \label{special}%title
 
-Flow counters are stored on each ingress switch in a multi-stage hash table. In case of full hash tables, Herd proposes to just send all packets of the flow to the coordinator. This introduces significant delay and communication cost. In our implementation, we handle full hash tables differently. Instead of sending all packets to the coordinator, the data plane sends an error message to the controller, indicating full hash tables. The controller will subsequently resets the hash tables. We argue that due to the fact that counters of large flows are reset back to 0 anyways in case of a report, this leads to a minor decrease in accuracy.
+Flow counters are stored on each ingress switch in a multi-stage hash table. In case of full hash tables, Herd proposes to just send all packets of the flow to the coordinator which introduces significant delay and communication cost. In our implementation, we handle full hash tables differently. Instead of sending all packets to the coordinator, the data plane sends an error message to the controller, indicating full hash tables. The controller will subsequently reset the hash tables. We argue that due to the fact that counters of large flows are reset back to zero anyways in case of a report, this leads to a minor decrease in accuracy. In the worst case, we reset the hash table when the packet count of flow $f \in g$ is $n_f = \tau_g -1$. The flow needs to be resampled in order for it to be counted. Thus, in expectation, the number of missed packet counts is $\tau_g-1+\frac{1}{s}$. 
 
 \subsection{Challenges} \label{challenges}
-Since the traffic we received from CAIDA for the evaluation had no MAC addresses we had to append our own created MAC addresses.
 
-The topology for the evaluation needs an additional load-balancer in front of the switches running Herd. This is needed in order to distribute the packets across all the ingress switches from $h1$. 
+We faced several challenges during the implementation and evaluation of Herd. The main challenge was limitations imposed by running Herd in a simulated environment and not in hardware. An important part of classification accuracy is how fast we can write or update an entry in the group values table. Whenever an incoming packet on the switch creates a table miss in the group values table, the switch will send a hello in order to fill the table. The total delay between the switch sending a hello and the controller writing the table rule is 
 
-Additionally the load-balancer has to distribute the flows randomly between two randomly chosen switches. 
+$$\Delta t_{hello} = t_{DC} + 2*t_{CC} + t_{table\_write} + \epsilon$$
 
-At the other end of the ingress switches we had a similar problem. This is why we put an aggregating switch between the ingress switches and $h2$. This switch collects again all the packets from the ingress switches and forwards them to $h2$. 
+\noindent where $t_{DC}$ is the delay introduced by the data plane to control plane communication (digests or copy-to-cpu), $t_{CC}$ is the delay introduced by the controller-coordinator communication, $t_{table\_write}$ is the time it takes to write into a match-action table and $\epsilon$ are negligible processing delays. Every packet belonging to a flow $f \in g$ that arrives during $\Delta t_{hello}$ will not be sampled and the higher the sending speed, the more packets will will arrive during $\Delta t_{hello}$. Further, we observed that the mininet starts dropping digest/copy-to-cpu messages at packet sending rates exceeding 400 packets per second (pps). We were thus limited to sending rates of 300 pps, which made evaluation over large pcap files take a long time. For a sending rate of 300 pps, a packet trace consisting of five million packets would take 4.6 hours. When running multiple evaluation runs, the total evaluation would easily take days. We thus limited our evaluation to packet trace with 100'000 and 400'000 packets. Note that these limitations only apply to simulations; in real hardware, the data plane to control plane communication would work over a direct link, which would remove that bottleneck. In that case, the main delay would come from the controller to coordinator communication.
 
-We faced further challenges with the communication between the ingress switch controllers and the coordinator. Since the communication between those two is asynchronous, for example a report about a mule could arrive at the coordinator before the hello and therefore not be store.%uh... really? I think the example is wrong.
+Another challenge we faced was that the Herd paper \cite{anon2019herd} was often times very unspecific and omitted crucial details (see section \ref{original_paper}). 
 
-The original paper mentions the implementation of a rolling window which resets the hash tables every $W$ seconds. Further, once all the hash tables are filled the ingress switches were to send every single sampled packet of a new flow to the global coordinator. So basically these new flows would have $\tau = 1$ and $r = 1$. The coordinator would therefore pretty much instantly classify these flows as heavy hitters even if they aren't. We didn't like this solution of the rolling time window since it doesn't solve the problem of what happens to new flows once the hash tables are full. We solved this problem by instantly resetting the hash tables once they can't accomodate a new flow, and therefore not waiting until the window $W$ is closed. Our solution doesn't overflow the coordinator with reports about the new flows.
-
-Further we faced severe speed issues. The scapy library often reached its limit in terms of speed. Another challenge was that the pcap files are often so big that it takes a long time to test the implementation of Herd. This makes the testing process even slower together with scapy. 
-%how we solved it. I need to have explained again.
-However, the speed issues we faced are only a problem in software, since the speed of the whole architecture in would be a multiple of the speed in software when implented onto hardware.
-
-We also tried digests, however we found that digests are slower which introduces significant delay between the data plane sending a message and the controller receiving it, which leads to an increase in false negatives since the switch misses packets as long as no table entries are written. In real hardware, this would not be an issue since there exists a direct link between data plane and control plane, which allows for diminishing delay. In real hardware, the delay introduced by the communication between controller and coordinator would be would dominate.
 
 \subsection{Assessment of the original paper} \label{original_paper}
-Due to the original paper on being only a rejected conference submission and not an accepted paper we faced many challenges along the way. The authors are often extremely vague. For instance the topology used for evaluation is barely mentioned. The paper also contains mistakes. For example in the GetSampling function the sampling probability is not adjusted in the while-loop which could trap the program in an infinite loop. The idea of a rolling time windows sounds rushed. This is why we implemented that the switch resets once the table is full.
 
-%\lipsum[1-5]
+Unfortunately, the Herd paper \cite{anon2019herd} has several weaknesses which made implementing it rather challenging. The paper is often extremely vague and omits crucial details. The authors stress the importance of tuning parameters such as the sampling probability $s$, the report probability $r$ or the approximation factor $\epsilon$, to that end they propose a tuning parameters algorithm which intends to simulate Herd and find an ideal parameter set, given a packet trace as training data. Although providing part of the algorithm in pseudo code, many details are neglected, which required assumptions from our side. In the end, we were not able to reproduce a meaningful set of parameters using their tuning algorithm.
+
+Considering the importance the paper puts on finding the right parameters, the authors blatantly omit mentioning which parameters were used for their evaluation. Since we were not able to reproduce the paper's tuning parameter algorithm, we thus had to find an optimal set of parameters by evaluating Herd in a mininet over multiple parameters, which eventually allowed us to at least find a locally optimal parameter set.
+
 
 \section{Evaluation}
+
 \subsection{Topology} \label{topology}
 
+For the evaluation, we used the topology displayed in figure \ref{fig:topology_fig}, as proposed by the Herd paper \cite{anon2019herd}. The topology is composed of $k=10$ edge (ingress) switches $s_1 - s_{10}$, representative of a wide-area network. Each ingress switch is running Herd with its Herd controller communicating with the coordinator. The host $h_1$ represents an external host which sends traffic towards an internal host $h_2$, crossing the ingress switches $s_1 - s_{10}$. As outlined in section \ref{locality}, flows usually show affinity for a limited number of ingress switches. As proposed by the paper, each flow will enter the network over $l = 2$ ingress switches $s_{primary}$, $s_{secondary}$, where $P[s_{primary}] = p = 0.95$ and $P[s_{secondary}] = 1-p = 0.05$. The two ingress switches are selected based on the hash of the source IP address. In order to distribute flows over ingress switches, we added a load balancer switch, which simply extracts the source IP of each packet, calculates a hash and sends the packet to $s_primary$ with $0.95$ probability and to $s_secondary$ with $0.05$ probability. Probabilistic coin flips are again implemented as explained in section \ref{switch}. Additionally, we added an aggregating switch to the topology, which basically just collects all traffic that the ingress switches forward and then sends it to the internal host $h_2$.
+
+\noindent Both, the load balancing switch and the aggregating switch have their own controllers that run at initialization time and write forwarding rules into match-action tables.
+
+\newpage
+
+To generate a sizable amount of traffic on the sending host $h1$ we use CAIDA's anonymized internet packet traces from 2016, the same packet traces the Herd paper used. Due to the problems specified in \ref{challenges}, we sized down the packet traces to pcap files with 100'000 or 400'000 packets. Instead of Python's scapy library, which only achieves very low sending rates, we used \textit{tcpreplay} to send packets on host $h_1$. \textit{tcprewrite} was used in order to add the correct source and destination MAC addresses (i.e. the MAC address of the sending interface on $h_1$ and the MAC address of the receiving interface on the load balancer $lb_1$) to the packets in the pcap file.
+
+ 
 \begin{figure}
 	\centering
-	\includegraphics[width=1\textwidth]{figures/Herd_topology}
-	\caption{Topology for the evaluation. h1 sends traffic over the loadbalancer, a Herd switch and the aggregating switch to h2.}
+	\includegraphics[width=0.75\textwidth]{figures/Herd_topology}
+	\caption{Evaluation topology: $h_1$ sends traffic towards $h_2$, crossing the ingress switches $s_1 - s_{10}$, which all run Herd}
 	\label{fig:topology_fig}
 \end{figure}
 
-As topology we use two host, $h1$ sends the traffic and $h2$ receives it. $h1$ sends to programmable switch $lb1$ which is there for load balancing. $lb1$ fowards the packets to the switches $s1 - s10$, which run the Herd protocol. The ingress switches $s1 - 10$ are an aggregating switch $ag1$ which is finally linked to the receiving host $h2$.\\
+\subsection{Detection accuracy} \label{accuracy}
 
-We had to separately build a load balancer for our test setup. In order to distribute the flows between the Herd switches the load balancing switch chooses randomly two Herd switches. The load balancer then forwards each packet of the flow to one of the two chosen switches. This has to be done this way since in the evaluation of the original paper each flow has exactly two switches observing each flow. Of course this procedure wouldn't be necessary in a real world application. There the number of observing switches would not be given by a separate switch, but according to the flows themselves, and therefore out of the direct control of the operators. Also the number of observing switches would not be limited by two. The coordinator would then forward this number to the switches according to the algorithm with the hello messages to take the locality of the flows into account.
+In the following evaluations, we look at detection accuracy, meaning out of all flows that actually are heavy hitters, how many do we classify correctly (true positive), how many do we mistakenly classify as heavy hitters (false positive) and how many actual heavy hitters don't we classify as such (false negative). Note that by \textit{positive} we always mean \textit{heavy hitter}. We look at the following accuracy measures
 
-Since the load balancing and the aggregating switch work differently from the ingress switch they get both their own controller and switch logic.
+$$Precision = \frac{tp}{tp + fp} \quad\quad recall = \frac{tp}{tp + fn} \quad\quad F1 score = \frac{2 \cdot tp}{2 \cdot tp + fp + fn}$$
 
-\subsubsection{Load-balancer}
-The load-balancing switch chooses for each flow two random ingress switches and forwards the packets of that flow randomly to one of those two switches.
-The corresponding controller forwards traffic to the ingress switches according to their switch ID.
+In order to calculate these accuracy measures, we need to know the actual heavy hitters of a packet trace. This is done by parsing all packets of a pcap file and calculating the flow count for each flow. The heavy hitter set is the set of  flow whose flow count exceeds a global threshold $T$. Setting $T$ is a design choice that depends on the network and traffic specifics. The Herd paper used the $99.99^{th}$ percentile flow count in the packet trace. We decide to use the $99th$ percentile since we use smaller packet traces and a smaller global threshold will result in more heavy hitter flows. Accuracy is then simply calculated by evaluating all 'real' heavy hitter flows and comparing them with the 'found' heavy hitter flows, which are returned by the coordinator.
 
-\subsubsection{Aggregating switch}
-The aggregating switch simply fowards every received to the end host.
-Its controller receives the traffic from all ingress switches with Herd and forwards everything to the endhost.
+\subsection{Herd performance over different sampling probabilities} \label{sampling_probability_evaluation}
 
-\subsection{Traffic} \label{traffic}
-To generate a sizeable amount of traffic on the sending host $h1$ we use CAIDA's anonymized Internet traces from 2016, like the original paper did. Using the $send.py$ script on $h1$ parses the packets stored in a $.pcap$ file and $h1$ forwards them through the testing topology. Further the script counts how often a packet was sent for each flow and writes flows that were seen more than $T$ times in $real\_elephants.json$ for later comparison with heavy-hitters found with Herd.
 
-Configuring the parameters $\tau$, $r$ and $R$ in isolation might actually impact the accuracy of Herd negatively. Thus $tuningparameters.py$ simulates the whole protocol with given training data in order to reach the best possible accuracy for the running protocol.
+One of the main ideas behind Herd is to probabilistically sample flows such that network devices don't need to keep track of every flow they observe, which would be infeasible for large number of flows due to the limited memory on network devices. The sampling probability $s$ dictates how many states a switch eventually will have to track, i.e. the lower the sampling probability, the lower the number of required states.
 
-\subsection{Evaluation} \label{evaluation}
 \begin{figure}
 	\centering
-	\includegraphics[width=0.5\textwidth]{figures/Herd_topology}
+	\includegraphics[width=0.5\textwidth]{figures/sampl_prob_400k_e0_1_re}
 	\caption{some graph about the evaluation}
-	\label{fig:topology_fig}
+	\label{fig:sampling_prob_graph}
 \end{figure}
 
-\lipsum[1]
-Something in %\figref{topology_fig}. %I still don't understand how \figrefs work.
 
 \begin{figure}
 	\centering
 	\includegraphics[width=0.5\textwidth]{figures/Herd_topology}
 	\caption{some other graph}
-	\label{fig:topology_fig}
+	\label{fig:topology_fig3}
 \end{figure}
-%\lipsum[1-2]
+
 
 \section{Conclusion}
-\hint{A brief conclusion about how you solved the project.} \\
+
+
 We reimplemented Herd, a distributed heavy hitter protocol. Compared to the original paper we changed when to reset the flow/count tables. Further we had to implement a load balancing switch in front of the Herd switches for the evaluation. Additionally, we had severe speed issues in the implementation in software compared to a implementation in hardware.
 
 Further research could go towards improving the selection of the parameters. How it is implemented at the moment, the tuning has to be done ahead of the protocol with training data. An improved protocol could maybe adjust the parameters according to captured data, and not prerecorded data. Even a dynamicaly changing tuning can be imagined. Another research topic would be, in case a single coordinator reaches its limit in processing power and speed, to have multiple coordinators, each responsible for a subnet, transferring data between each other.
-%\lipsum[1]
+
 
 \label{lastpage} % this must stay here
 \clearpage
