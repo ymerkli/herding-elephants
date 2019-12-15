@@ -1,0 +1,246 @@
+s1: switch hellos=[0], recv hellos=0, switch reports=[0], recv reports=0
+-
+-
+ **** Evaluation for epsilon 0.005 finished ****
+-
+-
+s5: switch hellos=[770], recv hellos=770, switch reports=[1186], recv reports=1186
+Switch memory used: 111000s3: switch hellos=[826], recv hellos=826, switch reports=[2677], recv reports=2677
+Switch memory used: 111000s4: switch hellos=[825], recv hellos=825, switch reports=[1573], recv reports=1573
+Switch memory used: 111000s2: switch hellos=[797], recv hellos=797, switch reports=[1446], recv reports=1446
+Switch memory used: 111000s8: switch hellos=[808], recv hellos=808, switch reports=[1302], recv reports=1301
+Switch memory used: 111000s6: switch hellos=[871], recv hellos=871, switch reports=[1273], recv reports=1273
+Switch memory used: 111000s1: switch hellos=[820], recv hellos=820, switch reports=[1484], recv reports=1484
+Switch memory used: 111000s7: switch hellos=[807], recv hellos=807, switch reports=[1245], recv reports=1245
+Switch memory used: 111000s10: switch hellos=[818], recv hellos=818, switch reports=[1112], recv reports=1112
+Switch memory used: 111000s9: switch hellos=[771], recv hellos=771, switch reports=[1175], recv reports=1175
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.01 finished ****
+-
+-
+s6: switch hellos=[908], recv hellos=908, switch reports=[1271], recv reports=1271
+Switch memory used: 111000s5: switch hellos=[780], recv hellos=780, switch reports=[1117], recv reports=1117
+Switch memory used: 111000s4: switch hellos=[771], recv hellos=771, switch reports=[1719], recv reports=1719
+Switch memory used: 111000s7: switch hellos=[857], recv hellos=857, switch reports=[1296], recv reports=1296
+Switch memory used: 111000s9: switch hellos=[805], recv hellos=805, switch reports=[1125], recv reports=1125
+Switch memory used: 111000s3: switch hellos=[837], recv hellos=837, switch reports=[2570], recv reports=2570
+Switch memory used: 111000s10: switch hellos=[815], recv hellos=815, switch reports=[1034], recv reports=1034
+Switch memory used: 111000s2: switch hellos=[790], recv hellos=790, switch reports=[1361], recv reports=1361
+Switch memory used: 111000s1: switch hellos=[821], recv hellos=821, switch reports=[1480], recv reports=1480
+Switch memory used: 111000s8: switch hellos=[800], recv hellos=800, switch reports=[1312], recv reports=1312
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.02 finished ****
+-
+-
+s10: switch hellos=[811], recv hellos=811, switch reports=[1117], recv reports=1117
+Switch memory used: 111000s2: switch hellos=[778], recv hellos=778, switch reports=[1353], recv reports=1353
+Switch memory used: 111000s1: switch hellos=[798], recv hellos=798, switch reports=[1513], recv reports=1513
+Switch memory used: 111000s6: switch hellos=[939], recv hellos=939, switch reports=[1213], recv reports=1213
+Switch memory used: 111000s4: switch hellos=[838], recv hellos=838, switch reports=[1609], recv reports=1609
+Switch memory used: 111000s5: switch hellos=[801], recv hellos=801, switch reports=[1180], recv reports=1180
+Switch memory used: 111000s7: switch hellos=[827], recv hellos=827, switch reports=[1334], recv reports=1334
+Switch memory used: 111000s9: switch hellos=[776], recv hellos=776, switch reports=[1033], recv reports=1033
+Switch memory used: 111000s8: switch hellos=[814], recv hellos=814, switch reports=[1297], recv reports=1296
+Switch memory used: 111000s3: switch hellos=[846], recv hellos=846, switch reports=[2731], recv reports=2731
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.04 finished ****
+-
+-
+s4: switch hellos=[842], recv hellos=842, switch reports=[1466], recv reports=1466
+Switch memory used: 111000s5: switch hellos=[819], recv hellos=819, switch reports=[1076], recv reports=1076
+Switch memory used: 111000s7: switch hellos=[793], recv hellos=793, switch reports=[1271], recv reports=1271
+Switch memory used: 111000s6: switch hellos=[1004], recv hellos=1004, switch reports=[1106], recv reports=1106
+Switch memory used: 111000s10: switch hellos=[803], recv hellos=803, switch reports=[1008], recv reports=1008
+Switch memory used: 111000s3: switch hellos=[850], recv hellos=850, switch reports=[2605], recv reports=2605
+Switch memory used: 111000s8: switch hellos=[838], recv hellos=838, switch reports=[1178], recv reports=1178
+Switch memory used: 111000s9: switch hellos=[812], recv hellos=812, switch reports=[1085], recv reports=1085
+Switch memory used: 111000s2: switch hellos=[781], recv hellos=781, switch reports=[1379], recv reports=1379
+Switch memory used: 111000s1: switch hellos=[808], recv hellos=808, switch reports=[1326], recv reports=1326
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.06 finished ****
+-
+-
+s5: switch hellos=[781], recv hellos=781, switch reports=[935], recv reports=935
+Switch memory used: 111000s4: switch hellos=[825], recv hellos=825, switch reports=[1241], recv reports=1241
+Switch memory used: 111000s6: switch hellos=[1016], recv hellos=1016, switch reports=[882], recv reports=882
+Switch memory used: 111000s7: switch hellos=[815], recv hellos=815, switch reports=[1068], recv reports=1068
+Switch memory used: 111000s1: switch hellos=[830], recv hellos=826, switch reports=[998], recv reports=990
+Switch memory used: 111000s10: switch hellos=[801], recv hellos=801, switch reports=[818], recv reports=818
+Switch memory used: 111000s2: switch hellos=[784], recv hellos=784, switch reports=[1193], recv reports=1193
+Switch memory used: 111000s8: switch hellos=[809], recv hellos=809, switch reports=[951], recv reports=951
+Switch memory used: 111000s9: switch hellos=[797], recv hellos=797, switch reports=[892], recv reports=892
+Switch memory used: 111000s3: switch hellos=[819], recv hellos=819, switch reports=[1796], recv reports=1796
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.08 finished ****
+-
+-
+s4: switch hellos=[790], recv hellos=790, switch reports=[1211], recv reports=1211
+Switch memory used: 111000s6: switch hellos=[922], recv hellos=922, switch reports=[910], recv reports=910
+Switch memory used: 111000s5: switch hellos=[805], recv hellos=805, switch reports=[909], recv reports=909
+Switch memory used: 111000s7: switch hellos=[844], recv hellos=844, switch reports=[1011], recv reports=1011
+Switch memory used: 111000s2: switch hellos=[788], recv hellos=788, switch reports=[1128], recv reports=1128
+Switch memory used: 111000s3: switch hellos=[765], recv hellos=765, switch reports=[1764], recv reports=1764
+Switch memory used: 111000s1: switch hellos=[878], recv hellos=878, switch reports=[957], recv reports=957
+Switch memory used: 111000s8: switch hellos=[836], recv hellos=836, switch reports=[1046], recv reports=1046
+Switch memory used: 111000s10: switch hellos=[807], recv hellos=807, switch reports=[730], recv reports=730
+Switch memory used: 111000s9: switch hellos=[806], recv hellos=806, switch reports=[935], recv reports=935
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.1 finished ****
+-
+-
+s4: switch hellos=[810], recv hellos=810, switch reports=[1014], recv reports=1014
+Switch memory used: 111000s5: switch hellos=[794], recv hellos=794, switch reports=[704], recv reports=704
+Switch memory used: 111000s6: switch hellos=[1071], recv hellos=1071, switch reports=[720], recv reports=720
+Switch memory used: 111000s10: switch hellos=[813], recv hellos=813, switch reports=[697], recv reports=697
+Switch memory used: 111000s2: switch hellos=[789], recv hellos=789, switch reports=[1000], recv reports=1000
+Switch memory used: 111000s7: switch hellos=[840], recv hellos=840, switch reports=[835], recv reports=835
+Switch memory used: 111000s1: switch hellos=[851], recv hellos=851, switch reports=[823], recv reports=823
+Switch memory used: 111000s3: switch hellos=[775], recv hellos=775, switch reports=[1261], recv reports=1261
+Switch memory used: 111000s8: switch hellos=[848], recv hellos=848, switch reports=[805], recv reports=805
+Switch memory used: 111000s9: switch hellos=[802], recv hellos=802, switch reports=[811], recv reports=811
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.2 finished ****
+-
+-
+s4: switch hellos=[831], recv hellos=831, switch reports=[564], recv reports=564
+Switch memory used: 111000s5: switch hellos=[839], recv hellos=839, switch reports=[438], recv reports=438
+Switch memory used: 111000s6: switch hellos=[1017], recv hellos=1017, switch reports=[417], recv reports=417
+Switch memory used: 111000s8: switch hellos=[857], recv hellos=856, switch reports=[464], recv reports=464
+Switch memory used: 111000s7: switch hellos=[825], recv hellos=825, switch reports=[489], recv reports=489
+Switch memory used: 111000s9: switch hellos=[802], recv hellos=802, switch reports=[442], recv reports=442
+Switch memory used: 111000s10: switch hellos=[813], recv hellos=813, switch reports=[375], recv reports=375
+Switch memory used: 111000s2: switch hellos=[815], recv hellos=815, switch reports=[542], recv reports=542
+Switch memory used: 111000s1: switch hellos=[851], recv hellos=851, switch reports=[510], recv reports=510
+Switch memory used: 111000s3: switch hellos=[889], recv hellos=889, switch reports=[752], recv reports=752
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.3 finished ****
+-
+-
+s4: switch hellos=[816], recv hellos=816, switch reports=[455], recv reports=455
+Switch memory used: 111000s6: switch hellos=[1033], recv hellos=1033, switch reports=[331], recv reports=331
+Switch memory used: 111000s5: switch hellos=[789], recv hellos=789, switch reports=[347], recv reports=347
+Switch memory used: 111000s10: switch hellos=[849], recv hellos=849, switch reports=[363], recv reports=363
+Switch memory used: 111000s7: switch hellos=[824], recv hellos=824, switch reports=[428], recv reports=428
+Switch memory used: 111000s2: switch hellos=[794], recv hellos=794, switch reports=[495], recv reports=495
+Switch memory used: 111000s3: switch hellos=[815], recv hellos=815, switch reports=[582], recv reports=582
+Switch memory used: 111000s9: switch hellos=[810], recv hellos=810, switch reports=[430], recv reports=430
+Switch memory used: 111000s8: switch hellos=[823], recv hellos=823, switch reports=[426], recv reports=426
+Switch memory used: 111000s1: switch hellos=[836], recv hellos=836, switch reports=[389], recv reports=389
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.4 finished ****
+-
+-
+s4: switch hellos=[859], recv hellos=859, switch reports=[349], recv reports=349
+Switch memory used: 111000s5: switch hellos=[815], recv hellos=815, switch reports=[271], recv reports=271
+Switch memory used: 111000s7: switch hellos=[808], recv hellos=808, switch reports=[347], recv reports=347
+Switch memory used: 111000s6: switch hellos=[1101], recv hellos=1101, switch reports=[256], recv reports=256
+Switch memory used: 111000s10: switch hellos=[822], recv hellos=822, switch reports=[255], recv reports=255
+Switch memory used: 111000s8: switch hellos=[847], recv hellos=847, switch reports=[288], recv reports=288
+Switch memory used: 111000s9: switch hellos=[837], recv hellos=837, switch reports=[307], recv reports=307
+Switch memory used: 111000s1: switch hellos=[885], recv hellos=874, switch reports=[291], recv reports=289
+Switch memory used: 111000s2: switch hellos=[795], recv hellos=795, switch reports=[365], recv reports=365
+Switch memory used: 111000s3: switch hellos=[851], recv hellos=851, switch reports=[458], recv reports=458
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.5 finished ****
+-
+-
+s4: switch hellos=[897], recv hellos=897, switch reports=[261], recv reports=261
+Switch memory used: 111000s5: switch hellos=[831], recv hellos=831, switch reports=[194], recv reports=194
+Switch memory used: 111000s7: switch hellos=[924], recv hellos=924, switch reports=[258], recv reports=258
+Switch memory used: 111000s1: switch hellos=[828], recv hellos=828, switch reports=[218], recv reports=218
+Switch memory used: 111000s6: switch hellos=[976], recv hellos=976, switch reports=[182], recv reports=182
+Switch memory used: 111000s8: switch hellos=[873], recv hellos=873, switch reports=[201], recv reports=201
+Switch memory used: 111000s10: switch hellos=[813], recv hellos=813, switch reports=[202], recv reports=202
+Switch memory used: 111000s2: switch hellos=[840], recv hellos=840, switch reports=[291], recv reports=291
+Switch memory used: 111000s3: switch hellos=[911], recv hellos=911, switch reports=[312], recv reports=312
+Switch memory used: 111000s9: switch hellos=[815], recv hellos=815, switch reports=[234], recv reports=234
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.6 finished ****
+-
+-
+s4: switch hellos=[844], recv hellos=844, switch reports=[226], recv reports=226
+Switch memory used: 111000s5: switch hellos=[833], recv hellos=833, switch reports=[199], recv reports=199
+Switch memory used: 111000s6: switch hellos=[1072], recv hellos=1072, switch reports=[190], recv reports=190
+Switch memory used: 111000s1: switch hellos=[862], recv hellos=862, switch reports=[180], recv reports=180
+Switch memory used: 111000s10: switch hellos=[843], recv hellos=843, switch reports=[184], recv reports=184
+Switch memory used: 111000s7: switch hellos=[918], recv hellos=918, switch reports=[223], recv reports=223
+Switch memory used: 111000s2: switch hellos=[808], recv hellos=808, switch reports=[264], recv reports=264
+Switch memory used: 111000s8: switch hellos=[865], recv hellos=865, switch reports=[230], recv reports=230
+Switch memory used: 111000s3: switch hellos=[852], recv hellos=852, switch reports=[333], recv reports=333
+Switch memory used: 111000s9: switch hellos=[790], recv hellos=790, switch reports=[202], recv reports=202
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.7 finished ****
+-
+-
+s4: switch hellos=[872], recv hellos=872, switch reports=[213], recv reports=213
+Switch memory used: 111000s5: switch hellos=[809], recv hellos=809, switch reports=[160], recv reports=160
+Switch memory used: 111000s6: switch hellos=[1065], recv hellos=1065, switch reports=[160], recv reports=160
+Switch memory used: 111000s7: switch hellos=[882], recv hellos=882, switch reports=[207], recv reports=207
+Switch memory used: 111000s10: switch hellos=[820], recv hellos=820, switch reports=[164], recv reports=164
+Switch memory used: 111000s2: switch hellos=[861], recv hellos=861, switch reports=[210], recv reports=210
+Switch memory used: 111000s1: switch hellos=[922], recv hellos=922, switch reports=[180], recv reports=180
+Switch memory used: 111000s8: switch hellos=[852], recv hellos=852, switch reports=[190], recv reports=189
+Switch memory used: 111000s9: switch hellos=[852], recv hellos=852, switch reports=[184], recv reports=184
+Switch memory used: 111000s3: switch hellos=[906], recv hellos=906, switch reports=[258], recv reports=258
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.8 finished ****
+-
+-
+s4: switch hellos=[839], recv hellos=839, switch reports=[178], recv reports=178
+Switch memory used: 111000s7: switch hellos=[892], recv hellos=892, switch reports=[196], recv reports=196
+Switch memory used: 111000s5: switch hellos=[884], recv hellos=884, switch reports=[137], recv reports=137
+Switch memory used: 111000s2: switch hellos=[798], recv hellos=798, switch reports=[206], recv reports=206
+Switch memory used: 111000s8: switch hellos=[846], recv hellos=844, switch reports=[180], recv reports=178
+Switch memory used: 111000s9: switch hellos=[819], recv hellos=819, switch reports=[173], recv reports=173
+Switch memory used: 111000s1: switch hellos=[858], recv hellos=858, switch reports=[149], recv reports=149
+Switch memory used: 111000s6: switch hellos=[1057], recv hellos=1057, switch reports=[162], recv reports=162
+Switch memory used: 111000s10: switch hellos=[836], recv hellos=836, switch reports=[183], recv reports=183
+Switch memory used: 111000s3: switch hellos=[895], recv hellos=895, switch reports=[244], recv reports=244
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 0.9 finished ****
+-
+-
+s5: switch hellos=[802], recv hellos=802, switch reports=[113], recv reports=113
+Switch memory used: 111000s4: switch hellos=[858], recv hellos=858, switch reports=[145], recv reports=145
+Switch memory used: 111000s6: switch hellos=[1064], recv hellos=1064, switch reports=[99], recv reports=99
+Switch memory used: 111000s1: switch hellos=[830], recv hellos=823, switch reports=[111], recv reports=111
+Switch memory used: 111000s2: switch hellos=[861], recv hellos=861, switch reports=[148], recv reports=148
+Switch memory used: 111000s7: switch hellos=[843], recv hellos=840, switch reports=[122], recv reports=118
+Switch memory used: 111000s9: switch hellos=[858], recv hellos=858, switch reports=[135], recv reports=135
+Switch memory used: 111000s10: switch hellos=[825], recv hellos=825, switch reports=[99], recv reports=99
+Switch memory used: 111000s3: switch hellos=[883], recv hellos=883, switch reports=[178], recv reports=178
+Switch memory used: 111000s8: switch hellos=[839], recv hellos=837, switch reports=[129], recv reports=129
+Switch memory used: 111000-
+-
+ **** Evaluation for epsilon 1.0 finished ****
+-
+-
+s4: switch hellos=[868], recv hellos=868, switch reports=[106], recv reports=106
+Switch memory used: 111000s5: switch hellos=[841], recv hellos=841, switch reports=[79], recv reports=79
+Switch memory used: 111000s6: switch hellos=[1051], recv hellos=1051, switch reports=[74], recv reports=74
+Switch memory used: 111000s7: switch hellos=[868], recv hellos=868, switch reports=[93], recv reports=93
+Switch memory used: 111000s10: switch hellos=[816], recv hellos=816, switch reports=[67], recv reports=67
+Switch memory used: 111000s1: switch hellos=[895], recv hellos=895, switch reports=[85], recv reports=85
+Switch memory used: 111000s2: switch hellos=[789], recv hellos=787, switch reports=[89], recv reports=85
+Switch memory used: 111000s9: switch hellos=[837], recv hellos=837, switch reports=[96], recv reports=96
+Switch memory used: 111000s8: switch hellos=[836], recv hellos=830, switch reports=[110], recv reports=109
+Switch memory used: 111000s3: switch hellos=[989], recv hellos=989, switch reports=[163], recv reports=163
+Switch memory used: 111000-
+-
+ **** All rounds finished ****
+-
+-

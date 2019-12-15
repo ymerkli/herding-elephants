@@ -465,7 +465,7 @@ class HerdController(object):
         for i in range (1,4):
             switch_mem = self.controller.register_read("hash_table_{}".format(i))
             for place in switch_mem:
-                if(switch_mem):
+                if(place != 0):
                     mem_used += 1
 
         f = open("../evaluation/counters/counter_results_herd","a")

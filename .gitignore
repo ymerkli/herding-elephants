@@ -19,5 +19,4 @@ src/found_elephants.json
 src/controller/found_elephants.json
 src/start_controllers.sh
 src/kill_script.sh
-src/counts.txt
 src/topology.db
