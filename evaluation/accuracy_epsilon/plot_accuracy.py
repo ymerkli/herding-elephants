@@ -70,7 +70,7 @@ def read_csv(csv_file_path):
         raise ValueError("Error: {0} doesnt exist")
 
 
-def plot_values(x_values, x_label, f1scores, precisions, recalls):
+def plot_values(x_values, x_label, f1scores, precisions, recalls, output_path):
     '''
     Plots a graph for the given x and y values
     '''
@@ -85,8 +85,8 @@ def plot_values(x_values, x_label, f1scores, precisions, recalls):
     majors = []
 
     plt.plot(x_values, f1scores, label='F1 score', marker='x', color='red')
-    plt.plot(x_values, precisions, label='Precision', marker='o', color='blue')
-    plt.plot(x_values, recalls, label='Recall', marker='o', color='green')
+    plt.plot(x_values, precisions, label='Precision', marker='x', color='blue')
+    plt.plot(x_values, recalls, label='Recall', marker='x', color='green')
     plt.xlabel('Approximation factor $\epsilon$')
     ax.set_xscale('log')
     plt.ylabel('Accuracy [%]')
@@ -94,14 +94,14 @@ def plot_values(x_values, x_label, f1scores, precisions, recalls):
 
     plt.show()
 
-    #fig.savefig('test.png')
+    fig.savefig(output_path)
 
 def main():
     csv_file_path, output_path = parser()
 
     parameter_values, parameter_name, f1scores, precisions, recalls = read_csv(csv_file_path)
 
-    plot_values(parameter_values, parameter_name, f1scores, precisions, recalls)
+    plot_values(parameter_values, parameter_name, f1scores, precisions, recalls, output_path)
 
 if __name__ == '__main__':
     main()
