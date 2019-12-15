@@ -311,6 +311,7 @@ class HerdController(object):
                     self.hellos += 1
                     # only send a hello if we havent sent a hello yet for this flow
                     if flow not in self.seen_flows:
+                        self.hellos += 1
                         self.send_hello(flow)
                         self.seen_flows[flow] = 1
                 else:

@@ -74,7 +74,7 @@
 \pagenumbering{roman}
 
 \begin{abstract}
-\noindent Detecting heavy hitters (e.g. flows whose packet counts exceed a certain threshold) is an important task for Denial of Service detection, load balancing and traffic routing. Past work has shown how to detect heavy hitters on a single network switch. However, nowadays heavy hitter flows are often \textit{network-wide}, thus detecting them on a single switch is not enough. A flow can enter a network over multiple ingress switches and from each switch's local view, the flow might look like normal, whereas from a global view, the flow would be classified as a heavy hitter. Thus, a detection protocol should be distributed to detect flows from a global view \textit{and} detection should still be quick and effective. Further, detecting global heavy-hitter flows inherently poses a trade-off between limitations in network-wide communication and memory resources on the ingress switches and accuracy in detecting heavy hitters. 
+\noindent Detecting heavy hitters (e.g. flows whose packet counts exceed a certain threshold) is an important task for Denial of Service detection, load balancing and traffic routing. Past work has shown how to detect heavy hitters on a single network switch. However, nowadays heavy hitter flows are often \textit{network-wide}, thus detecting them on a single switch is not enough. A flow can enter a network over multiple ingress switches and from each switch's local view, the flow might look like normal, whereas from a global view, the flow would be classified as a heavy hitter. Thus, a detection protocol should be distributed to detect flows from a global view \textit{and} detection should still be quick and effective. Further, detecting global heavy-hitter flows inherently poses a trade-off between limitations in network-wide communication and memory resources on the ingress switches and accuracy in detecting heavy hitters.
 
 In this work, we have implemented Herd \cite{anon2019herd}. Herd is a distributed algorithm that identifies network-wide heavy hitters in real time and under constraints on communication and switch memory. The algorithm uses a sample-and-hold technique for flow measurements on ingress switches and probabilistic sampling and reporting of flows. Reporting is done to a central coordinator, which allows for a global view on the network.
 
@@ -102,7 +102,7 @@ Herd \cite{anon2019herd} solves these problems by sampling traffic probabilistic
 
 \section{Background and related work}
 
-The basic problem to solve is the following: various flows enter a network and we want to classify them based on a measure that captures each flow's strain on the network (e.g. the packet count). We then want to distinguish \textit{mice flows} (flows without local or global significance) from \textit{elephant flows} (flows with local and global significance). 
+The basic problem to solve is the following: various flows enter a network and we want to classify them based on a measure that captures each flow's strain on the network (e.g. the packet count). We then want to distinguish \textit{mice flows} (flows without local or global significance) from \textit{elephant flows} (flows with local and global significance).
 
 \noindent There already exist a number of protocols with different approaches to detect elephants. Some existing algorithms, such as NetFlow \cite{claise2004netflow}, sample incoming packets and export them to a central collector. This addresses the constrained switch resources and the flow locality, however these algorithms suffer from temporal 'blind spots' due to low sampling rates and the resulting long delays. Other approaches to heavy hitter detection run streaming algorithms, combined with a compact data structure like a count-min sketch \cite{cormode2003countmin} or a bloom filter. However, these algorithms address the resource constraints of switches, however they fail to capture network-wide heavy hitters since detection is done on each switch individually.
 
@@ -150,7 +150,7 @@ $$g_{src,dst} = \{f | f.srcIP \in src, f.dstIP \in dst\}$$
 
 \subsection{Switch logic} \label{switch}
 Herd uses randomness for packet sampling and reporting to the global coordinator. Since P4 doesn't have a random library, we used hashes to 'flip' coins and simulate randomness.
-\noindent A  32 bit hash $h$ is calculated from timestamps, the destination IP and the last hash; and if 
+\noindent A  32 bit hash $h$ is calculated from timestamps, the destination IP and the last hash; and if
 
 $$h < int32_{MAX} * probability$$
 
@@ -178,7 +178,7 @@ A Herd controller is running on each ingress switch. The controller's main task 
 The communication model specified by Herd has the following three important characteristics: First, the coordinator needs to provide a service to one or many Herd controllers, which request the service. Second, communication should be asynchronous since hellos and reports can be generated anytime. Waiting for synchronous communication rounds would introduce additional delay, which would worsen detection accurcay. Last but not least, the communication needs to be two-way, since the coordinator needs to respond to hellos.
 
 We decided to use a remote procedure call (RPC) protocol, since it fulfills all three mentioned characteristics. The coordinator server runs an RPC service that implements two exposed methods, $send\_hello$ and $send\_report$, which can be invoked by Herd controllers. The communication from coordinator to Herd controller is implemented through a callback. When invoking $send\_hello$, a Herd controller passes the name of the switch and a callback function, which will be registered at the coordinator and called once the locality parameter $l_g$ is sent back.
- 
+
 
 \subsection{Coordinator} \label{coordinator}
 The central coordinator receives and handles hellos and reports sent by Herd controllers and sends back the locality parameter $l_g$. The coordinator further keeps track of the number of sent reports and classifies flows as heavy hitters.
@@ -203,17 +203,17 @@ We tried to implement the tuning algorithm as specified by the Herd paper, howev
 
 \subsection{Full hash tables} \label{special}%title
 
-Flow counters are stored on each ingress switch in a multi-stage hash table. In case of full hash tables, Herd proposes to just send all packets of the flow to the coordinator which introduces significant delay and communication cost. In our implementation, we handle full hash tables differently. Instead of sending all packets to the coordinator, the data plane sends an error message to the controller, indicating full hash tables. The controller will subsequently reset the hash tables. We argue that due to the fact that counters of large flows are reset back to zero anyways in case of a report, this leads to a minor decrease in accuracy. In the worst case, we reset the hash table when the packet count of flow $f \in g$ is $n_f \approx \tau_g$. The flow needs to be resampled in order for it to be counted again. Thus, in expectation, the number of missed packet counts is roughly $\tau_g+\frac{1}{s}$. 
+Flow counters are stored on each ingress switch in a multi-stage hash table. In case of full hash tables, Herd proposes to just send all packets of the flow to the coordinator which introduces significant delay and communication cost. In our implementation, we handle full hash tables differently. Instead of sending all packets to the coordinator, the data plane sends an error message to the controller, indicating full hash tables. The controller will subsequently reset the hash tables. We argue that due to the fact that counters of large flows are reset back to zero anyways in case of a report, this leads to a minor decrease in accuracy. In the worst case, we reset the hash table when the packet count of flow $f \in g$ is $n_f \approx \tau_g$. The flow needs to be resampled in order for it to be counted again. Thus, in expectation, the number of missed packet counts is roughly $\tau_g+\frac{1}{s}$.
 
 \subsection{Challenges} \label{challenges}
 
-We faced several challenges during the implementation and evaluation of Herd. The main challenge was limitations imposed by running Herd in a simulated environment and not in hardware. An important part of classification accuracy is how fast we can write or update an entry in the group values table. Whenever an incoming packet on the switch creates a table miss in the group values table, the switch will send a hello in order to fill the table. The total delay between the switch sending a hello and the controller writing the table rule is 
+We faced several challenges during the implementation and evaluation of Herd. The main challenge was limitations imposed by running Herd in a simulated environment and not in hardware. An important part of classification accuracy is how fast we can write or update an entry in the group values table. Whenever an incoming packet on the switch creates a table miss in the group values table, the switch will send a hello in order to fill the table. The total delay between the switch sending a hello and the controller writing the table rule is
 
 $$\Delta t_{hello_f} = t_{DC} + 2*t_{CC} + t_{table\_write} + \epsilon$$
 
 \noindent where $t_{DC}$ is the delay introduced by the data plane to control plane communication (digests or copy-to-cpu), $t_{CC}$ is the delay introduced by the controller-coordinator communication, $t_{table\_write}$ is the time it takes to write into a match-action table and $\epsilon$ are negligible processing delays. Every packet belonging to flow $f \in g$ that arrives during $\Delta t_{hello_f}$ will not be sampled and the higher the sending speed, the more packets belonging to f will arrive during $\Delta t_{hello_f}$. Further, we observed that the mininet starts dropping digest/copy-to-cpu messages at packet sending rates exceeding 350 packets per second (pps). We were thus limited to sending rates of 300 pps, which made evaluations over large pcap files take a long time. For a sending rate of 300 pps, a packet trace consisting of five million packets would take 4.6 hours. When running multiple evaluation runs, the total evaluation would easily take days. We thus limited our evaluation to packet trace with 100'000 and 400'000 packets. Note that these limitations only apply to simulations; in real hardware, the data plane to control plane communication would work over a direct link, which would remove that bottleneck. In that case, the main delay would come from the controller to coordinator communication.
 
-\noindent Another challenge we faced was that the Herd paper \cite{anon2019herd} was often times very unspecific and omitted crucial details (see section \ref{original_paper}). 
+\noindent Another challenge we faced was that the Herd paper \cite{anon2019herd} was often times very unspecific and omitted crucial details (see section \ref{original_paper}).
 
 
 \subsection{Assessment of the original paper} \label{original_paper}
@@ -233,7 +233,7 @@ For the evaluation, we used the topology displayed in figure \ref{fig:topology_f
 
 \noindent To generate a sizable amount of traffic on the sending host $h_1$ we use CAIDA's anonymized internet packet traces from 2016, the same packet traces the Herd paper used. Due to the problems specified in \ref{challenges}, we sized down the packet traces to pcap files with 100'000 or 400'000 packets. Instead of Python's scapy library, which only achieves very low sending rates, we used \textit{tcpreplay} to send packets on host $h_1$. \textit{tcprewrite} was used in order to add the correct source and destination MAC addresses (i.e. the MAC address of the sending interface on $h_1$ and the MAC address of the receiving interface on the load balancer $lb$) to the packets in the pcap file.
 
- 
+
 \begin{figure}
 	\centering
 	\includegraphics[width=0.75\textwidth]{figures/Herd_topology}
@@ -269,7 +269,7 @@ The approximation factor $\epsilon$ influences the local mule threshold $\tau_g 
 	\begin{subfigure}{.5\textwidth}
 		\centering
 		\includegraphics[width=\linewidth]{figures/sampl_prob_400k_e0_1_re}
-		\caption{Evaluation over sampling probabilities. \newline 
+		\caption{Evaluation over sampling probabilities. \newline
 			approximation factor $\epsilon = 0.1$, 400'000 packets, \newline
 			 $T = 91$, report threshold $R = \frac{1}{\epsilon} = 10$}
 		\label{fig:sampling_prob_graph}
@@ -277,13 +277,40 @@ The approximation factor $\epsilon$ influences the local mule threshold $\tau_g 
 	\begin{subfigure}{.5\textwidth}
 		\centering
 		\includegraphics[width=\linewidth]{figures/epsilon_400k_s0_2_re}
-		\caption{Evaluation over approximation factors $\epsilon$. \newline 
+		\caption{Evaluation over approximation factors $\epsilon$. \newline
 			sampling probability $s = 0.2$, 400'000 packets, \newline
 			$T = 91$, report threshold $R = \frac{1}{\epsilon}$}
 		\label{fig:epsilon_graph}
 	\end{subfigure}
 \end{figure}
 
+
+\subsection{Herd performance against other approaches}
+
+To finish our evaluation we compared our Herd performance against the alternative solutions mentioned in \cite{anon2019herd}, namley a probabilistic reporting (PR), a probabilistic sampling (PS) and a strawman solution. The strawman counts every flow and reports all counters at the end of a window. The PS technique does sample a packet with a given sampling probability and reports all samples. The PR technique counts every flow and reports all flows that reach a given threshold with report probability r = 1/k (where k is again the number of ingress switches). We compared the memory usage and the communication needed by the four solutions. \ref{fig:states_required} shows the memory needed by each technique for different sampling probability values in a range where all techniques get similar F1 scores. As we can see, Herd requires drastically less memory than the other approaches apart from the stateless probabilistic sampling. The states required by Herd are also highly dependant on the sampling probability, and we can approximate them as: Memory_required = #flows * sampling_probability * L, where L is the number of ingress switches that see the same flow (L = 2 in our test setup).
+
+
+\begin{figure}
+	\centering
+	\begin{subfigure}{.5\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{figures/required_states}
+		\caption{Evaluation of the states required for different sampling probabilities}
+		\label{fig:states_required}
+	\end{subfigure}%
+	\begin{subfigure}{.5\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{figures/generated_messages}
+		\caption{Evaluation of the generated messages for different $\epsilon}
+		\label{fig:messages_generated}
+	\end{subfigure}
+\end{figure}
+
+
+The comparison between the bandwidth usage of the different approaches is done by comparing how many messages each approach generates. From \ref{fig:messages_generated}, which shows the generaged messages for different $\epsilon values which lead to similar F1 scores (for probabilistic sampling we set the sampling probability equal to $\epsilon), we can make several observations:
+1) Herd is substantially better than the strawman approach.
+2) Herd scales better than probabilistic sampling, as we can reduce the needed communication via epsilon and the report probability. Probabilistic sampling can only reduce the sampling probability to generate fewer messages which quickly leads to deteriorating F1 scores.
+3) The difference between Herd and probabilistic reporting mainly stems from the hello messages overhead. We can approximate them by: hellos_generated = #groups * L, which is around 4600 in our dataset (with L = 2). Since the number of groups grows much slower than the number of flows, this overhead should become less significant with bigger datasets or larger time windows. Therefore we can conclude that Herd and probabilistic reporting will stay competitive in regard to communication, while Herd has a clear advantage since it requires less memory.
 
 \section{Conclusion}
 
@@ -321,7 +348,7 @@ Future research could go towards improving the parameter tuning. The current imp
 	\item Implemented the Herd switch in P4
 	\item Wrote the data plane - control plane communication
 	\item Implemented an automatic evaluation script
-	\item Evaluated Herd for 
+	\item Evaluated Herd for
 \end{itemize}
 
 \paragraph{Felix Rüssli}

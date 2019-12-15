@@ -239,7 +239,7 @@ def main():
             f.write("-\n-\n **** Evaluation for epsilon {0} finished ****\n-\n-\n".format(epsilon))
             f.close()
 
-        #
+
         # # rla part
         # os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_rla.json' &")
         # time.sleep(30)

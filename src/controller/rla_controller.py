@@ -136,6 +136,7 @@ class RlaController(object):
         '''
         k = 1/10
         report_threshold = int(self.epsilon*self.global_threshold_T*k)
+        print("REPORT THRESHOLD: %s" % report_threshold)
 
         # register names are defined in switch.p4
         self.controller.register_write("report_threshold", 0, report_threshold)
