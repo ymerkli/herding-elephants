@@ -81,14 +81,13 @@ def plot_values(x_values, x_label, f1scores, precisions, recalls):
     fig = plt.figure()
     ax  = plt.gca()
 
-    exp = int(math.log10(max(x_values)))
     majors = []
 
-    plt.plot(x_values, f1scores, label='F1 scores', marker='o', color='blue')
-    plt.plot(x_values, precisions, label='Precision', marker='o', color='red')
-    plt.plot(x_values, recalls, label='Recall', marker='o', color='green')
+    plt.plot(x_values, f1scores, label='F1 score', marker='x', color='red')
+    plt.plot(x_values, precisions, label='Precision', marker='x', color='blue')
+    plt.plot(x_values, recalls, label='Recall', marker='x', color='green')
     plt.xlabel('Sampling probability $s$')
-    ax.set_xscale('log')
+    #ax.set_xscale('log')
     plt.ylabel('Accuracy [%]')
     plt.legend()
 
