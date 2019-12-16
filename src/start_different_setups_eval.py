@@ -240,7 +240,7 @@ def main():
             f.close()
 
 
-        # rla part
+        # probabilistic reporting part
         os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_rla.json' &")
         time.sleep(30)
 
@@ -274,7 +274,7 @@ def main():
             f.write("-\n-\n **** Evaluation for epsilon {0} finished ****\n-\n-\n".format(epsilon))
             f.close()
 
-        probabilistic sampling part
+        # probabilistic sampling part
         os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_ps.json' &")
         time.sleep(30)
 
