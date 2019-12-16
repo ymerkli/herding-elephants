@@ -243,9 +243,18 @@ class RlaController(object):
 
         print("{0}: switch reports={1}, recv reports={2}".format(self.sw_name,\
             count_report_switch, self.reports))
+
+        mem_used = 0
+        for i in range (1,4):
+            switch_mem = self.controller.register_read("hash_table_{}".format(i))
+            for place in switch_mem:
+                if(place != 0):
+                    mem_used += 1
+
         f = open("../evaluation/counters/counter_results_rla","a")
-        f.write("{0}: switch reports={1}, recv reports={2}\n".format(self.sw_name,\
-            count_report_switch, self.reports))
+        f.write("{0}: switch hellos={1}, recv hellos={2}, switch reports={3}, recv reports={4}\nSwitch memory used: {5}\n".format(self.sw_name,\
+            count_hello_switch, self.hellos, count_report_switch, self.reports, mem_used))
+        f.close()
 
         sys.exit(0)
 

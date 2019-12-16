@@ -240,85 +240,85 @@ def main():
             f.close()
 
 
-        # # rla part
-        # os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_rla.json' &")
-        # time.sleep(30)
-        #
-        # for epsilon in parameter_rounds_rla:
-        #
-        #
-        #     r = int(1/float(epsilon))
-        #     mode = 'rla'
-        #     pid_list = startup(t, r, epsilon, 1, mode)
-        #     print(pid_list)
-        #     print("Startup finished, waiting for controllers to be ready")
-        #     time.sleep(10)
-        #     # send traffic from host
-        #     send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '300', '%s' % pcap_file_path])
-        #
-        #     time.sleep(10)
-        #     print("Sending finished, killing processes")
-        #     kill_processes(pid_list)
-        #
-        #     os.system("lxterminal -e bash -c 'sudo bash kill_script.sh'")
-        #
-        #     # wait for everything to finish (especially the coordinator to write out found_elephants.json)
-        #     time.sleep(5)
-        #
-        #     # Start the evaluation of the current round
-        #     f1_score, precision, recall = evaluator_rla.get_accuracy(real_elephants_path, found_elephants_path)
-        #     # Write the found measures to the csv file
-        #     evaluator_rla.write_accuracies_to_csv(f1_score, precision, recall, epsilon)
-        #
-        #     f = open("../evaluation/counters/counter_results_rla","a")
-        #     f.write("-\n-\n **** Evaluation for epsilon {0} finished ****\n-\n-\n".format(epsilon))
-        #     f.close()
-        #
-        # probabilistic sampling part
-        # os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_ps.json' &")
-        # time.sleep(30)
-        #
-        # for epsilon in parameter_rounds_ps:
-        #
-        #
-        #     s = epsilon
-        #     r = int(t/(1/float(s)))
-        #     r = max(1, r)
-        #     mode = 'ps'
-        #     pid_list = startup(1, r, 1, s, mode)
-        #     print(pid_list)
-        #     print("Startup finished, waiting for controllers to be ready")
-        #     time.sleep(10)
-        #     # send traffic from host
-        #     send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '300', '%s' % pcap_file_path])
-        #
-        #     time.sleep(10)
-        #     print("Sending finished, killing processes")
-        #     kill_processes(pid_list)
-        #
-        #     os.system("lxterminal -e bash -c 'sudo bash kill_script.sh'")
-        #
-        #     # wait for everything to finish (especially the coordinator to write out found_elephants.json)
-        #     time.sleep(5)
-        #
-        #     # Start the evaluation of the current round
-        #     f1_score, precision, recall = evaluator_ps.get_accuracy(real_elephants_path, found_elephants_path)
-        #     # Write the found measures to the csv file
-        #     evaluator_ps.write_accuracies_to_csv(f1_score, precision, recall, epsilon)
-        #
-        #     f = open("../evaluation/counters/counter_results_ps","a")
-        #     f.write("-\n-\n **** Evaluation for epsilon {0} finished ****\n-\n-\n".format(epsilon))
-        #     f.close()
-        #
-        # f = open("../evaluation/counters/counter_results_ps","a")
-        # f.write("-\n-\n **** All rounds finished ****\n-\n-\n".format(epsilon))
-        # f.close()
-        # f = open("../evaluation/counters/counter_results_rla","a")
-        # f.write("-\n-\n **** All rounds finished ****\n-\n-\n".format(epsilon))
-        # f.close()
-        # f = open("../evaluation/counters/counter_results_herd","a")
-        # f.write("-\n-\n **** All rounds finished ****\n-\n-\n".format(epsilon))
-        # f.close()
+        # rla part
+        os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_rla.json' &")
+        time.sleep(30)
+
+        for epsilon in parameter_rounds_rla:
+
+
+            r = int(1/float(epsilon))
+            mode = 'rla'
+            pid_list = startup(t, r, epsilon, 1, mode)
+            print(pid_list)
+            print("Startup finished, waiting for controllers to be ready")
+            time.sleep(10)
+            # send traffic from host
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '300', '%s' % pcap_file_path])
+
+            time.sleep(10)
+            print("Sending finished, killing processes")
+            kill_processes(pid_list)
+
+            os.system("lxterminal -e bash -c 'sudo bash kill_script.sh'")
+
+            # wait for everything to finish (especially the coordinator to write out found_elephants.json)
+            time.sleep(5)
+
+            # Start the evaluation of the current round
+            f1_score, precision, recall = evaluator_rla.get_accuracy(real_elephants_path, found_elephants_path)
+            # Write the found measures to the csv file
+            evaluator_rla.write_accuracies_to_csv(f1_score, precision, recall, epsilon)
+
+            f = open("../evaluation/counters/counter_results_rla","a")
+            f.write("-\n-\n **** Evaluation for epsilon {0} finished ****\n-\n-\n".format(epsilon))
+            f.close()
+
+        probabilistic sampling part
+        os.system("lxterminal -e 'sudo p4run --conf p4app/p4app_10_switches_ps.json' &")
+        time.sleep(30)
+
+        for epsilon in parameter_rounds_ps:
+
+
+            s = epsilon
+            r = int(t/(1/float(s)))
+            r = max(1, r)
+            mode = 'ps'
+            pid_list = startup(1, r, 1, s, mode)
+            print(pid_list)
+            print("Startup finished, waiting for controllers to be ready")
+            time.sleep(10)
+            # send traffic from host
+            send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '300', '%s' % pcap_file_path])
+
+            time.sleep(10)
+            print("Sending finished, killing processes")
+            kill_processes(pid_list)
+
+            os.system("lxterminal -e bash -c 'sudo bash kill_script.sh'")
+
+            # wait for everything to finish (especially the coordinator to write out found_elephants.json)
+            time.sleep(5)
+
+            # Start the evaluation of the current round
+            f1_score, precision, recall = evaluator_ps.get_accuracy(real_elephants_path, found_elephants_path)
+            # Write the found measures to the csv file
+            evaluator_ps.write_accuracies_to_csv(f1_score, precision, recall, epsilon)
+
+            f = open("../evaluation/counters/counter_results_ps","a")
+            f.write("-\n-\n **** Evaluation for epsilon {0} finished ****\n-\n-\n".format(epsilon))
+            f.close()
+
+        f = open("../evaluation/counters/counter_results_ps","a")
+        f.write("-\n-\n **** All rounds finished ****\n-\n-\n".format(epsilon))
+        f.close()
+        f = open("../evaluation/counters/counter_results_rla","a")
+        f.write("-\n-\n **** All rounds finished ****\n-\n-\n".format(epsilon))
+        f.close()
+        f = open("../evaluation/counters/counter_results_herd","a")
+        f.write("-\n-\n **** All rounds finished ****\n-\n-\n".format(epsilon))
+        f.close()
 
     else:
         raise ValueError("Error: unknown parameter name {0}".format(parameter_name))

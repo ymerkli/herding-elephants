@@ -30,7 +30,7 @@ NOTE: this script assumes that you use the `~/02-herding/src/p4app/p4app_10_swit
 
 #### global_threshold.py
 `global_threshold.py` takes a pcap file and a percentile. The goal of `global_threshold.py` is to determine a threshold on the packet count in order to separate small flows from heavy hitters. The global threshold returned is the provided percentile over all flow packet counts. Usual percentiles are 99, 99.9 and 99.99. The Herd paper uses the 99.99th percentile. For our evaluation we decided to use the 99th percentile since we had to use smaller pcap files, which results in only few
-heavy hitter flows with the 99.99th percentile. 
+heavy hitter flows with the 99.99th percentile.
 Keep in mind that the smaller your pcap file, the fewer heavy hitter flows will exist with constant percentile.
 
 How to run:
@@ -79,7 +79,7 @@ sudo bash start_topology_and_eval.sh <sampling_probability> <epsilon> <gobal_thr
 ```
 
 #### start_multiple_evaluation_runs
-Python script that reads a csv file which specifies a parameter to run evaluations over (epsilon, sampling_probability) and then runs an evaluation run for each value of the given parameter specified in the csv file. The script automatically starts the coordinator, all L2Controllers and the load balancer/ aggregator controller. It then logs into the outside host and sends packets from the specified pcap file, using tcpreplay. When sending is finished, the script shutsdown all controllers and the coordinator. It then reads the real and found elephants from json and calculates accuracy measures (f1 score, precision, recall) using FlowEvaluator. Finally, 
+Python script that reads a csv file which specifies a parameter to run evaluations over (epsilon, sampling_probability) and then runs an evaluation run for each value of the given parameter specified in the csv file. The script automatically starts the coordinator, all L2Controllers and the load balancer/ aggregator controller. It then logs into the outside host and sends packets from the specified pcap file, using tcpreplay. When sending is finished, the script shutsdown all controllers and the coordinator. It then reads the real and found elephants from json and calculates accuracy measures (f1 score, precision, recall) using FlowEvaluator. Finally,
 
 ### Automated testing
 
@@ -117,7 +117,7 @@ NOTE: During our evaluation, we've encountered dropped packets at the load balan
 
 For a quick example evaluation which won't take much time, run the following command:
 ```bash
-sudo bash start_topology_and_eval.sh 0.2 0.1 11 5 ~/02-herding/evaluation/basic/measurements.csv ~/02-herding/pcap/eval500.pcap ~/02-herding/src/p4app/p4app_10_switches.json
+sudo bash start_topology_and_eval.sh 0.2 0.1 11 5 ~/02-herding/evaluation/basic/measurements.csv ~/02-herding/pcap/eval500.pcap ~/02-herding/src/p4app/p4app_10_switches_herd.json
 ```
 NOTE: this evaluation is not representative since the pcap file consists of only 500 packets.
 
