@@ -38,7 +38,27 @@ This controller only writes the forwarding rules for the load balancer switch an
 This is a helper class that can compare two flow sets (json files), a real_elephant set (i.e. all flows in the respective pcap file which exceed a global threshold and are thus a heavy hitter) and a found_elephants (all flows that were classified as heavy hitters by Herd).
 
 ### Start_topology_and_eval
-Bash script that starts a mininet for a given p4app and then starts evaluation runs
+Bash script that starts a mininet for a given p4app and then starts evaluation runs.
+In order to start an evaluation run, you need to define a .csv file which defines the parameter over which the evalutations should run. The structure of the .csv file should look as follows:
+
+'''
+<parameter_name>,f1score,precsion,recall
+parameter_value_1,
+parameter_value_2,
+parameter_value_3,
+.
+.
+.
+'''
+
+Supported parameter_names are: 'epsilon', 'sampling_probability'.
+
+The evaluation parameters are then passed as follows:
+
+'''bash
+sudo bash start_topology_and_eval.sh <sampling_probability> <epsilon> <gobal_threshold> <report_threshold> <csv_file> <pcap_file> <p4app_file>
+'''
+
 
 ### Start_multiple_evaluation_runs
 Python script that reads a csv file which specifies a parameter to run evaluations over (epsilon, sampling_probability) and then runs an evaluation run for each value of the given parameter specified in the csv file. The script automatically starts the coordinator, all L2Controllers and the load balancer/ aggregator controller. It then logs into the outside host and sends packets from the specified pcap file, using tcpreplay. When sending is finished, the script shutsdown all controllers and the coordinator. It then reads the real and found elephants from json and calculates accuracy measures (f1 score, precision, recall) using FlowEvaluator.
