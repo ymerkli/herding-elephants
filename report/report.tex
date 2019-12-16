@@ -308,7 +308,7 @@ To finish our evaluation we compared our Herd performance against the alternativ
 
 
 The comparison between the bandwidth usage of the different approaches is done by comparing how many messages each approach generates. From \ref{fig:messages_generated}, which shows the generaged messages for different $\epsilon values which lead to similar F1 scores (for probabilistic sampling we set the sampling probability equal to $\epsilon), we can make several observations:
-1) Herd is substantially better than the strawman approach.
+1) Herd is substantially better than the strawman approach. 
 2) Herd scales better than probabilistic sampling, as we can reduce the needed communication via epsilon and the report probability. Probabilistic sampling can only reduce the sampling probability to generate fewer messages which quickly leads to deteriorating F1 scores.
 3) The difference between Herd and probabilistic reporting mainly stems from the hello messages overhead. We can approximate them by: hellos_generated = #groups * L, which is around 4600 in our dataset (with L = 2). Since the number of groups grows much slower than the number of flows, this overhead should become less significant with bigger datasets or larger time windows. Therefore we can conclude that Herd and probabilistic reporting will stay competitive in regard to communication, while Herd has a clear advantage since it requires less memory.
 
