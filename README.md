@@ -28,6 +28,23 @@ In reality, flows exhibit preference for certain ingress switches, meaning  cert
 
 The parameters _s_, _ε_ and _R_ can be calculated to maximize the F1 score under constraints on switch memory _S_ and the communication budget _C_ per switch. _ε_ is an approximation factor that is used to calculate the mule threshold _τ_.
 
+## What did we reproduce
+We were able to reproduce all parts of the Herd algorithm and the main parts of the evaluation of the Herd paper. Due to constraints on sending speed in the mininet, we were not able to test with large pcap files. Further, we were not able to reproduce the authors parameter tuning algorithm due to insufficient information from the paper.
+
+## Repository organization
+###src
+Contains all source code including scripts for automated evaluation.
+###report
+Contains all latex files, figures and the report in pdf format.
+###presentation
+Contains the presentation in pptx format and a demo script.
+###pcap
+Contains pcap files used for the evaluation.
+###parameters
+Contains outputs from automated evaluation runs for parameter tuning
+###evaluation
+Contains various evaluation data
+
 ## How to test
 For our evaluation, we've implemented an automated testing procedure which takes a set of parameters to evaluate over. For each parameter, a mininet will be started, the coordinator and all Herd Controllers (one per ingress switch in the given topology) will be started for the given parameters, the load balancer and aggregator switch will be
 initialized and finally, all packets from the given pcap file will be sent from a host connected to the load balancer.
