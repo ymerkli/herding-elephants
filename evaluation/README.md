@@ -81,6 +81,27 @@ sudo bash start_topology_and_eval.sh <sampling_probability> <epsilon> <gobal_thr
 #### start_multiple_evaluation_runs
 Python script that reads a csv file which specifies a parameter to run evaluations over (epsilon, sampling_probability) and then runs an evaluation run for each value of the given parameter specified in the csv file. The script automatically starts the coordinator, all L2Controllers and the load balancer/ aggregator controller. It then logs into the outside host and sends packets from the specified pcap file, using tcpreplay. When sending is finished, the script shutsdown all controllers and the coordinator. It then reads the real and found elephants from json and calculates accuracy measures (f1 score, precision, recall) using FlowEvaluator. Finally,
 
+### I don't want to read all of this...
+#### I want a quick evaluation to see how automated evaluation works (2 minutes)
+For a quick test evaluation which won't take much time, run the following command:
+```bash
+sudo bash start_topology_and_eval.sh 1.0 0.1 11 5 ~/02-herding/evaluation/basic/measurements_layout.csv ~/02-herding/pcap/eval500.pcap ~/02-herding/src/p4app/p4app_10_switches_herd.json
+```
+This will run three evaluation rounds (3 different epsilon values) with 500 packets each.
+NOTE: this evaluation is not representative since the pcap file consists of only 500 packets.
+
+#### I want to run a real evaluation and reproduce our results (8 hours)
+For a serious evaluation (the ones we did), run one of the following command:
+
+Evaluate over epsilon:
+```bash
+sudo bash start_topology_and_eval.sh 0.2 0.1 91 10 ~/02-herding/evaluation/accuracy_epsilon/epsilon_layout.csv ~/02-herding/pcap/eval400k.pcap ~/02-herding/src/p4app/p4app_10_switches_herd.json
+```
+Evaluate over sampling probabilities:
+```bash
+sudo bash start_topology_and_eval.sh 0.2 0.1 91 10 ~/02-herding/evaluation/accuracy_sampling_prob/sampl_prob_layout.csv ~/02-herding/pcap/eval400k.pcap ~/02-herding/src/p4app/p4app_10_switches_herd.json
+```
+
 ### Automated testing
 
 #### 1. Define a measurements script
@@ -115,11 +136,6 @@ sudo bash start_topology_and_eval.sh <sampling_prob> <epsilon> <global_threshold
 
 NOTE: During our evaluation, we've encountered dropped packets at the load balancer at around 8000 packets per second and dropped hellos and reports between ingress switch and local controller at around 400 packets per second. The limiting factor seemed to be the communication between data plane and controll plane and the time delay between sending a hello to the central coordinator and receiving a hello callback and then adding rules to the switch table. Due to this, we had to test at rather low sending speeds (300 packets per second). That's why evaluation takes rather long and the pcap files are rather short.
 
-For a quick example evaluation which won't take much time, run the following command:
-```bash
-sudo bash start_topology_and_eval.sh 0.2 0.1 11 5 ~/02-herding/evaluation/basic/measurements.csv ~/02-herding/pcap/eval500.pcap ~/02-herding/src/p4app/p4app_10_switches_herd.json
-```
-NOTE: this evaluation is not representative since the pcap file consists of only 500 packets.
 
 #### 4. Check the results
 After all evaluation rounds have finished, check your csv file. For each evalution round, you will find the f1score, precision and recall.

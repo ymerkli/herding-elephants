@@ -32,7 +32,29 @@ The parameters _s_, _ε_ and _R_ can be calculated to maximize the F1 score unde
 For our evaluation, we've implemented an automated testing procedure which takes a set of parameters to evaluate over. For each parameter, a mininet will be started, the coordinator and all Herd Controllers (one per ingress switch in the given topology) will be started for the given parameters, the load balancer and aggregator switch will be
 initialized and finally, all packets from the given pcap file will be sent from a host connected to the load balancer.
 
+### I don't want to read all of this...
+#### I want a quick evaluation to see how automated evaluation works (2 minutes)
+For a quick test evaluation which won't take much time, run the following command:
+```bash
+sudo bash start_topology_and_eval.sh 1.0 0.1 11 5 ~/02-herding/evaluation/basic/measurements_layout.csv ~/02-herding/pcap/eval500.pcap ~/02-herding/src/p4app/p4app_10_switches_herd.json
+```
+This will run three evaluation rounds (3 different epsilon values) with 500 packets each.
+NOTE: this evaluation is not representative since the pcap file consists of only 500 packets.
+
+#### I want to run a real evaluation and reproduce our results (8 hours)
+For a serious evaluation (the ones we did), run one of the following command:
+
+Evaluate over epsilon:
+```bash
+sudo bash start_topology_and_eval.sh 0.2 0.1 91 10 ~/02-herding/evaluation/accuracy_epsilon/epsilon_layout.csv ~/02-herding/pcap/eval400k.pcap ~/02-herding/src/p4app/p4app_10_switches_herd.json
+```
+Evaluate over sampling probabilities:
+```bash
+sudo bash start_topology_and_eval.sh 0.2 0.1 91 10 ~/02-herding/evaluation/accuracy_sampling_prob/sampl_prob_layout.csv ~/02-herding/pcap/eval400k.pcap ~/02-herding/src/p4app/p4app_10_switches_herd.json
+```
+
 ### Automated testing
+
 #### 1. Define a measurements script
 First, you have to decide over which parameter you want to sweep and which values of the parameter should be chosen. Currently supported parameters are: epsilon, sampling_probability (make sure to spell these correctly in the csv file). Create a .csv file in the following format:
 ```
@@ -43,6 +65,7 @@ First, you have to decide over which parameter you want to sweep and which value
 <parameter_value_n>
 ```
 There already exists a basic evaluation file in `~/02-herding/evaluation/basic/measurements.csv` which can be used.
+
 #### 2. Decide on parameter values
 The following values need to be specified to start an evaluation run:
 * global_threshold: The number of packets for which a flow is considered a heavy hitter. This needs to be determined using the `global_threshold.py` script. The global threshold is usually the 99th percentile on the packet count over all flows. For the given pcap files, the global_thresholds are specified in `~/02-herding/evaluation/data/global_thresholds.json`.
@@ -62,10 +85,6 @@ sudo bash start_topology_and_eval.sh <sampling_prob> <epsilon> <global_threshold
 
 NOTE: During our evaluation, we've encountered dropped packets at the load balancer at around 8000 packets per second and dropped hellos and reports between ingress switch and local controller at around 400 packets per second. The limiting factor seemed to be the communication between data plane and controll plane and the time delay between sending a hello to the central coordinator and receiving a hello callback and then adding rules to the switch table. Due to this, we had to test at rather low sending speeds (300 packets per second). That's why evaluation takes rather long and the pcap files are rather short.
 
-For a quick test evaluation which won't take much time, run the following command:
-```bash
-sudo bash start_topology_and_eval.sh 0.2 0.2 11 10 ~/02-herding/evaluation/basic/measurements.csv ~/02-herding/pcap/eval500.pcap ~/02-herding/src/p4app/p4app_10_switches.json
-```
 #### 4. Check the results
 After all evaluation rounds have finished, check your csv file. For each evalution round, you will find the f1score, precision and recall.
 These accuracy measures are calculated using `~/02-herding/evaluation/data/real_elephants_...`. These json files list all flows for the specific pcap files which are heavy hitters (i.e. the packet count for the flow exceeds the global threshold).
