@@ -32,17 +32,17 @@ The parameters _s_, _ε_ and _R_ can be calculated to maximize the F1 score unde
 We were able to reproduce all parts of the Herd algorithm and the main parts of the evaluation of the Herd paper. Due to constraints on sending speed in the mininet, we were not able to test with large pcap files. Further, we were not able to reproduce the authors parameter tuning algorithm due to insufficient information from the paper.
 
 ## Repository organization
-###src
+### src
 Contains all source code including scripts for automated evaluation.
-###report
+### report
 Contains all latex files, figures and the report in pdf format.
-###presentation
+### presentation
 Contains the presentation in pptx format and a demo script.
-###pcap
+### pcap
 Contains pcap files used for the evaluation.
-###parameters
+### parameters
 Contains outputs from automated evaluation runs for parameter tuning
-###evaluation
+### evaluation
 Contains various evaluation data
 
 ## How to test
