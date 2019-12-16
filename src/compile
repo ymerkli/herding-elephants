@@ -3,3 +3,4 @@ pip install nnpy
 pip install pickle
 pip install scapy
 pip install numpy
+pip install matplotlib
