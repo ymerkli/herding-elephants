@@ -287,7 +287,7 @@ The approximation factor $\epsilon$ influences the local mule threshold $\tau_g 
 
 \subsection{Herd performance against other approaches}
 
-To finish our evaluation we compared our Herd performance against the alternative solutions mentioned in \cite{anon2019herd}, namley a probabilistic reporting (PR), a probabilistic sampling (PS) and a strawman solution. The strawman counts every flow and reports all counters at the end of a window. The PS technique does sample a packet with a given sampling probability and reports all samples. The PR technique counts every flow and reports all flows that reach a given threshold with report probability r = 1/k (where k is again the number of ingress switches).\newline We compared the memory usage and the communication needed by the four solutions. \ref{fig:states_required} shows the memory needed by each technique for different sampling probability values in a range where all techniques get similar F1 scores. As one can see, Herd requires drastically less memory than the other approaches apart from the stateless probabilistic sampling. The states required by Herd are also highly dependant on the sampling probability and we can approximate them as: $Memory\_required = flow\_nr * sampling\_probability * L$, where L is the number of ingress switches that see the same flow (L = 2 in our test setup). Depending on s we have a memory usage reduction of 50\% to 80\%, which is even higher than the figure proposed in the original paper. \newline
+To finish our evaluation we compared our Herd performance against the alternative solutions mentioned in \cite{anon2019herd}, namley a probabilistic reporting (PR), a probabilistic sampling (PS) and a strawman solution. The strawman counts every flow and reports all counters at the end of a window. The PS technique does sample a packet with a given sampling probability and reports all samples. The PR technique counts every flow and reports all flows that reach a given threshold with report probability r = 1/k (where k is again the number of ingress switches).\newline We compared the memory usage and the communication needed by the four solutions for the 100k dataset. \ref{fig:states_required} shows the memory needed by each technique for different sampling probability values in a range where all techniques get similar F1 scores. As one can see, Herd requires drastically less memory than the other approaches apart from the stateless probabilistic sampling. The states required by Herd are also highly dependant on the sampling probability and we can approximate them as: $Memory\_required = flow\_nr * sampling\_probability * L$, where L is the number of ingress switches that see the same flow (L = 2 in our test setup). Depending on s we have a memory usage reduction of 50\% to 80\%, which is even higher than the figure proposed in the original paper. \newline
 
 
 \begin{figure}
@@ -295,13 +295,13 @@ To finish our evaluation we compared our Herd performance against the alternativ
 	\begin{subfigure}{.5\textwidth}
 		\centering
 		\includegraphics[width=\linewidth]{figures/required_states}
-		\caption{Evaluation of the states required for different sampling probabilities}
+		\caption{Evaluation of the states required for different sampling probabilities with the 100k dataset}
 		\label{fig:states_required}
 	\end{subfigure}%
 	\begin{subfigure}{.5\textwidth}
 		\centering
 		\includegraphics[width=\linewidth]{figures/generated_messages}
-		\caption{Evaluation of the generated messages for different $\epsilon$}
+		\caption{Evaluation of the generated messages for different $\epsilon$ with the 100k dataset}
 		\label{fig:messages_generated}
 	\end{subfigure}
 \end{figure}
