@@ -61,4 +61,10 @@ sudo bash start_topology_and_eval.sh <sampling_probability> <epsilon> <gobal_thr
 
 
 ### Start_multiple_evaluation_runs
-Python script that reads a csv file which specifies a parameter to run evaluations over (epsilon, sampling_probability) and then runs an evaluation run for each value of the given parameter specified in the csv file. The script automatically starts the coordinator, all Herd Controllers and the load balancer/ aggregator controller. It then logs into the outside host and sends packets from the specified pcap file, using tcpreplay. When sending is finished, the script shutsdown all controllers and the coordinator. It then reads the real and found elephants from json and calculates accuracy measures (f1 score, precision, recall) using FlowEvaluator.
+Python script that reads a csv file which specifies a parameter to run evaluations over (epsilon, sampling_probability) and then runs an evaluation run for each value of the given parameter specified in the csv file. The script automatically starts the coordinator, all Herd controllers and the load balancer/ aggregator controller. It then logs into the outside host and sends packets from the specified pcap file, using tcpreplay. When sending is finished, the script shutsdown all controllers and the coordinator. It then reads the real and found elephants from json and calculates accuracy measures (f1 score, precision, recall) using FlowEvaluator.
+
+### Start_different_setups_eval
+Python script that evaluates a given dataset for three different approaches: Herd, probabilistic sampling and probabilistc reporting. The values given are for epsilon and are again read from a csv file. The startup and teardown of the coordinator and controllers as well as sending and evaluation is the same as before. The results can then be found in the specified csv file. Additional results are generated under evaluation/counters, where counters for memory usage and messages generated are stored (one has to add them together manually).
+
+### Start_constrained_eval
+Python script that first runs tuningparameters_with_constraints for a hardcoded set of parameters for communication and state constraints. The parameters needed for later are stored in the csv files in the parameters directory. Afterwards, the resulting parameters are evaluated with the same setup as in the cases above.

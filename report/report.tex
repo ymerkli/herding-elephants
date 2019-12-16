@@ -277,19 +277,19 @@ The approximation factor $\epsilon$ influences the local mule threshold $\tau_g 
 
 \subsection{Herd performance against other approaches} \label{other_approaches_evaluation}
 
-To finish our evaluation we compared our Herd performance against the alternative solutions mentioned in \cite{anon2019herd}, namley a probabilistic reporting (PR), a probabilistic sampling (PS) and a strawman solution. The strawman counts every flow and reports all counters at the end of a window. The PS technique does sample a packet with a given sampling probability and reports all samples. The PR technique counts every flow and reports all flows that reach a given threshold with report probability $r = \frac{1}{k}$ (where $k$ is again the number of ingress switches).
-\newline We compared the memory usage and the communication needed by the four solutions for the 100'000 packets dataset. Figure \ref{fig:states_required} shows the memory needed by each technique for different sampling probability values in a range where all techniques get similar F1 scores. As one can see, Herd requires drastically less memory than the other approaches apart from the stateless probabilistic sampling. The states required by Herd are also highly dependent on the sampling probability and we can approximate them as: $Memory\_required = flow\_nr * sampling\_probability * L$, where L is the number of ingress switches that see the same flow ($L = 2$ in our test setup). Depending on $s$ we have a memory usage reduction of 50\% to 80\%, which is even higher than the figure proposed in the original paper. \newline
+To finish our evaluation we compared our Herd performance against the alternative solutions mentioned in \cite{anon2019herd}, namely a probabilistic reporting (PR), a probabilistic sampling (PS) and a strawman solution. The strawman counts every flow and reports all counters at the end of a window. The PS technique does sample a packet with a given sampling probability and reports all samples. The PR technique counts every flow and reports all flows that reach a given threshold with report probability $r = \frac{1}{k}$ (where $k$ is again the number of ingress switches).
+\newline We compared the memory usage and the communication needed by the four solutions for the 100'000 packets dataset. Figure \ref{fig:states_required} shows the memory needed by each technique for different sampling probability values in a range where all techniques get similar F1 scores. As one can see, Herd requires drastically less memory than the other approaches apart from the stateless probabilistic sampling, even though we only used the lower bound of $memory\_required \geq \#flows$. The states required by Herd are also highly dependant on the sampling probability and we can approximate them as: $memory\_required = \#flows * sampling\_probability * L$, where $L$ is the number of ingress switches that see the same flow ($L = 2$ in our test setup). Depending on $s$ we have a memory usage reduction of 50\% to 80\%, which is even more than the original paper proposed. \newline
 
 \begin{figure}%[hb]
 	\centering
-	\begin{subfigure}{.5\textwidth}
+	\begin{subfigure}[t]{.53\textwidth}
 		\centering
 		\includegraphics[width=\linewidth]{figures/required_states}
 		\caption{Evaluation of the states required for \newline
 			different sampling probabilities $s$, 100'000 packets}
 		\label{fig:states_required}
 	\end{subfigure}%
-	\begin{subfigure}{.5\textwidth}
+	\begin{subfigure}[t]{.5\textwidth}
 		\centering
 		\includegraphics[width=\linewidth]{figures/generated_messages}
 		\caption{Evaluation of the generated messages for \newline 
@@ -301,16 +301,17 @@ To finish our evaluation we compared our Herd performance against the alternativ
 
 \newpage
 
-The comparison between the bandwidth usage of the different approaches is done by comparing how many messages each approach generates. From \ref{fig:messages_generated}, which shows the generated messages for different $\epsilon$ values which lead to similar F1 scores (for probabilistic sampling we set the sampling probability equal to $\epsilon$), we can make several observations:
+\noindent The comparison between the bandwidth usage of the different approaches is done by comparing how many messages each approach generates. From figure \ref{fig:messages_generated}, which shows the generated messages for different $\epsilon$ values that lead to similar F1 scores (for probabilistic sampling we set the sampling probability equal to $\epsilon$), we can make several observations:
 
 \begin{enumerate}
-	\item Herd is substantially better than the strawman approach.
+	\setlength{\itemsep}{0pt}
+	\setlength{\parskip}{0pt}
+	\item Herd is substantially better than the strawman approach, which is approximated by it's lower bound $messages\_generated \geq \#flows$.
+	
 	\item Herd scales better than probabilistic sampling, as we can reduce the needed communication via the approximation factor $\epsilon$ and the report probability $r$. Probabilistic sampling can only reduce the sampling probability to generate fewer messages which quickly leads to deteriorating F1 scores.
-	\item  The difference between Herd and probabilistic reporting mainly stems from the hello messages overhead, which was around 7000 for our setup. Since we can upper bound the generated messages by $hellos\_generated < group_nr * k$, and the number of groups grows much slower than the number of flows, this overhead should become less significant with bigger datasets or larger time windows. Therefore we can conclude that Herd and probabilistic reporting will stay competitive in regard to communication, while Herd has a clear advantage since it requires less memory.
+	
+	\item  The difference between Herd and probabilistic reporting mainly stems from the hello messages overhead, which was around 7000 for our setup. Since we can upper bound the generated messages by $hellos\_generated < \#groups * k$, and the number of groups grows much slower than the number of flows, this overhead should become less significant with bigger datasets or larger time windows. Therefore we can conclude that Herd and probabilistic reporting will stay competitive in regard to communication, while Herd has a clear advantage since it requires less memory.
 \end{enumerate}
-
-
-
 
 \section{Conclusion}
 
@@ -337,7 +338,7 @@ Future research could go towards improving the parameter tuning. The current imp
 \begin{itemize}
 	\item Implemented the coordinator and the RPC communication
 	\item Wrote the Herd controller algorithm
-	\item Implemented the load balancer switch and the aggreagtor switch in P4
+	\item Implemented the load balancer switch and the aggregator switch in P4
 	\item Evaluated Herd and wrote report for \ref{sampling_probability_evaluation}, \ref{epsilon_evaluation}
 \end{itemize}
 
@@ -345,7 +346,7 @@ Future research could go towards improving the parameter tuning. The current imp
 \paragraph{Tim Bohren}
 \begin{itemize}
 	\item Implemented the Herd switch in P4
-	\item Wrote the data plane - control plane communication
+	\item Wrote the data plane - control plane communication (copy-to-cpu)
 	\item Implemented the automatic evaluation script
 	\item Evaluated Herd and wrote report for \ref{other_approaches_evaluation}
 \end{itemize}
