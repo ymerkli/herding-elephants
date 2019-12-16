@@ -82,7 +82,7 @@ class CoordinatorService(rpyc.Service):
         '''
 
         if self.verbose:
-            print("Received report from {0} for {1}".format(sw_name, flow))
+            print("\n --- Coordinator: Received report from {0} for {1}\n".format(sw_name, flow))
 
         # if the flow has been reported before, increase its count
         # otherwise, start counting
@@ -125,7 +125,7 @@ class CoordinatorService(rpyc.Service):
         '''
 
         if self.verbose:
-            print("Received hello from {0} for {1}".format(sw_name, flow))
+            print("\n --- Coordinator: Received hello from {0} for {1}\n".format(sw_name, flow))
 
         # store the callback function since we need it several times
         if sw_name not in self.callback_table:

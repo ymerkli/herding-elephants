@@ -334,6 +334,8 @@ class HerdController(object):
         '''
 
         try:
+            if self.verbose:
+                print("\n\n -- Switch {0}: Sending report message for flow: {1}\n".format(self.sw_name, flow))
             self.coordinator_c.root.send_report(flow, self.sw_name)
         except Exception as e:
             print("Error: {0} couldnt send report for {1}: {2}".format(self.sw_name, flow, e))
@@ -351,6 +353,8 @@ class HerdController(object):
         '''
 
         try:
+            if self.verbose:
+                print("\n\n -- Switch {0}: Sending hello message for flow: {1}\n".format(self.sw_name, flow))
             self.coordinator_c.root.send_hello(flow, self.sw_name, self.hello_callback)
         except Exception as e:
             print("Error: {0} couldnt send hello for {1}: {2}".format(self.sw_name, flow, e))

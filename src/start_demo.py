@@ -13,14 +13,6 @@ import sys
 
 from p4utils.utils.topology import Topology
 
-global_thresh_to_percentile = {
-    'eval500': {
-        11: '99',
-        37: '99_9',
-        37: '99_99'
-    }
-}
-
 def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     '''
     Starts the coordinator and controllers with the given parameters. Returns the pids of all
@@ -32,7 +24,7 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     topo = Topology(db="topology.db")
 
     # start controllers and coordinator here
-    coordinator = subprocess.Popen(['sudo', 'python', 'controller/coordinator.py', '--v', '--r', '%s' % report_threshold])
+    coordinator = subprocess.Popen(['sudo', 'python', 'controller/coordinator.py','--v', '--r', '%s' % report_threshold])
     pids_to_kill.append(coordinator.pid)
 
     time.sleep(5)
@@ -40,7 +32,7 @@ def startup(global_threshold, report_threshold, epsilon, sampling_probability):
     for p4switch_name in topo.get_p4switches():
         # only start controller for ingress switches
         if re.match(r"s\d+", p4switch_name):
-            controller = subprocess.Popen(['sudo', 'python', 'controller/herd_controller.py', '--v', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
+            controller = subprocess.Popen(['sudo', 'python', 'controller/herd_controller.py','--v', '--t', '%s' % global_threshold, '--n', '%s' % p4switch_name, '--e', '%s' % epsilon, '--s', '%s' % sampling_probability])
 
             '''
             Prepend Controller PIDs
@@ -72,13 +64,13 @@ def kill_processes(pid_list):
 
 def main():
 
-    pid_list = startup(5, 2, 0.1, 0.5)
+    pid_list = startup(2, 1, 1, 0.5)
     print(pid_list)
     print("Startup finished, waiting for controllers to be ready")
     time.sleep(10)
 
     # send traffic from host
-    send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-p', '300', '../data/eval500.pcap'])
+    send = subprocess.call(['mx', 'h1', 'sudo', 'tcpreplay', '-i', 'h1-eth0', '-o', '../pcap/eval500.pcap'])
 
     time.sleep(10)
     print("Sending finished, killing processes")
