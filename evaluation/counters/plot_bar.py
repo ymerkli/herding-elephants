@@ -6,7 +6,7 @@ import numpy as np
 labels = ['0,1', '0,15', '0,2']
 rla_comm = [10200, 10100, 9700]
 ps_comm = [10000, 15000, 20000]
-herd_comm = [17000, 16200, 15500]
+herd_comm = [15500, 14800, 12000]
 strawman_comm = [23100,23100,23100]
 
 labels_mem = ['0,1', '0,15', '0,2']
@@ -20,33 +20,33 @@ width = 0.15  # the width of the bars
 fig_1, ax_1 = plt.subplots()
 fig_2, ax_2 = plt.subplots()
 
-rects1 = ax_1.bar(x - 1.5*width, rla_comm, width, label='Probabilistic reporting')
-rects2 = ax_1.bar(x - 0.5*width, ps_comm, width, label='Probabilistic sampling (s = epsilon)')
-rects3 = ax_1.bar(x + 0.5*width, herd_comm, width, label='Herd')
-rects4 = ax_1.bar(x + 1.5*width, strawman_comm, width, label='Strawman')
-rects_a1 = [rects1, rects2, rects3, rects4]
+rects1 = ax_1.bar(x - 1.5*width, rla_comm, width, label='Probabilistic reporting', color='b')
+rects2 = ax_1.bar(x + 0.5*width, ps_comm, width, label='Probabilistic sampling (s = epsilon)', color='g')
+rects3 = ax_1.bar(x - 0.5*width, herd_comm, width, label='Herd', color='r')
+rects4 = ax_1.bar(x + 1.5*width, strawman_comm, width, label='Strawman', color='c')
+rects_a1 = [rects1, rects3, rects2, rects4]
 
-rects5 = ax_2.bar(x , rla_mem, width, label='Probabilistic reporting')
-rects7 = ax_2.bar(x - width, herd_mem, width, label='Herd')
-rects8 = ax_2.bar(x + width, strawman_mem, width, label='Strawman')
+rects5 = ax_2.bar(x , rla_mem, width, label='Probabilistic reporting', color='b')
+rects7 = ax_2.bar(x - width, herd_mem, width, label='Herd', color='r')
+rects8 = ax_2.bar(x + width, strawman_mem, width, label='Strawman', color='c')
 rects_a2 = [rects5, rects7, rects8]
 
 # Add some text for labels, title and custom x-axis tick labels, etc.
-ax_1.set_ylabel('Messages')
-ax_1.set_title('Communication usage')
-ax_1.set_xlabel('Epsilon')
+ax_1.set_ylabel('Messages', fontsize = 20)
+ax_1.set_title('Communication usage', fontsize = 20)
+ax_1.set_xlabel('Epsilon',  fontsize = 20)
 ax_1.set_xticks(x)
 ax_1.set_xticklabels(labels)
-ax_1.legend()
+ax_1.legend(loc=4, prop={'size': 18})
 
 
 # Add some text for labels, title and custom x-axis tick labels, etc.
-ax_2.set_ylabel('States')
-ax_2.set_title('Memory usage')
-ax_2.set_xlabel('Epsilon')
+ax_2.set_ylabel('States',  fontsize = 20)
+ax_2.set_title('Memory usage', fontsize = 20)
+ax_2.set_xlabel('Epsilon',  fontsize = 20)
 ax_2.set_xticks(x)
 ax_2.set_xticklabels(labels)
-ax_2.legend()
+ax_2.legend(loc=4,prop={'size': 18})
 
 
 def autolabel_a1(rects):
