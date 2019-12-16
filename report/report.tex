@@ -287,7 +287,7 @@ The approximation factor $\epsilon$ influences the local mule threshold $\tau_g 
 
 \subsection{Herd performance against other approaches}
 
-To finish our evaluation we compared our Herd performance against the alternative solutions mentioned in \cite{anon2019herd}, namley a probabilistic reporting (PR), a probabilistic sampling (PS) and a strawman solution. The strawman counts every flow and reports all counters at the end of a window. The PS technique does sample a packet with a given sampling probability and reports all samples. The PR technique counts every flow and reports all flows that reach a given threshold with report probability r = 1/k (where k is again the number of ingress switches). We compared the memory usage and the communication needed by the four solutions. \ref{fig:states_required} shows the memory needed by each technique for different sampling probability values in a range where all techniques get similar F1 scores. As we can see, Herd requires drastically less memory than the other approaches apart from the stateless probabilistic sampling. The states required by Herd are also highly dependant on the sampling probability, and we can approximate them as: Memory_required = #flows * sampling_probability * L, where L is the number of ingress switches that see the same flow (L = 2 in our test setup).
+To finish our evaluation we compared our Herd performance against the alternative solutions mentioned in \cite{anon2019herd}, namley a probabilistic reporting (PR), a probabilistic sampling (PS) and a strawman solution. The strawman counts every flow and reports all counters at the end of a window. The PS technique does sample a packet with a given sampling probability and reports all samples. The PR technique counts every flow and reports all flows that reach a given threshold with report probability r = 1/k (where k is again the number of ingress switches).\newline We compared the memory usage and the communication needed by the four solutions. \ref{fig:states_required} shows the memory needed by each technique for different sampling probability values in a range where all techniques get similar F1 scores. As one can see, Herd requires drastically less memory than the other approaches apart from the stateless probabilistic sampling. The states required by Herd are also highly dependant on the sampling probability and we can approximate them as: $Memory\_required = #flows * sampling\_probability * L$, where L is the number of ingress switches that see the same flow (L = 2 in our test setup). Depending on s we have a memory usage reduction of 50\% to 80\%, which is even higher than the figure proposed in the original paper. \newline
 
 
 \begin{figure}
@@ -301,16 +301,16 @@ To finish our evaluation we compared our Herd performance against the alternativ
 	\begin{subfigure}{.5\textwidth}
 		\centering
 		\includegraphics[width=\linewidth]{figures/generated_messages}
-		\caption{Evaluation of the generated messages for different $\epsilon}
+		\caption{Evaluation of the generated messages for different $\epsilon$}
 		\label{fig:messages_generated}
 	\end{subfigure}
 \end{figure}
 
 
-The comparison between the bandwidth usage of the different approaches is done by comparing how many messages each approach generates. From \ref{fig:messages_generated}, which shows the generaged messages for different $\epsilon values which lead to similar F1 scores (for probabilistic sampling we set the sampling probability equal to $\epsilon), we can make several observations:
-1) Herd is substantially better than the strawman approach. 
-2) Herd scales better than probabilistic sampling, as we can reduce the needed communication via epsilon and the report probability. Probabilistic sampling can only reduce the sampling probability to generate fewer messages which quickly leads to deteriorating F1 scores.
-3) The difference between Herd and probabilistic reporting mainly stems from the hello messages overhead. We can approximate them by: hellos_generated = #groups * L, which is around 4600 in our dataset (with L = 2). Since the number of groups grows much slower than the number of flows, this overhead should become less significant with bigger datasets or larger time windows. Therefore we can conclude that Herd and probabilistic reporting will stay competitive in regard to communication, while Herd has a clear advantage since it requires less memory.
+The comparison between the bandwidth usage of the different approaches is done by comparing how many messages each approach generates. From \ref{fig:messages_generated}, which shows the generated messages for different $\epsilon$ values which lead to similar F1 scores (for probabilistic sampling we set the sampling probability equal to $\epsilon$), we can make several observations:\newline
+1) Herd is substantially better than the strawman approach. \newline
+2) Herd scales better than probabilistic sampling, as we can reduce the needed communication via epsilon and the report probability. Probabilistic sampling can only reduce the sampling probability to generate fewer messages which quickly leads to deteriorating F1 scores.\newline
+3) The difference between Herd and probabilistic reporting mainly stems from the hello messages overhead. We can approximate them by: $hellos\_generated = #groups * L$, which is around 4600 messages in our dataset (with L = 2). Since the number of groups grows much slower than the number of flows, this overhead should become less significant with bigger datasets or larger time windows. Therefore we can conclude that Herd and probabilistic reporting will stay competitive in regard to communication, while Herd has a clear advantage since it requires less memory.
 
 \section{Conclusion}
 
@@ -348,7 +348,7 @@ Future research could go towards improving the parameter tuning. The current imp
 	\item Implemented the Herd switch in P4
 	\item Wrote the data plane - control plane communication
 	\item Implemented an automatic evaluation script
-	\item Evaluated Herd for
+	\item Evaluated Herd  \ref{fig:messages_generated}, \ref{fig:states_required}
 \end{itemize}
 
 \paragraph{Felix Rüssli}
