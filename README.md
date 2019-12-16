@@ -12,15 +12,21 @@ git clone https://gitlab.ethz.ch/nsg/adv-comm-net-projects/02-herding.git ~/
 ```
 
 ## Project description
-Herd is distributed algorithm which detects network-wide heavy hitters by combining sample-and-hold with probabilistic reporting to a central coordinator.
-Further an algorithm to tune Herd for a maximum F1-score under communication and state constraints is also implemented.
 
-We have four different kind of categories for flow: mice, moles, mules and elephants.
+Detecting heavy hitters (e.g. flows whose packet counts exceed a certain threshold) is an important task for Denial of Service detection, load balancing and traffic routing. Past work has shown how to detect heavy hitters on a single network switch. However, nowadays heavy hitter flows are often _network-wide_, thus detecting them on a single switch is not enough. A flow can enter a network over multiple ingress switches and from each switch's local view, the flow might look normal, whereas from a global view, the flow would be classified as a heavy hitter. Thus, a detection protocol should be distributed to detect flows from a global view and detection should still be quick and effective. Further, detecting global heavy-hitter flows inherently poses a trade-off between limitations in network-wide communication and memory resources on the ingress switches and accuracy in detecting heavy hitters. 
 
-All flows start as mice. Mice flows get picked randomly with probability _s_ and promoted to mules. Moles get tracked by the switch how often they appear. Once the moles reach a certain size, meaning they were seen on the switch _τ_ times, the moles become mules. The mules get reported to a central coordinator with the probability _r_. The coordinator counts from now on how many times it receives a report from a switch of that mules flow. Once it received _R_ reports it classifies that report as an elephant.
+In this project, we have implemented Herd, a distributed algorithm which detects network-wide heavy hitters by combining probabilistic sample-and-hold with probabilistic reporting to a central coordinator.
 
-The parameters _s_, _τ_, _r_ and _R_ can be calculated to maximize the F1-score under the constraints of limited switch memory _S_ and a maximum communication budget per switch. In order to calculate _τ_ we use an approximation factor _ε_.
-We do this by more or less with a try and error approach.
+Further an algorithm to tune Herd parameters in order to  maximize the  F1-score under communication and switch memory constraints is also implemented.
+
+
+Herd introduces four different kind of flow categories: mice, moles, mules and elephants.
+
+All flows start as mice. Mice flows are sampled randomly with sampling probability _s_ and promoted to moles. Mole flows are tracked by the switch: their packet counts are stored in a multi-stage hash table. Once a mole flow's packet count reaches the mule threshold  _τ_, the mole becomes a mule. Mules get reported to a central coordinator with report probability _r_. The coordinator counts how many times it received a report for each flow . Once the number of reports for a flow exceeds the report threshold _R_, the coordinator classifies the respective flow as an elephant.
+
+In reality, flows exhibit preference for certain ingress switches, meaning  certain switches are more likely to observe certain flows. Due to this behaviour, we need to adapt the mule threshold _τ_ and the report probability _r_. Herd keeps track of locality by putting flows into groups _g(src, dst)_, where src and dst are /8 IP subnets. The coordinator keeps track of a locality parameter _l\_g_ for each group g. The mule threshold _τ\_g_ and the report probabiltiy _r\_g_ are then tracked on a per-group basis. 
+
+The parameters _s_, _ε_ and _R_ can be calculated to maximize the F1 score under constraints on switch memory _S_ and the communication budget _C_ per switch. _ε_ is an approximation factor that is used to calculate the mule threshold _τ_.
 
 ## How to test
 For our evaluation, we've implemented an automated testing procedure which takes a set of parameters to evaluate over. For each parameter, a mininet will be started, the coordinator and all L2Controllers (one per ingress switch in the given topology) will be started for the given parameters, the load balancer and aggregator switch will be
