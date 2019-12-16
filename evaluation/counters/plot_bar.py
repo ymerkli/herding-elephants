@@ -6,7 +6,7 @@ import numpy as np
 labels = ['0,1', '0,15', '0,2']
 rla_comm = [10200, 10100, 9700]
 ps_comm = [10000, 15000, 20000]
-herd_comm = [14600, 13800, 13100]
+herd_comm = [17000, 16200, 15500]
 strawman_comm = [23100,23100,23100]
 
 labels_mem = ['0,1', '0,15', '0,2']

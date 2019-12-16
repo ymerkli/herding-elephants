@@ -308,7 +308,6 @@ class HerdController(object):
                 srcGroup, dstGroup = self.extract_group(flow)
                 group = (srcGroup, dstGroup)
                 if flow_count == 0:
-                    self.hellos += 1
                     # only send a hello if we havent sent a hello yet for this flow
                     if flow not in self.seen_flows:
                         self.hellos += 1
