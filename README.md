@@ -1,5 +1,7 @@
 # Hearding the Elephants: Detecting Network-Wide Heavy Hitters with Limited Resources
 
+This was a project that was part of the Advanced Topics in Communication Networks (2019) lecture at ETH Zurich. It is an implementation of the research paper [Herding the Elephants: Detecting Network-Wide Heavy Hitters with Limited Resources](https://pdfs.semanticscholar.org/d4dd/1e753df5ca14b4a0d8b648865608b4c14c24.pdf).
+
 #### Authors
     * Yannick Merkli
     * Felix Ruessli
