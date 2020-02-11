@@ -1,14 +1,14 @@
 # Hearding the Elephants: Detecting Network-Wide Heavy Hitters with Limited Resources
 
 #### Authors
-    * Yannick Merkli    (ymerkli@student.ethz.ch)
-    * Felix Ruessli     (fruessli@student.ethz.ch)
-    * Tim Bohren        (tbohren@student.ethz.ch)
+    * Yannick Merkli
+    * Felix Ruessli
+    * Tim Bohren
 
 ## Cloning the repository
 
 ```bash
-git clone https://gitlab.ethz.ch/nsg/adv-comm-net-projects/02-herding.git ~/
+git clone https://github.com/ymerkli/herding-elephants.git ~/
 ```
 
 ## Project description
